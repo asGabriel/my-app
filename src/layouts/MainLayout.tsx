@@ -1,0 +1,172 @@
+import { useState } from 'react';
+import { Layout, Menu, Button, Drawer, theme } from 'antd';
+import {
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  DashboardOutlined,
+  SettingOutlined,
+  UserOutlined,
+  MenuOutlined,
+} from '@ant-design/icons';
+import { Outlet, useNavigate, useLocation } from 'react-router';
+import type { MenuProps } from 'antd';
+
+const { Header, Sider, Content } = Layout;
+
+type MenuItem = Required<MenuProps>['items'][number];
+
+const menuItems: MenuItem[] = [
+  {
+    key: '/',
+    icon: <DashboardOutlined />,
+    label: 'Dashboard',
+  },
+  {
+    key: '/usuarios',
+    icon: <UserOutlined />,
+    label: 'Usuários',
+  },
+  {
+    key: '/configuracoes',
+    icon: <SettingOutlined />,
+    label: 'Configurações',
+  },
+];
+
+export function MainLayout() {
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const {
+    token: { colorBgContainer, borderRadiusLG },
+  } = theme.useToken();
+
+  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+    navigate(key);
+    setMobileDrawerOpen(false);
+  };
+
+  const siderContent = (
+    <Menu
+      theme="dark"
+      mode="inline"
+      selectedKeys={[location.pathname]}
+      items={menuItems}
+      onClick={handleMenuClick}
+    />
+  );
+
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        breakpoint="lg"
+        collapsedWidth="0"
+        onBreakpoint={(broken) => {
+          if (broken) {
+            setCollapsed(true);
+          }
+        }}
+        style={{
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 100,
+        }}
+        className="desktop-sider"
+      >
+        <div
+          style={{
+            height: 64,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontSize: collapsed ? 16 : 20,
+            fontWeight: 700,
+            letterSpacing: 1,
+          }}
+        >
+          {collapsed ? 'HM' : 'Home App'}
+        </div>
+        {siderContent}
+      </Sider>
+
+      <Drawer
+        title="Menu"
+        placement="left"
+        onClose={() => setMobileDrawerOpen(false)}
+        open={mobileDrawerOpen}
+        styles={{ body: { padding: 0, background: '#001529' } }}
+        width={250}
+        className="mobile-drawer"
+      >
+        {siderContent}
+      </Drawer>
+
+      <Layout
+        style={{
+          marginLeft: collapsed ? 0 : 200,
+          transition: 'margin-left 0.2s',
+        }}
+        className="main-layout-content"
+      >
+        <Header
+          style={{
+            padding: '0 16px',
+            background: colorBgContainer,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            position: 'sticky',
+            top: 0,
+            zIndex: 99,
+            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.08)',
+          }}
+        >
+          <Button
+            type="text"
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() => setCollapsed(!collapsed)}
+            className="desktop-menu-toggle"
+            style={{
+              fontSize: 16,
+              width: 48,
+              height: 48,
+            }}
+          />
+
+          <Button
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setMobileDrawerOpen(true)}
+            className="mobile-menu-toggle"
+            style={{
+              fontSize: 16,
+              width: 48,
+              height: 48,
+            }}
+          />
+
+          <span style={{ fontWeight: 600, fontSize: 18 }}>Dashboard</span>
+        </Header>
+
+        <Content
+          style={{
+            margin: 16,
+            padding: 24,
+            background: colorBgContainer,
+            borderRadius: borderRadiusLG,
+            minHeight: 'calc(100vh - 64px - 32px)',
+          }}
+        >
+          <Outlet />
+        </Content>
+      </Layout>
+    </Layout>
+  );
+}

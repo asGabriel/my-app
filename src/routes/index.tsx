@@ -1,16 +1,28 @@
-import { BrowserRouter, Route, Routes } from "react-router"
-import { HomePage } from "../pages/HomePage/HomePage"
-import { InvoicesPage } from "../pages/Financial/Invoices"
-import { InvoicesDetailsPage } from "../pages/Financial/InvoicesDetail.rs"
+import { createBrowserRouter, RouterProvider } from 'react-router';
+import { MainLayout } from '../layouts/MainLayout';
+import { Dashboard } from '../pages/Dashboard';
 
-export const HmRouteProvider = () => {
-    return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/invoices" element={<InvoicesPage />} />
-                <Route path="/invoices/:id" element={<InvoicesDetailsPage />} />
-            </Routes>
-        </BrowserRouter>
-    )
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <MainLayout />,
+    children: [
+      {
+        index: true,
+        element: <Dashboard />,
+      },
+      {
+        path: 'usuarios',
+        element: <div>Página de Usuários (em construção)</div>,
+      },
+      {
+        path: 'configuracoes',
+        element: <div>Página de Configurações (em construção)</div>,
+      },
+    ],
+  },
+]);
+
+export function AppRouter() {
+  return <RouterProvider router={router} />;
 }

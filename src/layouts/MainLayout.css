@@ -1,0 +1,23 @@
+@media (min-width: 992px) {
+    .mobile-menu-toggle {
+        display: none !important;
+    }
+
+    .mobile-drawer {
+        display: none !important;
+    }
+}
+
+@media (max-width: 991px) {
+    .desktop-sider {
+        display: none !important;
+    }
+
+    .desktop-menu-toggle {
+        display: none !important;
+    }
+
+    .main-layout-content {
+        margin-left: 0 !important;
+    }
+}
