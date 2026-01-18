@@ -37,15 +37,16 @@
 
 /* Cards Grid - Statistics */
 .stats-card .ant-statistic-title {
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .stats-card .ant-statistic-content-value {
-    font-size: 18px !important;
+    font-size: 24px !important;
 }
 
-.stats-card .ant-statistic-content-suffix {
-    font-size: 12px !important;
+.stats-card .ant-statistic-content-prefix {
+    font-size: 16px !important;
+    margin-right: 4px;
 }
 
 /* Mobile Adjustments */
@@ -67,7 +68,11 @@
     }
 
     .stats-card .ant-statistic-content-value {
-        font-size: 16px !important;
+        font-size: 20px !important;
+    }
+
+    .stats-card .ant-statistic-content-prefix {
+        font-size: 14px !important;
     }
 
     .stats-card .ant-card-body {
@@ -89,7 +94,11 @@
 /* Tablet Adjustments */
 @media (min-width: 577px) and (max-width: 991px) {
     .stats-card .ant-statistic-content-value {
-        font-size: 18px !important;
+        font-size: 22px !important;
+    }
+
+    .stats-card .ant-statistic-content-prefix {
+        font-size: 15px !important;
     }
 }
 

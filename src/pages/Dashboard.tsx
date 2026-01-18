@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Card, Col, Row, Statistic, Progress, Typography, Space, theme } from 'antd';
-import {
-    DollarOutlined,
-    FilterOutlined,
-} from '@ant-design/icons';
-import { useIncomes } from '../api';
+import { FilterOutlined } from '@ant-design/icons';
+import { useIncomes, usePayments } from '../api';
 import { FilterBar, FilterBarValues, getDefaultFilters } from '../components/FilterBar';
 import { Loading } from '../components/Loading';
+import { formatCurrency } from '../utils/format';
 
 const { Title, Text } = Typography;
 
@@ -19,10 +17,20 @@ export function Dashboard() {
         endDate: filters.endDate,
     });
 
+    const { data: payments, isLoading: isLoadingPayments } = usePayments({
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+    });
+
     const totalIncome = useMemo(() => {
         if (!incomes) return 0;
         return incomes.reduce((sum, income) => sum + parseFloat(income.amount), 0);
     }, [incomes]);
+
+    const totalPayments = useMemo(() => {
+        if (!payments) return 0;
+        return payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+    }, [payments]);
 
     return (
         <div style={{ margin: -16 }}>
@@ -65,9 +73,23 @@ export function Dashboard() {
                                 <Statistic
                                     title="Entradas"
                                     value={totalIncome}
-                                    prefix={<DollarOutlined />}
-                                    valueStyle={{ color: token.blue }}
-                                    suffix="R$"
+                                    prefix="R$"
+                                    valueStyle={{ color: token.colorSuccess }}
+                                    formatter={(value) => formatCurrency(value as number)}
+                                />
+                            </Loading>
+                        </Card>
+                    </Col>
+
+                    <Col xs={12} sm={12} lg={6}>
+                        <Card size="small" hoverable className="stats-card">
+                            <Loading loading={isLoadingPayments}>
+                                <Statistic
+                                    title="Saídas"
+                                    value={totalPayments}
+                                    prefix="R$"
+                                    valueStyle={{ color: token.colorError }}
+                                    formatter={(value) => formatCurrency(value as number)}
                                 />
                             </Loading>
                         </Card>
