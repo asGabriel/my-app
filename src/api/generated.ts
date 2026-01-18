@@ -16,6 +16,14 @@ const Income = z
     updatedAt: z.string().nullish(),
   })
   .passthrough();
+const CreateIncomeRequest = z
+  .object({
+    accountIdentification: z.string(),
+    description: z.string(),
+    amount: z.string(),
+    dateReference: z.string(),
+  })
+  .passthrough();
 const ListPaymentsFilters = z
   .object({
     debtIds: z.array(z.string().uuid()),
@@ -34,6 +42,15 @@ const Payment = z
     paymentDate: z.string(),
     createdAt: z.string(),
     updatedAt: z.string().nullish(),
+  })
+  .passthrough();
+const CreatePaymentRequest = z
+  .object({
+    debtId: z.string().uuid(),
+    accountId: z.string().uuid().nullish(),
+    paymentDate: z.string(),
+    amount: z.string().nullish(),
+    reconcile: z.boolean().nullish(),
   })
   .passthrough();
 const DebtFilters = z
@@ -63,17 +80,49 @@ const Debt = z
     updatedAt: z.string().nullish(),
   })
   .passthrough();
+const CreateDebtRequest = z
+  .object({
+    category: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    description: z.string(),
+    dueDate: z.string(),
+    totalAmount: z.string(),
+    paidAmount: z.string().optional(),
+    discountAmount: z.string().optional(),
+    status: z.enum(["UNPAID", "PARTIALLY_PAID", "SETTLED"]).optional(),
+    isPaid: z.boolean(),
+    accountId: z.string().uuid().optional(),
+    installmentCount: z.number().int().optional(),
+  })
+  .passthrough();
 
 export const schemas = {
   ListIncomesFilters,
   Income,
+  CreateIncomeRequest,
   ListPaymentsFilters,
   Payment,
+  CreatePaymentRequest,
   DebtFilters,
   Debt,
+  CreateDebtRequest,
 };
 
 const endpoints = makeApi([
+  {
+    method: "post",
+    path: "/financeManager/debt",
+    alias: "createDebt",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateDebtRequest,
+      },
+    ],
+    response: Debt,
+  },
   {
     method: "post",
     path: "/financeManager/debt/list",
@@ -90,6 +139,20 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/financeManager/income",
+    alias: "createIncome",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateIncomeRequest,
+      },
+    ],
+    response: Income,
+  },
+  {
+    method: "post",
     path: "/financeManager/income/list",
     alias: "listIncomes",
     requestFormat: "json",
@@ -101,6 +164,20 @@ const endpoints = makeApi([
       },
     ],
     response: z.array(Income),
+  },
+  {
+    method: "post",
+    path: "/financeManager/payment",
+    alias: "createPayment",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreatePaymentRequest,
+      },
+    ],
+    response: Payment,
   },
   {
     method: "post",
@@ -126,10 +203,13 @@ export function createApiClient(baseUrl: string, options?: ZodiosOptions) {
 
 export type ListIncomesFilters = z.infer<typeof ListIncomesFilters>;
 export type Income = z.infer<typeof Income>;
+export type CreateIncomeRequest = z.infer<typeof CreateIncomeRequest>;
 export type ListPaymentsFilters = z.infer<typeof ListPaymentsFilters>;
 export type Payment = z.infer<typeof Payment>;
+export type CreatePaymentRequest = z.infer<typeof CreatePaymentRequest>;
 export type DebtFilters = z.infer<typeof DebtFilters>;
 export type Debt = z.infer<typeof Debt>;
+export type CreateDebtRequest = z.infer<typeof CreateDebtRequest>;
 
 export const IncomeListResponseSchema = z.array(Income);
 export type IncomeListResponse = z.infer<typeof IncomeListResponseSchema>;
@@ -139,3 +219,12 @@ export type PaymentListResponse = z.infer<typeof PaymentListResponseSchema>;
 
 export const DebtListResponseSchema = z.array(Debt);
 export type DebtListResponse = z.infer<typeof DebtListResponseSchema>;
+
+export const IncomeResponseSchema = Income;
+export type IncomeResponse = z.infer<typeof IncomeResponseSchema>;
+
+export const PaymentResponseSchema = Payment;
+export type PaymentResponse = z.infer<typeof PaymentResponseSchema>;
+
+export const DebtResponseSchema = Debt;
+export type DebtResponse = z.infer<typeof DebtResponseSchema>;

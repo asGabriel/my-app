@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Card, Col, Row, Statistic, Progress, Typography, Space, theme } from 'antd';
+import { Card, Col, Row, Statistic, Typography, Space, theme } from 'antd';
 import { FilterOutlined } from '@ant-design/icons';
 import { useIncomes, usePayments, useDebts, Debt } from '../api';
 import { FilterBar, FilterBarValues, getDefaultFilters } from '../components/FilterBar';
 import { Loading } from '../components/Loading';
-import { formatCurrency, formatRelativeTime } from '../utils/format';
+import { formatCurrency, formatRelativeTime, formatDebtStatus, debtStatusColors, DebtStatus } from '../utils/format';
 
 const { Title, Text } = Typography;
 
@@ -42,33 +42,22 @@ export function Dashboard() {
         return payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
     }, [payments]);
 
-    const recentActivities = useMemo(() => {
-        const activities: Array<{
-            id: string;
-            type: 'payment' | 'debt';
-            label: string;
-            description: string;
-            amount: number;
-            createdAt: string;
-        }> = [];
-
-        if (payments) {
-            payments.forEach((payment) => {
-                const debt = debtsMap.get(payment.debtId);
-                activities.push({
-                    id: payment.id,
-                    type: 'payment',
-                    label: 'Pagamento',
-                    description: debt?.description || '',
-                    amount: parseFloat(payment.amount),
-                    createdAt: payment.createdAt,
-                });
-            });
-        }
-
-        return activities
+    const recentDebts = useMemo(() => {
+        if (!debts) return [];
+        return [...debts]
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .slice(0, 10);
+            .slice(0, 5);
+    }, [debts]);
+
+    const recentPayments = useMemo(() => {
+        if (!payments) return [];
+        return [...payments]
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 5)
+            .map((payment) => ({
+                ...payment,
+                debt: debtsMap.get(payment.debtId),
+            }));
     }, [payments, debtsMap]);
 
     return (
@@ -138,48 +127,20 @@ export function Dashboard() {
 
                 <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
                     <Col xs={24} lg={12}>
-                        <Card title="Metas do Mês" size="small">
-                            <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                                <div>
-                                    <div className="flex-between" style={{ marginBottom: 4 }}>
-                                        <Text style={{ fontSize: 13 }}>Vendas</Text>
-                                        <Text type="secondary" style={{ fontSize: 13 }}>75%</Text>
-                                    </div>
-                                    <Progress percent={75} status="active" strokeColor={token.colorPrimary} size="small" />
-                                </div>
-                                <div>
-                                    <div className="flex-between" style={{ marginBottom: 4 }}>
-                                        <Text style={{ fontSize: 13 }}>Novos Clientes</Text>
-                                        <Text type="secondary" style={{ fontSize: 13 }}>60%</Text>
-                                    </div>
-                                    <Progress percent={60} status="active" strokeColor={token.colorSuccess} size="small" />
-                                </div>
-                                <div>
-                                    <div className="flex-between" style={{ marginBottom: 4 }}>
-                                        <Text style={{ fontSize: 13 }}>Entradas</Text>
-                                        <Text type="secondary" style={{ fontSize: 13 }}>90%</Text>
-                                    </div>
-                                    <Progress percent={90} status="active" strokeColor={token.purple} size="small" />
-                                </div>
-                            </Space>
-                        </Card>
-                    </Col>
-
-                    <Col xs={24} lg={12}>
-                        <Card title="Atividade Recente" size="small">
-                            <Loading loading={isLoadingPayments || isLoadingDebts}>
-                                {recentActivities.length === 0 ? (
+                        <Card title="Últimos Débitos" size="small">
+                            <Loading loading={isLoadingDebts}>
+                                {recentDebts.length === 0 ? (
                                     <Text type="secondary" style={{ fontSize: 13 }}>
-                                        Nenhuma atividade no período
+                                        Nenhum débito no período
                                     </Text>
                                 ) : (
-                                    <Space direction="vertical" style={{ width: '100%' }} size="small">
-                                        {recentActivities.map((activity, index) => (
+                                    <Space direction="vertical" style={{ width: '100%' }} size={4}>
+                                        {recentDebts.map((debt, index) => (
                                             <div
-                                                key={activity.id}
+                                                key={debt.id}
                                                 style={{
                                                     padding: '8px 0',
-                                                    borderBottom: index < recentActivities.length - 1
+                                                    borderBottom: index < recentDebts.length - 1
                                                         ? `1px solid ${token.colorBorderSecondary}`
                                                         : 'none',
                                                 }}
@@ -188,19 +149,94 @@ export function Dashboard() {
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <Text
                                                             strong
+                                                            style={{ fontSize: 13 }}
+                                                            className="text-truncate"
+                                                        >
+                                                            {debt.description}
+                                                        </Text>
+                                                        <div style={{ marginTop: 2 }}>
+                                                            <Text
+                                                                style={{
+                                                                    fontSize: 11,
+                                                                    padding: '1px 6px',
+                                                                    borderRadius: 4,
+                                                                    background: debtStatusColors[debt.status as DebtStatus] === 'success'
+                                                                        ? token.colorSuccessBg
+                                                                        : debtStatusColors[debt.status as DebtStatus] === 'warning'
+                                                                            ? token.colorWarningBg
+                                                                            : token.colorInfoBg,
+                                                                    color: debtStatusColors[debt.status as DebtStatus] === 'success'
+                                                                        ? token.colorSuccess
+                                                                        : debtStatusColors[debt.status as DebtStatus] === 'warning'
+                                                                            ? token.colorWarning
+                                                                            : token.colorInfo,
+                                                                }}
+                                                            >
+                                                                {formatDebtStatus(debt.status as DebtStatus)}
+                                                            </Text>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right', marginLeft: 8 }}>
+                                                        <Text
                                                             style={{
-                                                                fontSize: 12,
-                                                                color: activity.type === 'payment' ? token.colorError : token.colorWarning,
+                                                                fontSize: 13,
+                                                                color: token.colorWarning,
+                                                                fontWeight: 500,
                                                             }}
                                                         >
-                                                            {activity.label}
+                                                            R$ {formatCurrency(parseFloat(debt.totalAmount))}
                                                         </Text>
-                                                        {activity.description && (
+                                                        <Text
+                                                            type="secondary"
+                                                            style={{ fontSize: 11, display: 'block' }}
+                                                        >
+                                                            {formatRelativeTime(debt.createdAt)}
+                                                        </Text>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </Space>
+                                )}
+                            </Loading>
+                        </Card>
+                    </Col>
+
+                    <Col xs={24} lg={12}>
+                        <Card title="Últimos Pagamentos" size="small">
+                            <Loading loading={isLoadingPayments}>
+                                {recentPayments.length === 0 ? (
+                                    <Text type="secondary" style={{ fontSize: 13 }}>
+                                        Nenhum pagamento no período
+                                    </Text>
+                                ) : (
+                                    <Space direction="vertical" style={{ width: '100%' }} size={4}>
+                                        {recentPayments.map((payment, index) => (
+                                            <div
+                                                key={payment.id}
+                                                style={{
+                                                    padding: '8px 0',
+                                                    borderBottom: index < recentPayments.length - 1
+                                                        ? `1px solid ${token.colorBorderSecondary}`
+                                                        : 'none',
+                                                }}
+                                            >
+                                                <div className="flex-between">
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <Text
+                                                            strong
+                                                            style={{ fontSize: 13 }}
+                                                            className="text-truncate"
+                                                        >
+                                                            {payment.debt?.description || 'Pagamento'}
+                                                        </Text>
+                                                        {payment.debt && (
                                                             <Text
-                                                                style={{ fontSize: 13, display: 'block' }}
+                                                                type="secondary"
+                                                                style={{ fontSize: 11, display: 'block' }}
                                                                 className="text-truncate"
                                                             >
-                                                                {activity.description}
+                                                                {payment.debt.identification}
                                                             </Text>
                                                         )}
                                                     </div>
@@ -208,17 +244,17 @@ export function Dashboard() {
                                                         <Text
                                                             style={{
                                                                 fontSize: 13,
-                                                                color: activity.type === 'payment' ? token.colorError : token.colorWarning,
+                                                                color: token.colorError,
                                                                 fontWeight: 500,
                                                             }}
                                                         >
-                                                            {activity.type === 'payment' ? '-' : '+'}R$ {formatCurrency(activity.amount)}
+                                                            -R$ {formatCurrency(parseFloat(payment.amount))}
                                                         </Text>
                                                         <Text
                                                             type="secondary"
                                                             style={{ fontSize: 11, display: 'block' }}
                                                         >
-                                                            {formatRelativeTime(activity.createdAt)}
+                                                            {formatRelativeTime(payment.createdAt)}
                                                         </Text>
                                                     </div>
                                                 </div>

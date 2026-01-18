@@ -12,6 +12,10 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import type { MenuProps } from 'antd';
 import { useAuth } from '../contexts/AuthContext';
+import { QuickActions } from '../components/QuickActions';
+import { DebtFormModal } from '../components/DebtFormModal';
+import { PaymentFormModal } from '../components/PaymentFormModal';
+import { IncomeFormModal } from '../components/IncomeFormModal';
 
 const { Header, Sider, Content } = Layout;
 
@@ -38,6 +42,9 @@ const menuItems: MenuItem[] = [
 export function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [debtModalOpen, setDebtModalOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [incomeModalOpen, setIncomeModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -197,6 +204,27 @@ export function MainLayout() {
           <Outlet />
         </Content>
       </Layout>
+
+      <QuickActions
+        onAddDebt={() => setDebtModalOpen(true)}
+        onAddPayment={() => setPaymentModalOpen(true)}
+        onAddIncome={() => setIncomeModalOpen(true)}
+      />
+
+      <DebtFormModal
+        open={debtModalOpen}
+        onClose={() => setDebtModalOpen(false)}
+      />
+
+      <PaymentFormModal
+        open={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+      />
+
+      <IncomeFormModal
+        open={incomeModalOpen}
+        onClose={() => setIncomeModalOpen(false)}
+      />
     </Layout>
   );
 }
