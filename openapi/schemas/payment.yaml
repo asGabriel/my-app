@@ -55,3 +55,30 @@ Payment:
       type: string
       nullable: true
       description: "DateTime string"
+
+CreatePaymentRequest:
+  type: object
+  required:
+    - debtId
+    - paymentDate
+  properties:
+    debtId:
+      type: string
+      format: uuid
+      description: "Unique identifier of the debt to pay"
+    accountId:
+      type: string
+      format: uuid
+      description: "Unique identifier of the account"
+      nullable: true
+    paymentDate:
+      type: string
+      description: "Payment date (YYYY-MM-DD)"
+    amount:
+      type: string
+      description: "Decimal value as string (optional, uses debt remaining amount if not provided)"
+      nullable: true
+    reconcile:
+      type: boolean
+      description: "Whether to reconcile the debt with this payment amount"
+      nullable: true

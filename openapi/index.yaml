@@ -16,9 +16,13 @@ paths:
   /financeManager/income/list:
     $ref: "./paths/income.yaml"
   /financeManager/payment/list:
-    $ref: "./paths/payment.yaml"
+    $ref: "./paths/payment.yaml#/list"
+  /financeManager/payment:
+    $ref: "./paths/payment.yaml#/create"
   /financeManager/debt/list:
-    $ref: "./paths/debt.yaml"
+    $ref: "./paths/debt.yaml#/list"
+  /financeManager/debt:
+    $ref: "./paths/debt.yaml#/create"
 
 components:
   schemas:
@@ -30,6 +34,10 @@ components:
       $ref: "./schemas/payment.yaml#/ListPaymentsFilters"
     Payment:
       $ref: "./schemas/payment.yaml#/Payment"
+    CreatePaymentRequest:
+      $ref: "./schemas/payment.yaml#/CreatePaymentRequest"
+    CreateDebtRequest:
+      $ref: "./schemas/debt.yaml#/CreateDebtRequest"
     DebtFilters:
       $ref: "./schemas/debt.yaml#/DebtFilters"
     Debt:

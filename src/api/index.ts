@@ -2,3 +2,5 @@ export * from './generated';
 export * from './hooks/useIncomes';
 export * from './hooks/usePayments';
 export * from './hooks/useDebts';
+export * from './hooks/useCreateDebt';
+export * from './hooks/useCreatePayment';

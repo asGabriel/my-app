@@ -1,3 +1,49 @@
+CreateDebtRequest:
+  type: object
+  required:
+    - description
+    - dueDate
+    - totalAmount
+    - isPaid
+  properties:
+    category:
+      type: string
+      description: "Categoria do débito"
+    tags:
+      type: array
+      items:
+        type: string
+      description: "Tags para identificar o débito"
+    description:
+      type: string
+      description: "Descrição do débito"
+    dueDate:
+      type: string
+      description: "Data de vencimento (YYYY-MM-DD)"
+    totalAmount:
+      type: string
+      description: "Valor total do débito"
+    paidAmount:
+      type: string
+      description: "Valor já pago"
+    discountAmount:
+      type: string
+      description: "Valor de desconto"
+    status:
+      type: string
+      enum: [UNPAID, PARTIALLY_PAID, SETTLED]
+      description: "Status do débito"
+    isPaid:
+      type: boolean
+      description: "Se o débito já foi pago"
+    accountId:
+      type: string
+      format: uuid
+      description: "ID da conta de pagamento"
+    installmentCount:
+      type: integer
+      description: "Número de parcelas"
+
 DebtFilters:
   type: object
   properties:

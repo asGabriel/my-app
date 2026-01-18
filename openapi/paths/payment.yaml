@@ -1,20 +1,41 @@
-post:
-  operationId: listPayments
-  summary: Lista os pagamentos do período
-  tags:
-    - Payment
-  requestBody:
-    required: true
-    content:
-      application/json:
-        schema:
-          $ref: "../schemas/payment.yaml#/ListPaymentsFilters"
-  responses:
-    "200":
-      description: Lista de pagamentos
+list:
+  post:
+    operationId: listPayments
+    summary: Lista os pagamentos do período
+    tags:
+      - Payment
+    requestBody:
+      required: true
       content:
         application/json:
           schema:
-            type: array
-            items:
+            $ref: "../schemas/payment.yaml#/ListPaymentsFilters"
+    responses:
+      "200":
+        description: Lista de pagamentos
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/payment.yaml#/Payment"
+
+create:
+  post:
+    operationId: createPayment
+    summary: Cria um novo pagamento
+    tags:
+      - Payment
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/payment.yaml#/CreatePaymentRequest"
+    responses:
+      "201":
+        description: Pagamento criado com sucesso
+        content:
+          application/json:
+            schema:
               $ref: "../schemas/payment.yaml#/Payment"

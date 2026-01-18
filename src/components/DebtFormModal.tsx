@@ -1,0 +1,159 @@
+import { useEffect } from 'react';
+import {
+    Modal,
+    Form,
+    Input,
+    DatePicker,
+    InputNumber,
+    // Switch,
+    App,
+} from 'antd';
+import dayjs from 'dayjs';
+import { useCreateDebt, CreateDebtRequest, Debt } from '../api';
+
+interface DebtFormModalProps {
+    open: boolean;
+    onClose: () => void;
+    initialData?: Debt;
+}
+
+export function DebtFormModal({ open, onClose, initialData }: DebtFormModalProps) {
+    const [form] = Form.useForm();
+    const { message } = App.useApp();
+    const createDebt = useCreateDebt();
+
+    const isEditing = !!initialData;
+
+    useEffect(() => {
+        if (open) {
+            if (initialData) {
+                form.setFieldsValue({
+                    ...initialData,
+                    dueDate: dayjs(initialData.dueDate),
+                    totalAmount: parseFloat(initialData.totalAmount),
+                    paidAmount: initialData.paidAmount ? parseFloat(initialData.paidAmount) : undefined,
+                    discountAmount: initialData.discountAmount ? parseFloat(initialData.discountAmount) : undefined,
+                });
+            } else {
+                form.resetFields();
+                form.setFieldsValue({
+                    dueDate: dayjs(),
+                });
+            }
+        }
+    }, [open, initialData, form]);
+
+    const handleSubmit = async () => {
+        try {
+            const values = await form.validateFields();
+            
+            const payload: CreateDebtRequest = {
+                description: values.description,
+                dueDate: values.dueDate.format('YYYY-MM-DD'),
+                totalAmount: values.totalAmount.toString(),
+                isPaid: false, // TODO: use values.isPaid when API supports it
+                discountAmount: values.discountAmount?.toString(),
+                installmentCount: values.installmentCount || undefined,
+            };
+
+            await createDebt.mutateAsync(payload);
+            message.success('Débito criado com sucesso!');
+            onClose();
+        } catch (error) {
+            if (error instanceof Error) {
+                message.error(error.message);
+            }
+        }
+    };
+
+    return (
+        <Modal
+            title={isEditing ? 'Editar Débito' : 'Novo Débito'}
+            open={open}
+            onCancel={onClose}
+            onOk={handleSubmit}
+            okText={isEditing ? 'Salvar' : 'Criar'}
+            cancelText="Cancelar"
+            confirmLoading={createDebt.isPending}
+            destroyOnClose
+            width={500}
+        >
+            <Form
+                form={form}
+                layout="vertical"
+                style={{ marginTop: 16 }}
+            >
+                <Form.Item
+                    name="description"
+                    label="Descrição"
+                    rules={[{ required: true, message: 'Informe a descrição' }]}
+                >
+                    <Input placeholder="Ex: Fatura do cartão, Aluguel, etc" />
+                </Form.Item>
+
+                <Form.Item
+                    name="dueDate"
+                    label="Data de Vencimento"
+                    rules={[{ required: true, message: 'Informe a data de vencimento' }]}
+                >
+                    <DatePicker
+                        format="DD/MM/YYYY"
+                        placeholder="Selecione a data"
+                        style={{ width: '100%' }}
+                    />
+                </Form.Item>
+
+                <Form.Item
+                    name="totalAmount"
+                    label="Valor Total"
+                    rules={[{ required: true, message: 'Informe o valor' }]}
+                >
+                    <InputNumber
+                        prefix="R$"
+                        placeholder="0,00"
+                        style={{ width: '100%' }}
+                        precision={2}
+                        decimalSeparator=","
+                        min={0}
+                    />
+                </Form.Item>
+
+                <Form.Item
+                    name="installmentCount"
+                    label="Número de Parcelas"
+                >
+                    <InputNumber
+                        placeholder="1"
+                        style={{ width: '100%' }}
+                        min={1}
+                        max={48}
+                    />
+                </Form.Item>
+
+                {/* TODO: re-enable when API supports isPaid
+                <Form.Item
+                    name="isPaid"
+                    label="Já foi pago?"
+                    valuePropName="checked"
+                >
+                    <Switch />
+                </Form.Item>
+                */}
+
+                <Form.Item
+                    name="discountAmount"
+                    label="Valor de Desconto"
+                >
+                    <InputNumber
+                        prefix="R$"
+                        placeholder="0,00"
+                        style={{ width: '100%' }}
+                        precision={2}
+                        decimalSeparator=","
+                        min={0}
+                    />
+                </Form.Item>
+            </Form>
+        </Modal>
+    );
+}
