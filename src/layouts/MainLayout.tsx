@@ -12,6 +12,7 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import type { MenuProps } from 'antd';
 import { useAuth } from '../contexts/AuthContext';
+import { QuickActions } from '../components/QuickActions';
 
 const { Header, Sider, Content } = Layout;
 
@@ -197,6 +198,12 @@ export function MainLayout() {
           <Outlet />
         </Content>
       </Layout>
+
+      <QuickActions
+        onAddDebt={() => console.log('Novo débito')}
+        onAddPayment={() => console.log('Novo pagamento')}
+        onAddIncome={() => console.log('Nova entrada')}
+      />
     </Layout>
   );
 }
