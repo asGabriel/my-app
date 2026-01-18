@@ -1,4 +1,10 @@
-const API_PATH = '/api/financeManager';
+// In development, Vite proxy handles /api -> backend
+// In production, we need the full URL
+const API_BASE_URL = import.meta.env.PROD 
+  ? import.meta.env.VITE_API_URL 
+  : '';
+
+const API_PATH = `${API_BASE_URL}/api/financeManager`;
 
 interface RequestOptions extends RequestInit {
   token?: string;
