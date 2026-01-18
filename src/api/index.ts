@@ -4,3 +4,4 @@ export * from './hooks/usePayments';
 export * from './hooks/useDebts';
 export * from './hooks/useCreateDebt';
 export * from './hooks/useCreatePayment';
+export * from './hooks/useCreateIncome';

@@ -16,6 +16,14 @@ const Income = z
     updatedAt: z.string().nullish(),
   })
   .passthrough();
+const CreateIncomeRequest = z
+  .object({
+    accountIdentification: z.string(),
+    description: z.string(),
+    amount: z.string(),
+    dateReference: z.string(),
+  })
+  .passthrough();
 const ListPaymentsFilters = z
   .object({
     debtIds: z.array(z.string().uuid()),
@@ -91,6 +99,7 @@ const CreateDebtRequest = z
 export const schemas = {
   ListIncomesFilters,
   Income,
+  CreateIncomeRequest,
   ListPaymentsFilters,
   Payment,
   CreatePaymentRequest,
@@ -127,6 +136,20 @@ const endpoints = makeApi([
       },
     ],
     response: z.array(Debt),
+  },
+  {
+    method: "post",
+    path: "/financeManager/income",
+    alias: "createIncome",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateIncomeRequest,
+      },
+    ],
+    response: Income,
   },
   {
     method: "post",
@@ -180,6 +203,7 @@ export function createApiClient(baseUrl: string, options?: ZodiosOptions) {
 
 export type ListIncomesFilters = z.infer<typeof ListIncomesFilters>;
 export type Income = z.infer<typeof Income>;
+export type CreateIncomeRequest = z.infer<typeof CreateIncomeRequest>;
 export type ListPaymentsFilters = z.infer<typeof ListPaymentsFilters>;
 export type Payment = z.infer<typeof Payment>;
 export type CreatePaymentRequest = z.infer<typeof CreatePaymentRequest>;
@@ -195,6 +219,9 @@ export type PaymentListResponse = z.infer<typeof PaymentListResponseSchema>;
 
 export const DebtListResponseSchema = z.array(Debt);
 export type DebtListResponse = z.infer<typeof DebtListResponseSchema>;
+
+export const IncomeResponseSchema = Income;
+export type IncomeResponse = z.infer<typeof IncomeResponseSchema>;
 
 export const PaymentResponseSchema = Payment;
 export type PaymentResponse = z.infer<typeof PaymentResponseSchema>;

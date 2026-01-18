@@ -39,3 +39,24 @@ Income:
       type: string
       nullable: true
       description: "DateTime string"
+
+CreateIncomeRequest:
+  type: object
+  required:
+    - accountIdentification
+    - description
+    - amount
+    - dateReference
+  properties:
+    accountIdentification:
+      type: string
+      description: "Account identification"
+    description:
+      type: string
+      description: "Income description"
+    amount:
+      type: string
+      description: "Decimal value as string"
+    dateReference:
+      type: string
+      description: "Reference date (YYYY-MM-DD)"

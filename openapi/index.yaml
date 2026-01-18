@@ -14,7 +14,9 @@ servers:
 
 paths:
   /financeManager/income/list:
-    $ref: "./paths/income.yaml"
+    $ref: "./paths/income.yaml#/list"
+  /financeManager/income:
+    $ref: "./paths/income.yaml#/create"
   /financeManager/payment/list:
     $ref: "./paths/payment.yaml#/list"
   /financeManager/payment:
@@ -30,6 +32,8 @@ components:
       $ref: "./schemas/income.yaml#/ListIncomesFilters"
     Income:
       $ref: "./schemas/income.yaml#/Income"
+    CreateIncomeRequest:
+      $ref: "./schemas/income.yaml#/CreateIncomeRequest"
     ListPaymentsFilters:
       $ref: "./schemas/payment.yaml#/ListPaymentsFilters"
     Payment:

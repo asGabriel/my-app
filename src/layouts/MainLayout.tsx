@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { QuickActions } from '../components/QuickActions';
 import { DebtFormModal } from '../components/DebtFormModal';
 import { PaymentFormModal } from '../components/PaymentFormModal';
+import { IncomeFormModal } from '../components/IncomeFormModal';
 
 const { Header, Sider, Content } = Layout;
 
@@ -43,6 +44,7 @@ export function MainLayout() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [debtModalOpen, setDebtModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [incomeModalOpen, setIncomeModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -206,7 +208,7 @@ export function MainLayout() {
       <QuickActions
         onAddDebt={() => setDebtModalOpen(true)}
         onAddPayment={() => setPaymentModalOpen(true)}
-        onAddIncome={() => console.log('Nova entrada')}
+        onAddIncome={() => setIncomeModalOpen(true)}
       />
 
       <DebtFormModal
@@ -217,6 +219,11 @@ export function MainLayout() {
       <PaymentFormModal
         open={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
+      />
+
+      <IncomeFormModal
+        open={incomeModalOpen}
+        onClose={() => setIncomeModalOpen(false)}
       />
     </Layout>
   );

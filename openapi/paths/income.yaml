@@ -1,20 +1,41 @@
-post:
-  operationId: listIncomes
-  summary: Lista as entradas do período
-  tags:
-    - Income
-  requestBody:
-    required: true
-    content:
-      application/json:
-        schema:
-          $ref: "../schemas/income.yaml#/ListIncomesFilters"
-  responses:
-    "200":
-      description: Lista de entradas
+list:
+  post:
+    operationId: listIncomes
+    summary: Lista as entradas do período
+    tags:
+      - Income
+    requestBody:
+      required: true
       content:
         application/json:
           schema:
-            type: array
-            items:
+            $ref: "../schemas/income.yaml#/ListIncomesFilters"
+    responses:
+      "200":
+        description: Lista de entradas
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/income.yaml#/Income"
+
+create:
+  post:
+    operationId: createIncome
+    summary: Cria uma nova entrada
+    tags:
+      - Income
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/income.yaml#/CreateIncomeRequest"
+    responses:
+      "201":
+        description: Entrada criada com sucesso
+        content:
+          application/json:
+            schema:
               $ref: "../schemas/income.yaml#/Income"
