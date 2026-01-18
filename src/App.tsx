@@ -6,6 +6,7 @@ import { AppRouter } from './routes';
 import { queryClient } from './services/queryClient';
 import './App.css';
 import './layouts/MainLayout.css';
+import './styles/responsive.css';
 
 function App() {
   return (
