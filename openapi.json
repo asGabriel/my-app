@@ -1,0 +1,197 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Finance Manager API",
+        "version": "1.0.0",
+        "description": "API para gerenciamento financeiro"
+    },
+    "servers": [
+        {
+            "url": "https://rust-api-h0m0.onrender.com/api",
+            "description": "Production server"
+        }
+    ],
+    "paths": {
+        "/financeManager/income/list": {
+            "post": {
+                "operationId": "listIncomes",
+                "summary": "Lista as entradas do período",
+                "tags": [
+                    "Income"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DateRangeRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Lista de entradas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Income"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/financeManager/expense/list": {
+            "post": {
+                "operationId": "listExpenses",
+                "summary": "Lista as saídas do período",
+                "tags": [
+                    "Expense"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DateRangeRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Lista de saídas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Expense"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "DateRangeRequest": {
+                "type": "object",
+                "properties": {
+                    "startDate": {
+                        "type": "string",
+                        "description": "Data de início (formato: YYYY-MM-DD)"
+                    },
+                    "endDate": {
+                        "type": "string",
+                        "description": "Data de fim (formato: YYYY-MM-DD)"
+                    }
+                }
+            },
+            "Income": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "account_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "amount": {
+                        "type": "string",
+                        "description": "Decimal value as string"
+                    },
+                    "reference": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Reference date (YYYY-MM-DD)"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "account_id",
+                    "description",
+                    "amount",
+                    "reference",
+                    "created_at"
+                ]
+            },
+            "Expense": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "account_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "amount": {
+                        "type": "string",
+                        "description": "Decimal value as string"
+                    },
+                    "reference": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Reference date (YYYY-MM-DD)"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "account_id",
+                    "description",
+                    "amount",
+                    "reference",
+                    "created_at"
+                ]
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    },
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ]
+}
