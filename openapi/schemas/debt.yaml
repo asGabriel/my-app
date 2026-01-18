@@ -1,0 +1,86 @@
+DebtFilters:
+  type: object
+  properties:
+    ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "Lista de IDs de dívidas para filtrar"
+    statuses:
+      type: array
+      items:
+        type: string
+        enum: [UNPAID, PARTIALLY_PAID, SETTLED]
+      description: "Lista de status para filtrar"
+    startDate:
+      type: string
+      description: "Data de início (formato: YYYY-MM-DD)"
+    endDate:
+      type: string
+      description: "Data de fim (formato: YYYY-MM-DD)"
+
+Debt:
+  type: object
+  required:
+    - id
+    - category
+    - tags
+    - identification
+    - description
+    - totalAmount
+    - paidAmount
+    - discountAmount
+    - remainingAmount
+    - dueDate
+    - status
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: "Unique identifier"
+    category:
+      type: string
+      description: "The category of the debt"
+    tags:
+      type: array
+      items:
+        type: string
+      description: "Tags that identify the debt"
+    identification:
+      type: string
+      description: "Human readable identification"
+    description:
+      type: string
+      description: "The description of the debt"
+    totalAmount:
+      type: string
+      description: "Decimal value as string"
+    paidAmount:
+      type: string
+      description: "Decimal value as string"
+    discountAmount:
+      type: string
+      description: "Decimal value as string"
+    remainingAmount:
+      type: string
+      description: "Decimal value as string"
+    dueDate:
+      type: string
+      description: "Due date (YYYY-MM-DD)"
+    status:
+      type: string
+      enum: [UNPAID, PARTIALLY_PAID, SETTLED]
+      description: "The status of the debt"
+    installmentCount:
+      type: integer
+      nullable: true
+      description: "The number of installments"
+    createdAt:
+      type: string
+      description: "DateTime string"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string"

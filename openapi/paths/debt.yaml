@@ -1,0 +1,20 @@
+post:
+  operationId: listDebts
+  summary: Lista os débitos do período
+  tags:
+    - Debt
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "../schemas/debt.yaml#/DebtFilters"
+  responses:
+    "200":
+      description: Lista de débitos
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "../schemas/debt.yaml#/Debt"

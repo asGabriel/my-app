@@ -17,6 +17,8 @@ paths:
     $ref: "./paths/income.yaml"
   /financeManager/payment/list:
     $ref: "./paths/payment.yaml"
+  /financeManager/debt/list:
+    $ref: "./paths/debt.yaml"
 
 components:
   schemas:
@@ -28,6 +30,10 @@ components:
       $ref: "./schemas/payment.yaml#/ListPaymentsFilters"
     Payment:
       $ref: "./schemas/payment.yaml#/Payment"
+    DebtFilters:
+      $ref: "./schemas/debt.yaml#/DebtFilters"
+    Debt:
+      $ref: "./schemas/debt.yaml#/Debt"
   securitySchemes:
     bearerAuth:
       type: http

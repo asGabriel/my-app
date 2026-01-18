@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Card, Col, Row, Statistic, Progress, Typography, Space, theme } from 'antd';
 import { FilterOutlined } from '@ant-design/icons';
-import { useIncomes, usePayments } from '../api';
+import { useIncomes, usePayments, useDebts, Debt } from '../api';
 import { FilterBar, FilterBarValues, getDefaultFilters } from '../components/FilterBar';
 import { Loading } from '../components/Loading';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatRelativeTime } from '../utils/format';
 
 const { Title, Text } = Typography;
 
@@ -22,6 +22,16 @@ export function Dashboard() {
         endDate: filters.endDate,
     });
 
+    const { data: debts, isLoading: isLoadingDebts } = useDebts({
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+    });
+
+    const debtsMap = useMemo(() => {
+        if (!debts) return new Map<string, Debt>();
+        return new Map(debts.map((debt) => [debt.id, debt]));
+    }, [debts]);
+
     const totalIncome = useMemo(() => {
         if (!incomes) return 0;
         return incomes.reduce((sum, income) => sum + parseFloat(income.amount), 0);
@@ -31,6 +41,35 @@ export function Dashboard() {
         if (!payments) return 0;
         return payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
     }, [payments]);
+
+    const recentActivities = useMemo(() => {
+        const activities: Array<{
+            id: string;
+            type: 'payment' | 'debt';
+            label: string;
+            description: string;
+            amount: number;
+            createdAt: string;
+        }> = [];
+
+        if (payments) {
+            payments.forEach((payment) => {
+                const debt = debtsMap.get(payment.debtId);
+                activities.push({
+                    id: payment.id,
+                    type: 'payment',
+                    label: 'Pagamento',
+                    description: debt?.description || '',
+                    amount: parseFloat(payment.amount),
+                    createdAt: payment.createdAt,
+                });
+            });
+        }
+
+        return activities
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 10);
+    }, [payments, debtsMap]);
 
     return (
         <div style={{ margin: -16 }}>
@@ -128,26 +167,66 @@ export function Dashboard() {
 
                     <Col xs={24} lg={12}>
                         <Card title="Atividade Recente" size="small">
-                            <Space direction="vertical" style={{ width: '100%' }} size="small">
-                                {[
-                                    { time: 'Agora', text: 'Novo usuário registrado' },
-                                    { time: '5 min', text: 'Venda #1234 realizada' },
-                                    { time: '15 min', text: 'Produto atualizado' },
-                                    { time: '1h', text: 'Relatório exportado' },
-                                ].map((item, index) => (
-                                    <div
-                                        key={index}
-                                        className="flex-between"
-                                        style={{
-                                            padding: '6px 0',
-                                            borderBottom: index < 3 ? `1px solid ${token.colorBorderSecondary}` : 'none',
-                                        }}
-                                    >
-                                        <Text style={{ fontSize: 13 }}>{item.text}</Text>
-                                        <Text type="secondary" style={{ fontSize: 12 }}>{item.time}</Text>
-                                    </div>
-                                ))}
-                            </Space>
+                            <Loading loading={isLoadingPayments || isLoadingDebts}>
+                                {recentActivities.length === 0 ? (
+                                    <Text type="secondary" style={{ fontSize: 13 }}>
+                                        Nenhuma atividade no período
+                                    </Text>
+                                ) : (
+                                    <Space direction="vertical" style={{ width: '100%' }} size="small">
+                                        {recentActivities.map((activity, index) => (
+                                            <div
+                                                key={activity.id}
+                                                style={{
+                                                    padding: '8px 0',
+                                                    borderBottom: index < recentActivities.length - 1
+                                                        ? `1px solid ${token.colorBorderSecondary}`
+                                                        : 'none',
+                                                }}
+                                            >
+                                                <div className="flex-between">
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <Text
+                                                            strong
+                                                            style={{
+                                                                fontSize: 12,
+                                                                color: activity.type === 'payment' ? token.colorError : token.colorWarning,
+                                                            }}
+                                                        >
+                                                            {activity.label}
+                                                        </Text>
+                                                        {activity.description && (
+                                                            <Text
+                                                                style={{ fontSize: 13, display: 'block' }}
+                                                                className="text-truncate"
+                                                            >
+                                                                {activity.description}
+                                                            </Text>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ textAlign: 'right', marginLeft: 8 }}>
+                                                        <Text
+                                                            style={{
+                                                                fontSize: 13,
+                                                                color: activity.type === 'payment' ? token.colorError : token.colorWarning,
+                                                                fontWeight: 500,
+                                                            }}
+                                                        >
+                                                            {activity.type === 'payment' ? '-' : '+'}R$ {formatCurrency(activity.amount)}
+                                                        </Text>
+                                                        <Text
+                                                            type="secondary"
+                                                            style={{ fontSize: 11, display: 'block' }}
+                                                        >
+                                                            {formatRelativeTime(activity.createdAt)}
+                                                        </Text>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </Space>
+                                )}
+                            </Loading>
                         </Card>
                     </Col>
                 </Row>
