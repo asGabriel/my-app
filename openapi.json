@@ -7,8 +7,14 @@
     },
     "servers": [
         {
-            "url": "https://rust-api-h0m0.onrender.com/api",
-            "description": "Production server"
+            "url": "{apiUrl}/api",
+            "description": "API Server",
+            "variables": {
+                "apiUrl": {
+                    "default": "http://localhost:5173",
+                    "description": "Base URL from VITE_API_URL env var"
+                }
+            }
         }
     ],
     "paths": {
