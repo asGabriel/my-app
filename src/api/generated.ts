@@ -8,12 +8,12 @@ const ListIncomesFilters = z
 const Income = z
   .object({
     id: z.string().uuid(),
-    account_id: z.string().uuid(),
+    accountId: z.string().uuid(),
     description: z.string(),
     amount: z.string(),
     reference: z.string(),
-    created_at: z.string().datetime({ offset: true }),
-    updated_at: z.string().datetime({ offset: true }).nullish(),
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
   })
   .passthrough();
 

@@ -12,16 +12,16 @@ Income:
   type: object
   required:
     - id
-    - account_id
+    - accountId
     - description
     - amount
     - reference
-    - created_at
+    - createdAt
   properties:
     id:
       type: string
       format: uuid
-    account_id:
+    accountId:
       type: string
       format: uuid
     description:
@@ -31,12 +31,11 @@ Income:
       description: "Decimal value as string"
     reference:
       type: string
-      format: date
       description: "Reference date (YYYY-MM-DD)"
-    created_at:
+    createdAt:
       type: string
-      format: date-time
-    updated_at:
+      description: "DateTime string"
+    updatedAt:
       type: string
-      format: date-time
       nullable: true
+      description: "DateTime string"
