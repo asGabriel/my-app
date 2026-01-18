@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_PATH = '/api/financeManager';
 
 interface RequestOptions extends RequestInit {
   token?: string;
@@ -16,7 +16,7 @@ export async function apiRequest<T>(
     ...options.headers,
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${API_PATH}${endpoint}`, {
     ...fetchOptions,
     headers,
   });

@@ -1,0 +1,42 @@
+ListIncomesFilters:
+  type: object
+  properties:
+    startDate:
+      type: string
+      description: "Data de início (formato: YYYY-MM-DD)"
+    endDate:
+      type: string
+      description: "Data de fim (formato: YYYY-MM-DD)"
+
+Income:
+  type: object
+  required:
+    - id
+    - account_id
+    - description
+    - amount
+    - reference
+    - created_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    account_id:
+      type: string
+      format: uuid
+    description:
+      type: string
+    amount:
+      type: string
+      description: "Decimal value as string"
+    reference:
+      type: string
+      format: date
+      description: "Reference date (YYYY-MM-DD)"
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+      nullable: true
