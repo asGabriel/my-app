@@ -101,101 +101,101 @@ export function PaymentFormModal({ open, onClose }: PaymentFormModalProps) {
             width={600}
             okButtonProps={{ disabled: !selectedDebt }}
         >
-            {isLoading ? (
-                <Loading />
-            ) : unpaidDebts.length === 0 ? (
-                <Empty description="Nenhum débito pendente encontrado" />
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    <Text strong>Selecione o débito a ser pago:</Text>
+            <Loading loading={isLoading}>
+                {unpaidDebts.length === 0 ? (
+                    <Empty description="Nenhum débito pendente encontrado" />
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <Text strong>Selecione o débito a ser pago:</Text>
 
-                    <List
-                        dataSource={unpaidDebts}
-                        style={{ maxHeight: 300, overflow: 'auto' }}
-                        renderItem={(debt) => (
-                            <Card
-                                size="small"
-                                style={{
-                                    marginBottom: 8,
-                                    cursor: 'pointer',
-                                    border: selectedDebt?.id === debt.id
-                                        ? `2px solid ${token.colorPrimary}`
-                                        : `1px solid ${token.colorBorderSecondary}`,
-                                    backgroundColor: selectedDebt?.id === debt.id
-                                        ? token.colorPrimaryBg
-                                        : undefined,
-                                }}
-                                onClick={() => handleSelectDebt(debt)}
-                            >
-                                <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                                    <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                                        <Text strong>{debt.description}</Text>
-                                        <Tag color={debtStatusColors[debt.status]}>
-                                            {formatDebtStatus(debt.status)}
-                                        </Tag>
-                                    </Space>
-                                    <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                                        <Text type="secondary">
-                                            Vencimento: {dayjs(debt.dueDate).format('DD/MM/YYYY')}
-                                        </Text>
-                                        <Text strong style={{ color: token.colorError }}>
-                                            Restante: {formatCurrency(parseFloat(debt.remainingAmount))}
-                                        </Text>
-                                    </Space>
-                                </Space>
-                            </Card>
-                        )}
-                    />
-
-                    {selectedDebt && (
-                        <Form
-                            form={form}
-                            layout="vertical"
-                        >
-                            <Form.Item
-                                name="paymentDate"
-                                label="Data do Pagamento"
-                                rules={[{ required: true, message: 'Informe a data do pagamento' }]}
-                            >
-                                <DatePicker
-                                    format="DD/MM/YYYY"
-                                    placeholder="Selecione a data"
-                                    style={{ width: '100%' }}
-                                />
-                            </Form.Item>
-
-                            <Form.Item
-                                name="amount"
-                                label="Valor do Pagamento"
-                            >
-                                <InputNumber
-                                    prefix="R$"
-                                    placeholder="0,00"
-                                    style={{ width: '100%' }}
-                                    precision={2}
-                                    decimalSeparator=","
-                                    min={0}
-                                    onChange={(value) => {
-                                        const remaining = parseFloat(selectedDebt.remainingAmount);
-                                        setShowReconcile(value !== null && value !== remaining);
+                        <List
+                            dataSource={unpaidDebts}
+                            style={{ maxHeight: 300, overflow: 'auto' }}
+                            renderItem={(debt) => (
+                                <Card
+                                    size="small"
+                                    style={{
+                                        marginBottom: 8,
+                                        cursor: 'pointer',
+                                        border: selectedDebt?.id === debt.id
+                                            ? `2px solid ${token.colorPrimary}`
+                                            : `1px solid ${token.colorBorderSecondary}`,
+                                        backgroundColor: selectedDebt?.id === debt.id
+                                            ? token.colorPrimaryBg
+                                            : undefined,
                                     }}
-                                />
-                            </Form.Item>
-
-                            {showReconcile && (
-                                <Form.Item
-                                    name="reconcile"
-                                    label="Baixar débito com este valor?"
-                                    valuePropName="checked"
-                                    tooltip="Marque se o valor pago é diferente do valor restante, mas deve baixar o débito completamente"
+                                    onClick={() => handleSelectDebt(debt)}
                                 >
-                                    <Switch />
-                                </Form.Item>
+                                    <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                                        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                                            <Text strong>{debt.description}</Text>
+                                            <Tag color={debtStatusColors[debt.status]}>
+                                                {formatDebtStatus(debt.status)}
+                                            </Tag>
+                                        </Space>
+                                        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                                            <Text type="secondary">
+                                                Vencimento: {dayjs(debt.dueDate).format('DD/MM/YYYY')}
+                                            </Text>
+                                            <Text strong style={{ color: token.colorError }}>
+                                                Restante: {formatCurrency(parseFloat(debt.remainingAmount))}
+                                            </Text>
+                                        </Space>
+                                    </Space>
+                                </Card>
                             )}
-                        </Form>
-                    )}
-                </div>
-            )}
+                        />
+
+                        {selectedDebt && (
+                            <Form
+                                form={form}
+                                layout="vertical"
+                            >
+                                <Form.Item
+                                    name="paymentDate"
+                                    label="Data do Pagamento"
+                                    rules={[{ required: true, message: 'Informe a data do pagamento' }]}
+                                >
+                                    <DatePicker
+                                        format="DD/MM/YYYY"
+                                        placeholder="Selecione a data"
+                                        style={{ width: '100%' }}
+                                    />
+                                </Form.Item>
+
+                                <Form.Item
+                                    name="amount"
+                                    label="Valor do Pagamento"
+                                >
+                                    <InputNumber
+                                        prefix="R$"
+                                        placeholder="0,00"
+                                        style={{ width: '100%' }}
+                                        precision={2}
+                                        decimalSeparator=","
+                                        min={0}
+                                        onChange={(value) => {
+                                            const remaining = parseFloat(selectedDebt.remainingAmount);
+                                            setShowReconcile(value !== null && value !== remaining);
+                                        }}
+                                    />
+                                </Form.Item>
+
+                                {showReconcile && (
+                                    <Form.Item
+                                        name="reconcile"
+                                        label="Baixar débito com este valor?"
+                                        valuePropName="checked"
+                                        tooltip="Marque se o valor pago é diferente do valor restante, mas deve baixar o débito completamente"
+                                    >
+                                        <Switch />
+                                    </Form.Item>
+                                )}
+                            </Form>
+                        )}
+                    </div>
+                )}
+            </Loading>
         </Modal>
     );
 }
