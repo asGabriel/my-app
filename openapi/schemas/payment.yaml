@@ -1,0 +1,57 @@
+ListPaymentsFilters:
+  type: object
+  properties:
+    debtIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "Lista de IDs de dívidas para filtrar"
+    accountIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "Lista de IDs de contas para filtrar"
+    startDate:
+      type: string
+      description: "Data de início (formato: YYYY-MM-DD)"
+    endDate:
+      type: string
+      description: "Data de fim (formato: YYYY-MM-DD)"
+
+Payment:
+  type: object
+  required:
+    - id
+    - debtId
+    - accountId
+    - amount
+    - paymentDate
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: "Unique identifier"
+    debtId:
+      type: string
+      format: uuid
+      description: "Unique identifier of the debt"
+    accountId:
+      type: string
+      format: uuid
+      description: "Unique identifier of the account (conta de pagamento)"
+    amount:
+      type: string
+      description: "Decimal value as string"
+    paymentDate:
+      type: string
+      description: "Payment date (YYYY-MM-DD)"
+    createdAt:
+      type: string
+      description: "DateTime string"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string"

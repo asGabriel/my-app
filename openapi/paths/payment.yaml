@@ -1,0 +1,20 @@
+post:
+  operationId: listPayments
+  summary: Lista os pagamentos do período
+  tags:
+    - Payment
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "../schemas/payment.yaml#/ListPaymentsFilters"
+  responses:
+    "200":
+      description: Lista de pagamentos
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "../schemas/payment.yaml#/Payment"

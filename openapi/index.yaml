@@ -15,6 +15,8 @@ servers:
 paths:
   /financeManager/income/list:
     $ref: "./paths/income.yaml"
+  /financeManager/payment/list:
+    $ref: "./paths/payment.yaml"
 
 components:
   schemas:
@@ -22,6 +24,10 @@ components:
       $ref: "./schemas/income.yaml#/ListIncomesFilters"
     Income:
       $ref: "./schemas/income.yaml#/Income"
+    ListPaymentsFilters:
+      $ref: "./schemas/payment.yaml#/ListPaymentsFilters"
+    Payment:
+      $ref: "./schemas/payment.yaml#/Payment"
   securitySchemes:
     bearerAuth:
       type: http
