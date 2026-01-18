@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Card, Col, Row, Statistic, Progress, Typography, Space, Spin, theme } from 'antd';
+import { Card, Col, Row, Statistic, Progress, Typography, Space, theme } from 'antd';
 import {
     DollarOutlined,
     FilterOutlined,
 } from '@ant-design/icons';
 import { useIncomes } from '../api';
 import { FilterBar, FilterBarValues, getDefaultFilters } from '../components/FilterBar';
+import { Loading } from '../components/Loading';
 
 const { Title, Text } = Typography;
 
@@ -60,20 +61,15 @@ export function Dashboard() {
 
                     <Col xs={12} sm={12} lg={6}>
                         <Card size="small" hoverable className="stats-card">
-                            {isLoadingIncomes ? (
-                                <div className="flex-center" style={{ padding: 10 }}>
-                                    <Spin size="small" />
-                                </div>
-                            ) : (
+                            <Loading loading={isLoadingIncomes}>
                                 <Statistic
                                     title="Entradas"
                                     value={totalIncome}
-                                    precision={2}
                                     prefix={<DollarOutlined />}
                                     valueStyle={{ color: token.blue }}
                                     suffix="R$"
                                 />
-                            )}
+                            </Loading>
                         </Card>
                     </Col>
 
