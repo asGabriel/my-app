@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: Finance Manager API
+  version: 1.0.0
+  description: API para gerenciamento financeiro
+
+servers:
+  - url: "{apiUrl}/api"
+    description: API Server
+    variables:
+      apiUrl:
+        default: http://localhost:5173
+        description: Base URL from VITE_API_URL env var
+
+paths:
+  /financeManager/income/list:
+    $ref: "./paths/income.yaml"
+  /financeManager/payment/list:
+    $ref: "./paths/payment.yaml"
+  /financeManager/debt/list:
+    $ref: "./paths/debt.yaml"
+
+components:
+  schemas:
+    ListIncomesFilters:
+      $ref: "./schemas/income.yaml#/ListIncomesFilters"
+    Income:
+      $ref: "./schemas/income.yaml#/Income"
+    ListPaymentsFilters:
+      $ref: "./schemas/payment.yaml#/ListPaymentsFilters"
+    Payment:
+      $ref: "./schemas/payment.yaml#/Payment"
+    DebtFilters:
+      $ref: "./schemas/debt.yaml#/DebtFilters"
+    Debt:
+      $ref: "./schemas/debt.yaml#/Debt"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []

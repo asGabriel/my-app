@@ -1,0 +1,20 @@
+post:
+  operationId: listIncomes
+  summary: Lista as entradas do período
+  tags:
+    - Income
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "../schemas/income.yaml#/ListIncomesFilters"
+  responses:
+    "200":
+      description: Lista de entradas
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "../schemas/income.yaml#/Income"

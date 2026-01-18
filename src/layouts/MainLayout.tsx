@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layout, Menu, Button, Drawer, theme } from 'antd';
+import { Layout, Menu, Button, Drawer, theme, Dropdown, Avatar } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -7,9 +7,11 @@ import {
   SettingOutlined,
   UserOutlined,
   MenuOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import type { MenuProps } from 'antd';
+import { useAuth } from '../contexts/AuthContext';
 
 const { Header, Sider, Content } = Layout;
 
@@ -38,6 +40,7 @@ export function MainLayout() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
@@ -46,6 +49,26 @@ export function MainLayout() {
     navigate(key);
     setMobileDrawerOpen(false);
   };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'user',
+      label: user?.name || 'Usuário',
+      disabled: true,
+    },
+    { type: 'divider' },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: 'Sair',
+      onClick: handleLogout,
+    },
+  ];
 
   const siderContent = (
     <Menu
@@ -152,7 +175,14 @@ export function MainLayout() {
             }}
           />
 
-          <span style={{ fontWeight: 600, fontSize: 18 }}>Dashboard</span>
+          <span style={{ fontWeight: 600, fontSize: 18, flex: 1 }}>Dashboard</span>
+
+          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+            <Avatar
+              style={{ backgroundColor: '#1890ff', cursor: 'pointer' }}
+              icon={<UserOutlined />}
+            />
+          </Dropdown>
         </Header>
 
         <Content
