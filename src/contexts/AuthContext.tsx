@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { authRequest, ApiError } from '../services/api';
 import { UserResponse } from '../api/generated';
+import { queryClient } from '../services/queryClient';
 
 interface User {
     id: string;
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(USER_KEY);
         setToken(null);
         setUser(null);
+        queryClient.clear();
     }, []);
 
     useEffect(() => {
