@@ -70,6 +70,7 @@ Debt:
   type: object
   required:
     - id
+    - clientId
     - category
     - tags
     - identification
@@ -86,6 +87,10 @@ Debt:
       type: string
       format: uuid
       description: "Unique identifier"
+    clientId:
+      type: string
+      format: uuid
+      description: "Client identifier"
     category:
       type: string
       description: "The category of the debt"

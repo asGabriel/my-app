@@ -9,12 +9,14 @@ export function useCreateDebt() {
 
   return useMutation({
     mutationFn: async (data: CreateDebtRequest) => {
+      if (!token) throw new Error('Not authenticated');
+      
       const response = await apiRequest<DebtResponse>(
         '/debt',
         {
           method: 'POST',
           body: JSON.stringify(data),
-          token: token || undefined,
+          token,
         }
       );
 

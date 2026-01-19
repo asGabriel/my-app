@@ -13,6 +13,12 @@ servers:
         description: Base URL from VITE_API_URL env var
 
 paths:
+  /auth/login:
+    $ref: "./paths/auth.yaml#/login"
+  /auth/register:
+    $ref: "./paths/auth.yaml#/register"
+  /auth/me:
+    $ref: "./paths/auth.yaml#/me"
   /financeManager/income/list:
     $ref: "./paths/income.yaml#/list"
   /financeManager/income:
@@ -28,6 +34,14 @@ paths:
 
 components:
   schemas:
+    LoginRequest:
+      $ref: "./schemas/auth.yaml#/LoginRequest"
+    RegisterRequest:
+      $ref: "./schemas/auth.yaml#/RegisterRequest"
+    UserResponse:
+      $ref: "./schemas/auth.yaml#/UserResponse"
+    AuthResponse:
+      $ref: "./schemas/auth.yaml#/AuthResponse"
     ListIncomesFilters:
       $ref: "./schemas/income.yaml#/ListIncomesFilters"
     Income:

@@ -9,12 +9,14 @@ export function useCreatePayment() {
 
   return useMutation({
     mutationFn: async (data: CreatePaymentRequest) => {
+      if (!token) throw new Error('Not authenticated');
+      
       const response = await apiRequest<PaymentResponse>(
         '/payment',
         {
           method: 'POST',
           body: JSON.stringify(data),
-          token: token || undefined,
+          token,
         }
       );
 

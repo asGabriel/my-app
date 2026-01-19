@@ -9,12 +9,14 @@ export function useCreateIncome() {
 
   return useMutation({
     mutationFn: async (data: CreateIncomeRequest) => {
+      if (!token) throw new Error('Not authenticated');
+      
       const response = await apiRequest<IncomeResponse>(
         '/income',
         {
           method: 'POST',
           body: JSON.stringify(data),
-          token: token || undefined,
+          token,
         }
       );
 

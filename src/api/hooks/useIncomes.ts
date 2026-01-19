@@ -18,11 +18,12 @@ export function useIncomes(filters: ListIncomesFilters) {
         {
           method: 'POST',
           body: JSON.stringify(filters),
-          token: token || undefined,
+          token: token!,
         }
       );
 
       return IncomeListResponseSchema.parse(data);
     },
+    enabled: !!token,
   });
 }

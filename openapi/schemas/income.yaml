@@ -12,6 +12,7 @@ Income:
   type: object
   required:
     - id
+    - clientId
     - accountId
     - description
     - amount
@@ -21,6 +22,10 @@ Income:
     id:
       type: string
       format: uuid
+    clientId:
+      type: string
+      format: uuid
+      description: "Client identifier"
     accountId:
       type: string
       format: uuid

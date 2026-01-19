@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 const { Title, Text } = Typography;
 
 interface LoginForm {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -23,11 +23,11 @@ export function Login() {
   const onFinish = async (values: LoginForm) => {
     setLoading(true);
     try {
-      await login(values.email, values.password);
+      await login(values.username, values.password);
       message.success('Login realizado com sucesso!');
       navigate(from, { replace: true });
     } catch {
-      message.error('Email ou senha inválidos');
+      message.error('Usuário ou senha inválidos');
     } finally {
       setLoading(false);
     }
@@ -66,13 +66,12 @@ export function Login() {
             size="large"
           >
             <Form.Item
-              name="email"
+              name="username"
               rules={[
-                { required: true, message: 'Digite seu email' },
-                { type: 'email', message: 'Email inválido' },
+                { required: true, message: 'Digite seu usuário' },
               ]}
             >
-              <Input prefix={<UserOutlined />} placeholder="Email" />
+              <Input prefix={<UserOutlined />} placeholder="Usuário" />
             </Form.Item>
 
             <Form.Item

@@ -24,6 +24,7 @@ Payment:
   type: object
   required:
     - id
+    - clientId
     - debtId
     - accountId
     - amount
@@ -34,6 +35,10 @@ Payment:
       type: string
       format: uuid
       description: "Unique identifier"
+    clientId:
+      type: string
+      format: uuid
+      description: "Client identifier"
     debtId:
       type: string
       format: uuid

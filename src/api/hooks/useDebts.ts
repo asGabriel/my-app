@@ -18,11 +18,12 @@ export function useDebts(filters: DebtFilters) {
         {
           method: 'POST',
           body: JSON.stringify(filters),
-          token: token || undefined,
+          token: token!,
         }
       );
 
       return DebtListResponseSchema.parse(data);
     },
+    enabled: !!token,
   });
 }

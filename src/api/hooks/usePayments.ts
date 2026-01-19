@@ -18,11 +18,12 @@ export function usePayments(filters: ListPaymentsFilters) {
         {
           method: 'POST',
           body: JSON.stringify(filters),
-          token: token || undefined,
+          token: token!,
         }
       );
 
       return PaymentListResponseSchema.parse(data);
     },
+    enabled: !!token,
   });
 }

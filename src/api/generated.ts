@@ -1,6 +1,32 @@
 import { makeApi, Zodios, type ZodiosOptions } from "@zodios/core";
 import { z } from "zod";
 
+const LoginRequest = z
+  .object({ username: z.string(), password: z.string() })
+  .passthrough();
+const UserResponse = z
+  .object({
+    id: z.string().uuid(),
+    clientId: z.string().uuid(),
+    username: z.string(),
+    email: z.string().email(),
+    name: z.string(),
+    is_active: z.boolean(),
+    created_at: z.string().datetime({ offset: true }),
+    updated_at: z.string().datetime({ offset: true }).nullish(),
+  })
+  .passthrough();
+const AuthResponse = z
+  .object({ token: z.string(), user: UserResponse })
+  .passthrough();
+const RegisterRequest = z
+  .object({
+    username: z.string(),
+    email: z.string().email(),
+    password: z.string(),
+    name: z.string(),
+  })
+  .passthrough();
 const ListIncomesFilters = z
   .object({ startDate: z.string(), endDate: z.string() })
   .partial()
@@ -8,6 +34,7 @@ const ListIncomesFilters = z
 const Income = z
   .object({
     id: z.string().uuid(),
+    clientId: z.string().uuid(),
     accountId: z.string().uuid(),
     description: z.string(),
     amount: z.string(),
@@ -36,6 +63,7 @@ const ListPaymentsFilters = z
 const Payment = z
   .object({
     id: z.string().uuid(),
+    clientId: z.string().uuid(),
     debtId: z.string().uuid(),
     accountId: z.string().uuid(),
     amount: z.string(),
@@ -65,6 +93,7 @@ const DebtFilters = z
 const Debt = z
   .object({
     id: z.string().uuid(),
+    clientId: z.string().uuid(),
     category: z.string(),
     tags: z.array(z.string()),
     identification: z.string(),
@@ -97,6 +126,10 @@ const CreateDebtRequest = z
   .passthrough();
 
 export const schemas = {
+  LoginRequest,
+  UserResponse,
+  AuthResponse,
+  RegisterRequest,
   ListIncomesFilters,
   Income,
   CreateIncomeRequest,
@@ -109,6 +142,62 @@ export const schemas = {
 };
 
 const endpoints = makeApi([
+  {
+    method: "post",
+    path: "/auth/login",
+    alias: "login",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: LoginRequest,
+      },
+    ],
+    response: AuthResponse,
+    errors: [
+      {
+        status: 401,
+        description: `Credenciais inválidas`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/auth/me",
+    alias: "getMe",
+    requestFormat: "json",
+    response: UserResponse,
+    errors: [
+      {
+        status: 401,
+        description: `Não autenticado`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/auth/register",
+    alias: "register",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: RegisterRequest,
+      },
+    ],
+    response: AuthResponse,
+    errors: [
+      {
+        status: 400,
+        description: `Dados inválidos`,
+        schema: z.void(),
+      },
+    ],
+  },
   {
     method: "post",
     path: "/financeManager/debt",
@@ -200,6 +289,13 @@ export const api = new Zodios(endpoints);
 export function createApiClient(baseUrl: string, options?: ZodiosOptions) {
   return new Zodios(baseUrl, endpoints, options);
 }
+
+export type LoginRequest = z.infer<typeof LoginRequest>;
+export type RegisterRequest = z.infer<typeof RegisterRequest>;
+export type UserResponse = z.infer<typeof UserResponse>;
+export type AuthResponse = z.infer<typeof AuthResponse>;
+export const UserResponseSchema = UserResponse;
+export const AuthResponseSchema = AuthResponse;
 
 export type ListIncomesFilters = z.infer<typeof ListIncomesFilters>;
 export type Income = z.infer<typeof Income>;

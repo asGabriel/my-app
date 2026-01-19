@@ -1,0 +1,61 @@
+login:
+  post:
+    operationId: login
+    summary: Realiza login do usuário
+    tags:
+      - Auth
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/auth.yaml#/LoginRequest"
+    responses:
+      "200":
+        description: Login realizado com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/AuthResponse"
+      "401":
+        description: Credenciais inválidas
+
+register:
+  post:
+    operationId: register
+    summary: Registra um novo usuário
+    tags:
+      - Auth
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/auth.yaml#/RegisterRequest"
+    responses:
+      "201":
+        description: Usuário registrado com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/AuthResponse"
+      "400":
+        description: Dados inválidos
+
+me:
+  get:
+    operationId: getMe
+    summary: Retorna os dados do usuário autenticado
+    tags:
+      - Auth
+    responses:
+      "200":
+        description: Dados do usuário
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/UserResponse"
+      "401":
+        description: Não autenticado
