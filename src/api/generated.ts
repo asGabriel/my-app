@@ -124,6 +124,30 @@ const CreateDebtRequest = z
     installmentCount: z.number().int().optional(),
   })
   .passthrough();
+const AccountListFilters = z
+  .object({
+    clientId: z.string().uuid(),
+    ids: z.array(z.string().uuid()),
+    identifications: z.array(z.string()),
+  })
+  .partial()
+  .passthrough();
+const AccountConfiguration = z
+  .object({ defaultDueDate: z.number().int().nullable() })
+  .partial()
+  .passthrough();
+const BankAccount = z
+  .object({
+    id: z.string().uuid(),
+    clientId: z.string().uuid(),
+    name: z.string(),
+    owner: z.string(),
+    identification: z.string(),
+    configuration: AccountConfiguration,
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
+  })
+  .passthrough();
 
 export const schemas = {
   LoginRequest,
@@ -139,6 +163,9 @@ export const schemas = {
   DebtFilters,
   Debt,
   CreateDebtRequest,
+  AccountListFilters,
+  AccountConfiguration,
+  BankAccount,
 };
 
 const endpoints = makeApi([
@@ -197,6 +224,20 @@ const endpoints = makeApi([
         schema: z.void(),
       },
     ],
+  },
+  {
+    method: "post",
+    path: "/financeManager/account/list",
+    alias: "listAccounts",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: AccountListFilters,
+      },
+    ],
+    response: z.array(BankAccount),
   },
   {
     method: "post",
@@ -307,6 +348,10 @@ export type DebtFilters = z.infer<typeof DebtFilters>;
 export type Debt = z.infer<typeof Debt>;
 export type CreateDebtRequest = z.infer<typeof CreateDebtRequest>;
 
+export type AccountListFilters = z.infer<typeof AccountListFilters>;
+export type AccountConfiguration = z.infer<typeof AccountConfiguration>;
+export type BankAccount = z.infer<typeof BankAccount>;
+
 export const IncomeListResponseSchema = z.array(Income);
 export type IncomeListResponse = z.infer<typeof IncomeListResponseSchema>;
 
@@ -316,6 +361,9 @@ export type PaymentListResponse = z.infer<typeof PaymentListResponseSchema>;
 export const DebtListResponseSchema = z.array(Debt);
 export type DebtListResponse = z.infer<typeof DebtListResponseSchema>;
 
+export const BankAccountListResponseSchema = z.array(BankAccount);
+export type BankAccountListResponse = z.infer<typeof BankAccountListResponseSchema>;
+
 export const IncomeResponseSchema = Income;
 export type IncomeResponse = z.infer<typeof IncomeResponseSchema>;
 
@@ -324,3 +372,6 @@ export type PaymentResponse = z.infer<typeof PaymentResponseSchema>;
 
 export const DebtResponseSchema = Debt;
 export type DebtResponse = z.infer<typeof DebtResponseSchema>;
+
+export const BankAccountResponseSchema = BankAccount;
+export type BankAccountResponse = z.infer<typeof BankAccountResponseSchema>;

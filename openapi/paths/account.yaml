@@ -1,0 +1,21 @@
+list:
+  post:
+    operationId: listAccounts
+    summary: Lista as contas bancárias
+    tags:
+      - Account
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/account.yaml#/AccountListFilters"
+    responses:
+      "200":
+        description: Lista de contas bancárias
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/account.yaml#/BankAccount"

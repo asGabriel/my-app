@@ -1,0 +1,64 @@
+AccountListFilters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      format: uuid
+      description: "Client identifier"
+    ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "List of account IDs to filter"
+    identifications:
+      type: array
+      items:
+        type: string
+      description: "List of account identifications to filter"
+
+AccountConfiguration:
+  type: object
+  properties:
+    defaultDueDate:
+      type: integer
+      nullable: true
+      description: "Default due date day of the month"
+
+BankAccount:
+  type: object
+  required:
+    - id
+    - clientId
+    - name
+    - owner
+    - identification
+    - configuration
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: "Unique identifier"
+    clientId:
+      type: string
+      format: uuid
+      description: "Client identifier"
+    name:
+      type: string
+      description: "Account name"
+    owner:
+      type: string
+      description: "Account owner"
+    identification:
+      type: string
+      description: "Account identification"
+    configuration:
+      $ref: "#/AccountConfiguration"
+    createdAt:
+      type: string
+      description: "DateTime string"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string"
