@@ -39,3 +39,25 @@ create:
           application/json:
             schema:
               $ref: "../schemas/debt.yaml#/Debt"
+
+listInstallments:
+  post:
+    operationId: listInstallments
+    summary: Lista as parcelas dos débitos
+    tags:
+      - Debt
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/debt.yaml#/InstallmentFilters"
+    responses:
+      "200":
+        description: Lista de parcelas
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/debt.yaml#/Installment"

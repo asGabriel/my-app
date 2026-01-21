@@ -31,8 +31,12 @@ paths:
     $ref: "./paths/debt.yaml#/list"
   /financeManager/debt:
     $ref: "./paths/debt.yaml#/create"
-  /financeManager/account/list:
-    $ref: "./paths/account.yaml#/list"
+  /financeManager/debt/installment/list:
+    $ref: "./paths/debt.yaml#/listInstallments"
+  /financeManager/financialInstrument/list:
+    $ref: "./paths/financial_instrument.yaml#/list"
+  /financeManager/financialInstrument:
+    $ref: "./paths/financial_instrument.yaml#/createOrUpdate"
 
 components:
   schemas:
@@ -62,12 +66,26 @@ components:
       $ref: "./schemas/debt.yaml#/DebtFilters"
     Debt:
       $ref: "./schemas/debt.yaml#/Debt"
-    AccountListFilters:
-      $ref: "./schemas/account.yaml#/AccountListFilters"
-    AccountConfiguration:
-      $ref: "./schemas/account.yaml#/AccountConfiguration"
-    BankAccount:
-      $ref: "./schemas/account.yaml#/BankAccount"
+    FinancialInstrumentType:
+      $ref: "./schemas/financial_instrument.yaml#/FinancialInstrumentType"
+    InstrumentConfiguration:
+      $ref: "./schemas/financial_instrument.yaml#/InstrumentConfiguration"
+    FinancialInstrumentListFilters:
+      $ref: "./schemas/financial_instrument.yaml#/FinancialInstrumentListFilters"
+    FinancialInstrument:
+      $ref: "./schemas/financial_instrument.yaml#/FinancialInstrument"
+    CreateFinancialInstrumentRequest:
+      $ref: "./schemas/financial_instrument.yaml#/CreateFinancialInstrumentRequest"
+    UpdateFinancialInstrumentRequest:
+      $ref: "./schemas/financial_instrument.yaml#/UpdateFinancialInstrumentRequest"
+    DebtCategory:
+      $ref: "./schemas/debt.yaml#/DebtCategory"
+    ExpenseType:
+      $ref: "./schemas/debt.yaml#/ExpenseType"
+    InstallmentFilters:
+      $ref: "./schemas/debt.yaml#/InstallmentFilters"
+    Installment:
+      $ref: "./schemas/debt.yaml#/Installment"
   securitySchemes:
     bearerAuth:
       type: http

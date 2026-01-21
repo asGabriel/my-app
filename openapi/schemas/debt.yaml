@@ -1,3 +1,22 @@
+DebtCategory:
+  type: string
+  enum:
+    - UNKNOWN
+    - HOME
+    - TRANSPORT
+    - HEALTH
+    - FOOD
+    - LIFESTYLE
+    - EDUCATION
+    - GOALS
+    - PERSONAL
+
+ExpenseType:
+  type: string
+  enum:
+    - FIXED
+    - VARIABLE
+
 CreateDebtRequest:
   type: object
   required:
@@ -36,13 +55,17 @@ CreateDebtRequest:
     isPaid:
       type: boolean
       description: "Se o débito já foi pago"
-    accountId:
+    financialInstrumentId:
       type: string
       format: uuid
-      description: "ID da conta de pagamento"
+      description: "ID do instrumento financeiro"
     installmentCount:
       type: integer
       description: "Número de parcelas"
+    expenseType:
+      $ref: "#/ExpenseType"
+      nullable: true
+      description: "Tipo de despesa"
 
 DebtFilters:
   type: object
@@ -128,6 +151,67 @@ Debt:
       type: integer
       nullable: true
       description: "The number of installments"
+    expenseType:
+      $ref: "#/ExpenseType"
+      description: "The expense type"
+    createdAt:
+      type: string
+      description: "DateTime string"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string"
+
+InstallmentFilters:
+  type: object
+  properties:
+    debtIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "Lista de IDs de débitos para filtrar parcelas"
+    isPaid:
+      type: boolean
+      description: "Filtrar por parcelas pagas ou não pagas"
+    startDate:
+      type: string
+      description: "Data de início (formato: YYYY-MM-DD)"
+    endDate:
+      type: string
+      description: "Data de fim (formato: YYYY-MM-DD)"
+
+Installment:
+  type: object
+  required:
+    - debtId
+    - installmentId
+    - dueDate
+    - amount
+    - isPaid
+    - createdAt
+  properties:
+    debtId:
+      type: string
+      format: uuid
+      description: "ID do débito"
+    installmentId:
+      type: integer
+      description: "Número da parcela"
+    dueDate:
+      type: string
+      description: "Data de vencimento (YYYY-MM-DD)"
+    amount:
+      type: string
+      description: "Valor da parcela"
+    isPaid:
+      type: boolean
+      description: "Se a parcela foi paga"
+    paymentId:
+      type: string
+      format: uuid
+      nullable: true
+      description: "ID do pagamento (se pago)"
     createdAt:
       type: string
       description: "DateTime string"

@@ -13,7 +13,7 @@ Income:
   required:
     - id
     - clientId
-    - accountId
+    - financialInstrumentId
     - description
     - amount
     - reference
@@ -26,7 +26,7 @@ Income:
       type: string
       format: uuid
       description: "Client identifier"
-    accountId:
+    financialInstrumentId:
       type: string
       format: uuid
     description:
@@ -48,14 +48,14 @@ Income:
 CreateIncomeRequest:
   type: object
   required:
-    - accountIdentification
+    - financialInstrumentIdentification
     - description
     - amount
     - dateReference
   properties:
-    accountIdentification:
+    financialInstrumentIdentification:
       type: string
-      description: "Account identification"
+      description: "Financial instrument identification"
     description:
       type: string
       description: "Income description"

@@ -2,19 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
-  AccountListFilters, 
-  BankAccountListResponse, 
-  BankAccountListResponseSchema 
+  FinancialInstrumentListFilters, 
+  FinancialInstrumentListResponse, 
+  FinancialInstrumentListResponseSchema 
 } from '../generated';
 
-export function useAccounts(filters: AccountListFilters = {}) {
+export function useFinancialInstruments(filters: FinancialInstrumentListFilters = {}) {
   const { token } = useAuth();
 
   return useQuery({
-    queryKey: ['accounts', filters],
+    queryKey: ['financial-instruments', filters],
     queryFn: async () => {
-      const data = await apiRequest<BankAccountListResponse>(
-        '/account/list',
+      const data = await apiRequest<FinancialInstrumentListResponse>(
+        '/financialInstrument/list',
         {
           method: 'POST',
           body: JSON.stringify(filters),
@@ -22,7 +22,7 @@ export function useAccounts(filters: AccountListFilters = {}) {
         }
       );
 
-      return BankAccountListResponseSchema.parse(data);
+      return FinancialInstrumentListResponseSchema.parse(data);
     },
     enabled: !!token,
   });

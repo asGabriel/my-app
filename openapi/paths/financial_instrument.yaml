@@ -1,0 +1,59 @@
+list:
+  post:
+    operationId: listFinancialInstruments
+    summary: Lista os instrumentos financeiros
+    tags:
+      - FinancialInstrument
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/financial_instrument.yaml#/FinancialInstrumentListFilters"
+    responses:
+      "200":
+        description: Lista de instrumentos financeiros
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/financial_instrument.yaml#/FinancialInstrument"
+
+createOrUpdate:
+  post:
+    operationId: createFinancialInstrument
+    summary: Cria um novo instrumento financeiro
+    tags:
+      - FinancialInstrument
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/financial_instrument.yaml#/CreateFinancialInstrumentRequest"
+    responses:
+      "201":
+        description: Instrumento financeiro criado
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/financial_instrument.yaml#/FinancialInstrument"
+  patch:
+    operationId: updateFinancialInstrument
+    summary: Atualiza um instrumento financeiro
+    tags:
+      - FinancialInstrument
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/financial_instrument.yaml#/UpdateFinancialInstrumentRequest"
+    responses:
+      "200":
+        description: Instrumento financeiro atualizado
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/financial_instrument.yaml#/FinancialInstrument"
