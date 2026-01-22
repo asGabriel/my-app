@@ -80,6 +80,8 @@ components:
       $ref: "./schemas/financial_instrument.yaml#/UpdateFinancialInstrumentRequest"
     DebtCategory:
       $ref: "./schemas/debt.yaml#/DebtCategory"
+    DebtStatus:
+      $ref: "./schemas/debt.yaml#/DebtStatus"
     ExpenseType:
       $ref: "./schemas/debt.yaml#/ExpenseType"
     InstallmentFilters:

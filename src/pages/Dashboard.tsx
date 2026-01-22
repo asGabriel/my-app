@@ -4,7 +4,8 @@ import { FilterOutlined } from '@ant-design/icons';
 import { useIncomes, usePayments, useDebts, Debt } from '../api';
 import { FilterBar, FilterBarValues, getDefaultFilters } from '../components/FilterBar';
 import { Loading } from '../components/Loading';
-import { formatCurrency, formatRelativeTime, formatDebtStatus, debtStatusColors, DebtStatus } from '../utils/format';
+import { formatCurrency, formatRelativeTime } from '../utils/format';
+import { formatDebtStatus, DEBT_STATUS_COLORS, DebtStatus } from '../utils/constants';
 
 const { Title, Text } = Typography;
 
@@ -160,14 +161,14 @@ export function Dashboard() {
                                                                     fontSize: 11,
                                                                     padding: '1px 6px',
                                                                     borderRadius: 4,
-                                                                    background: debtStatusColors[debt.status as DebtStatus] === 'success'
+                                                                    background: DEBT_STATUS_COLORS[debt.status as DebtStatus] === 'success'
                                                                         ? token.colorSuccessBg
-                                                                        : debtStatusColors[debt.status as DebtStatus] === 'warning'
+                                                                        : DEBT_STATUS_COLORS[debt.status as DebtStatus] === 'warning'
                                                                             ? token.colorWarningBg
                                                                             : token.colorInfoBg,
-                                                                    color: debtStatusColors[debt.status as DebtStatus] === 'success'
+                                                                    color: DEBT_STATUS_COLORS[debt.status as DebtStatus] === 'success'
                                                                         ? token.colorSuccess
-                                                                        : debtStatusColors[debt.status as DebtStatus] === 'warning'
+                                                                        : DEBT_STATUS_COLORS[debt.status as DebtStatus] === 'warning'
                                                                             ? token.colorWarning
                                                                             : token.colorInfo,
                                                                 }}

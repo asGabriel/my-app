@@ -1,12 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authRequest } from '../../services/api';
-import { 
-  LoginRequest, 
-  AuthResponse, 
-  AuthResponseSchema,
-  UserResponse,
-  UserResponseSchema 
-} from '../generated';
+import { LoginRequest, AuthResponse, UserResponse, schemas } from '../generated';
 
 export function useLogin() {
   const queryClient = useQueryClient();
@@ -18,7 +12,7 @@ export function useLogin() {
         body: JSON.stringify(credentials),
       });
 
-      return AuthResponseSchema.parse(data);
+      return schemas.AuthResponse.parse(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
@@ -35,7 +29,7 @@ export function useMe(token: string | null) {
         token: token || undefined,
       });
 
-      return UserResponseSchema.parse(data);
+      return schemas.UserResponse.parse(data);
     },
     enabled: !!token,
     retry: false,

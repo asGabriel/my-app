@@ -1,11 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  ListIncomesFilters, 
-  IncomeListResponse, 
-  IncomeListResponseSchema 
-} from '../generated';
+import { ListIncomesFilters, Income, schemas } from '../generated';
 
 export function useIncomes(filters: ListIncomesFilters) {
   const { token } = useAuth();
@@ -13,7 +9,7 @@ export function useIncomes(filters: ListIncomesFilters) {
   return useQuery({
     queryKey: ['incomes', filters],
     queryFn: async () => {
-      const data = await apiRequest<IncomeListResponse>(
+      const data = await apiRequest<Income[]>(
         '/income/list',
         {
           method: 'POST',
@@ -22,7 +18,7 @@ export function useIncomes(filters: ListIncomesFilters) {
         }
       );
 
-      return IncomeListResponseSchema.parse(data);
+      return schemas.Income.array().parse(data);
     },
     enabled: !!token,
   });

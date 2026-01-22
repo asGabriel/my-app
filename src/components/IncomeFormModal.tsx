@@ -5,10 +5,11 @@ import {
     Input,
     DatePicker,
     InputNumber,
+    Select,
     App,
 } from 'antd';
 import dayjs from 'dayjs';
-import { useCreateIncome, CreateIncomeRequest } from '../api';
+import { useCreateIncome, useFinancialInstruments, CreateIncomeRequest } from '../api';
 
 interface IncomeFormModalProps {
     open: boolean;
@@ -19,6 +20,7 @@ export function IncomeFormModal({ open, onClose }: IncomeFormModalProps) {
     const [form] = Form.useForm();
     const { message } = App.useApp();
     const createIncome = useCreateIncome();
+    const { data: instruments, isLoading: isLoadingInstruments } = useFinancialInstruments();
 
     useEffect(() => {
         if (open) {
@@ -33,12 +35,13 @@ export function IncomeFormModal({ open, onClose }: IncomeFormModalProps) {
         try {
             const values = await form.validateFields();
 
+            const selectedInstrument = instruments?.find(i => i.id === values.financialInstrumentId);
+            
             const payload: CreateIncomeRequest = {
                 description: values.description,
                 amount: values.amount.toString(),
                 dateReference: values.dateReference.format('YYYY-MM-DD'),
-                // TODO: implement account selection - using mock accountIdentification for now
-                accountIdentification: '1000',
+                financialInstrumentIdentification: selectedInstrument?.identification || '',
             };
 
             await createIncome.mutateAsync(payload);
@@ -88,6 +91,23 @@ export function IncomeFormModal({ open, onClose }: IncomeFormModalProps) {
                         precision={2}
                         decimalSeparator=","
                         min={0}
+                    />
+                </Form.Item>
+
+                <Form.Item
+                    name="financialInstrumentId"
+                    label="Instrumento Financeiro"
+                    rules={[{ required: true, message: 'Selecione o instrumento financeiro' }]}
+                >
+                    <Select
+                        placeholder="Selecione o instrumento"
+                        loading={isLoadingInstruments}
+                        options={instruments?.map((instrument) => ({
+                            label: `${instrument.name} - ${instrument.identification}`,
+                            value: instrument.id,
+                        }))}
+                        showSearch
+                        optionFilterProp="label"
                     />
                 </Form.Item>
 

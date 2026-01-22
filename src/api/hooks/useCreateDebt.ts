@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { CreateDebtRequest, DebtResponse, DebtResponseSchema } from '../generated';
+import { CreateDebtRequest, Debt, schemas } from '../generated';
 
 export function useCreateDebt() {
   const { token } = useAuth();
@@ -11,7 +11,7 @@ export function useCreateDebt() {
     mutationFn: async (data: CreateDebtRequest) => {
       if (!token) throw new Error('Not authenticated');
       
-      const response = await apiRequest<DebtResponse>(
+      const response = await apiRequest<Debt>(
         '/debt',
         {
           method: 'POST',
@@ -20,7 +20,7 @@ export function useCreateDebt() {
         }
       );
 
-      return DebtResponseSchema.parse(response);
+      return schemas.Debt.parse(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });

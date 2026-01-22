@@ -1,15 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Modal,
     Form,
     Input,
     DatePicker,
     InputNumber,
-    // Switch,
+    Select,
     App,
 } from 'antd';
 import dayjs from 'dayjs';
-import { useCreateDebt, CreateDebtRequest, Debt } from '../api';
+import { useCreateDebt, useFinancialInstruments, CreateDebtRequest, Debt } from '../api';
+import { DEBT_CATEGORY_OPTIONS, EXPENSE_TYPE_OPTIONS } from '../utils/constants';
 
 interface DebtFormModalProps {
     open: boolean;
@@ -20,13 +21,18 @@ interface DebtFormModalProps {
 export function DebtFormModal({ open, onClose, initialData }: DebtFormModalProps) {
     const [form] = Form.useForm();
     const { message } = App.useApp();
+    const [hasInstallments, setHasInstallments] = useState(false);
+
     const createDebt = useCreateDebt();
+    const { data: instruments, isLoading: isLoadingInstruments } = useFinancialInstruments();
 
     const isEditing = !!initialData;
 
     useEffect(() => {
         if (open) {
             if (initialData) {
+                const installmentCount = initialData.installmentCount;
+                setHasInstallments(!!installmentCount && installmentCount >= 1);
                 form.setFieldsValue({
                     ...initialData,
                     dueDate: dayjs(initialData.dueDate),
@@ -36,6 +42,7 @@ export function DebtFormModal({ open, onClose, initialData }: DebtFormModalProps
                 });
             } else {
                 form.resetFields();
+                setHasInstallments(false);
                 form.setFieldsValue({
                     dueDate: dayjs(),
                 });
@@ -46,14 +53,17 @@ export function DebtFormModal({ open, onClose, initialData }: DebtFormModalProps
     const handleSubmit = async () => {
         try {
             const values = await form.validateFields();
-            
+
             const payload: CreateDebtRequest = {
                 description: values.description,
                 dueDate: values.dueDate.format('YYYY-MM-DD'),
                 totalAmount: values.totalAmount.toString(),
-                isPaid: false, // TODO: use values.isPaid when API supports it
+                isPaid: false,
+                category: values.category || undefined,
+                expenseType: values.expenseType || undefined,
                 discountAmount: values.discountAmount?.toString(),
                 installmentCount: values.installmentCount || undefined,
+                financialInstrumentId: values.financialInstrumentId || undefined,
             };
 
             await createDebt.mutateAsync(payload);
@@ -91,6 +101,32 @@ export function DebtFormModal({ open, onClose, initialData }: DebtFormModalProps
                     <Input placeholder="Ex: Fatura do cartão, Aluguel, etc" />
                 </Form.Item>
 
+                <div style={{ display: 'flex', gap: 16 }}>
+                    <Form.Item
+                        name="category"
+                        label="Categoria"
+                        style={{ flex: 1 }}
+                    >
+                        <Select
+                            placeholder="Selecione a categoria"
+                            options={DEBT_CATEGORY_OPTIONS}
+                            allowClear
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="expenseType"
+                        label="Tipo de Despesa"
+                        style={{ flex: 1 }}
+                    >
+                        <Select
+                            placeholder="Fixa ou Variável"
+                            options={EXPENSE_TYPE_OPTIONS}
+                            allowClear
+                        />
+                    </Form.Item>
+                </div>
+
                 <Form.Item
                     name="dueDate"
                     label="Data de Vencimento"
@@ -127,18 +163,34 @@ export function DebtFormModal({ open, onClose, initialData }: DebtFormModalProps
                         style={{ width: '100%' }}
                         min={1}
                         max={48}
+                        onChange={(value) => {
+                            setHasInstallments(!!value && value > 1);
+                            if (!value || value <= 1) {
+                                form.setFieldValue('financialInstrumentId', undefined);
+                            }
+                        }}
                     />
                 </Form.Item>
 
-                {/* TODO: re-enable when API supports isPaid
-                <Form.Item
-                    name="isPaid"
-                    label="Já foi pago?"
-                    valuePropName="checked"
-                >
-                    <Switch />
-                </Form.Item>
-                */}
+                {hasInstallments && (
+                    <Form.Item
+                        name="financialInstrumentId"
+                        label="Instrumento Financeiro"
+                        rules={[{ required: true, message: 'Selecione o instrumento para débitos parcelados' }]}
+                        tooltip="Obrigatório para débitos com parcelas"
+                    >
+                        <Select
+                            placeholder="Selecione o instrumento"
+                            loading={isLoadingInstruments}
+                            options={instruments?.map((instrument) => ({
+                                label: `${instrument.name} - ${instrument.identification}`,
+                                value: instrument.id,
+                            }))}
+                            showSearch
+                            optionFilterProp="label"
+                        />
+                    </Form.Item>
+                )}
 
                 <Form.Item
                     name="discountAmount"

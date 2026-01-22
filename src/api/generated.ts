@@ -35,7 +35,7 @@ const Income = z
   .object({
     id: z.string().uuid(),
     clientId: z.string().uuid(),
-    accountId: z.string().uuid(),
+    financialInstrumentId: z.string().uuid(),
     description: z.string(),
     amount: z.string(),
     reference: z.string(),
@@ -54,7 +54,7 @@ const CreateIncomeRequest = z
 const ListPaymentsFilters = z
   .object({
     debtIds: z.array(z.string().uuid()),
-    accountIds: z.array(z.string().uuid()),
+    financialInstrumentIds: z.array(z.string().uuid()),
     startDate: z.string(),
     endDate: z.string(),
   })
@@ -65,7 +65,7 @@ const Payment = z
     id: z.string().uuid(),
     clientId: z.string().uuid(),
     debtId: z.string().uuid(),
-    accountId: z.string().uuid(),
+    financialInstrumentId: z.string().uuid(),
     amount: z.string(),
     paymentDate: z.string(),
     createdAt: z.string(),
@@ -81,15 +81,17 @@ const CreatePaymentRequest = z
     reconcile: z.boolean().nullish(),
   })
   .passthrough();
+const DebtStatus = z.enum(["UNPAID", "PARTIALLY_PAID", "SETTLED"]);
 const DebtFilters = z
   .object({
     ids: z.array(z.string().uuid()),
-    statuses: z.array(z.enum(["UNPAID", "PARTIALLY_PAID", "SETTLED"])),
+    statuses: z.array(DebtStatus),
     startDate: z.string(),
     endDate: z.string(),
   })
   .partial()
   .passthrough();
+const ExpenseType = z.enum(["FIXED", "VARIABLE"]);
 const Debt = z
   .object({
     id: z.string().uuid(),
@@ -103,17 +105,13 @@ const Debt = z
     discountAmount: z.string(),
     remainingAmount: z.string(),
     dueDate: z.string(),
-    status: z.enum(["UNPAID", "PARTIALLY_PAID", "SETTLED"]),
+    status: DebtStatus,
     installmentCount: z.number().int().nullish(),
+    expenseType: ExpenseType.optional(),
     createdAt: z.string(),
     updatedAt: z.string().nullish(),
   })
   .passthrough();
-const DebtCategory = z.enum([
-  "UNKNOWN", "HOME", "TRANSPORT", "HEALTH", "FOOD", 
-  "LIFESTYLE", "EDUCATION", "GOALS", "PERSONAL"
-]);
-const ExpenseType = z.enum(["FIXED", "VARIABLE"]);
 const CreateDebtRequest = z
   .object({
     category: z.string().optional(),
@@ -123,7 +121,7 @@ const CreateDebtRequest = z
     totalAmount: z.string(),
     paidAmount: z.string().optional(),
     discountAmount: z.string().optional(),
-    status: z.enum(["UNPAID", "PARTIALLY_PAID", "SETTLED"]).optional(),
+    status: DebtStatus.optional(),
     isPaid: z.boolean(),
     financialInstrumentId: z.string().uuid().optional(),
     installmentCount: z.number().int().optional(),
@@ -151,11 +149,11 @@ const Installment = z
     updatedAt: z.string().nullish(),
   })
   .passthrough();
-const FinancialInstrumentType = z.enum(["CREDIT_CARD", "DEBIT_ACCOUNT", "INVESTMENT_BOX"]);
-const InstrumentConfiguration = z
-  .object({ defaultDueDate: z.number().int().nullable() })
-  .partial()
-  .passthrough();
+const FinancialInstrumentType = z.enum([
+  "CREDIT_CARD",
+  "DEBIT_ACCOUNT",
+  "INVESTMENT_BOX",
+]);
 const FinancialInstrumentListFilters = z
   .object({
     clientId: z.string().uuid(),
@@ -163,6 +161,10 @@ const FinancialInstrumentListFilters = z
     identifications: z.array(z.string()),
     instrumentTypes: z.array(FinancialInstrumentType),
   })
+  .partial()
+  .passthrough();
+const InstrumentConfiguration = z
+  .object({ defaultDueDate: z.number().int().nullable() })
   .partial()
   .passthrough();
 const FinancialInstrument = z
@@ -174,8 +176,8 @@ const FinancialInstrument = z
     identification: z.string(),
     instrumentType: FinancialInstrumentType.optional(),
     configuration: InstrumentConfiguration,
-    createdAt: z.string(),
-    updatedAt: z.string().nullish(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullish(),
   })
   .passthrough();
 const CreateFinancialInstrumentRequest = z
@@ -195,6 +197,7 @@ const UpdateFinancialInstrumentRequest = z
     configuration: InstrumentConfiguration.optional(),
   })
   .passthrough();
+
 export const schemas = {
   LoginRequest,
   UserResponse,
@@ -206,19 +209,19 @@ export const schemas = {
   ListPaymentsFilters,
   Payment,
   CreatePaymentRequest,
+  DebtStatus,
   DebtFilters,
+  ExpenseType,
   Debt,
   CreateDebtRequest,
   InstallmentFilters,
   Installment,
   FinancialInstrumentType,
-  InstrumentConfiguration,
   FinancialInstrumentListFilters,
+  InstrumentConfiguration,
   FinancialInstrument,
   CreateFinancialInstrumentRequest,
   UpdateFinancialInstrumentRequest,
-  DebtCategory,
-  ExpenseType,
 };
 
 const endpoints = makeApi([
@@ -280,17 +283,45 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/financeManager/financialInstrument/list",
-    alias: "listFinancialInstruments",
+    path: "/financeManager/debt",
+    alias: "createDebt",
     requestFormat: "json",
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: FinancialInstrumentListFilters,
+        schema: CreateDebtRequest,
       },
     ],
-    response: z.array(FinancialInstrument),
+    response: Debt,
+  },
+  {
+    method: "post",
+    path: "/financeManager/debt/installment/list",
+    alias: "listInstallments",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: InstallmentFilters,
+      },
+    ],
+    response: z.array(Installment),
+  },
+  {
+    method: "post",
+    path: "/financeManager/debt/list",
+    alias: "listDebts",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: DebtFilters,
+      },
+    ],
+    response: z.array(Debt),
   },
   {
     method: "post",
@@ -322,45 +353,17 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/financeManager/debt",
-    alias: "createDebt",
+    path: "/financeManager/financialInstrument/list",
+    alias: "listFinancialInstruments",
     requestFormat: "json",
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: CreateDebtRequest,
+        schema: FinancialInstrumentListFilters,
       },
     ],
-    response: Debt,
-  },
-  {
-    method: "post",
-    path: "/financeManager/debt/list",
-    alias: "listDebts",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: DebtFilters,
-      },
-    ],
-    response: z.array(Debt),
-  },
-  {
-    method: "post",
-    path: "/financeManager/debt/installment/list",
-    alias: "listInstallments",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: InstallmentFilters,
-      },
-    ],
-    response: z.array(Installment),
+    response: z.array(FinancialInstrument),
   },
   {
     method: "post",
@@ -426,57 +429,27 @@ export function createApiClient(baseUrl: string, options?: ZodiosOptions) {
   return new Zodios(baseUrl, endpoints, options);
 }
 
+// Type exports
 export type LoginRequest = z.infer<typeof LoginRequest>;
-export type RegisterRequest = z.infer<typeof RegisterRequest>;
 export type UserResponse = z.infer<typeof UserResponse>;
 export type AuthResponse = z.infer<typeof AuthResponse>;
-export const UserResponseSchema = UserResponse;
-export const AuthResponseSchema = AuthResponse;
-
+export type RegisterRequest = z.infer<typeof RegisterRequest>;
 export type ListIncomesFilters = z.infer<typeof ListIncomesFilters>;
 export type Income = z.infer<typeof Income>;
 export type CreateIncomeRequest = z.infer<typeof CreateIncomeRequest>;
 export type ListPaymentsFilters = z.infer<typeof ListPaymentsFilters>;
 export type Payment = z.infer<typeof Payment>;
 export type CreatePaymentRequest = z.infer<typeof CreatePaymentRequest>;
+export type DebtStatus = z.infer<typeof DebtStatus>;
 export type DebtFilters = z.infer<typeof DebtFilters>;
+export type ExpenseType = z.infer<typeof ExpenseType>;
 export type Debt = z.infer<typeof Debt>;
 export type CreateDebtRequest = z.infer<typeof CreateDebtRequest>;
-
+export type InstallmentFilters = z.infer<typeof InstallmentFilters>;
+export type Installment = z.infer<typeof Installment>;
 export type FinancialInstrumentType = z.infer<typeof FinancialInstrumentType>;
-export type InstrumentConfiguration = z.infer<typeof InstrumentConfiguration>;
 export type FinancialInstrumentListFilters = z.infer<typeof FinancialInstrumentListFilters>;
+export type InstrumentConfiguration = z.infer<typeof InstrumentConfiguration>;
 export type FinancialInstrument = z.infer<typeof FinancialInstrument>;
 export type CreateFinancialInstrumentRequest = z.infer<typeof CreateFinancialInstrumentRequest>;
 export type UpdateFinancialInstrumentRequest = z.infer<typeof UpdateFinancialInstrumentRequest>;
-export type DebtCategory = z.infer<typeof DebtCategory>;
-export type ExpenseType = z.infer<typeof ExpenseType>;
-export type InstallmentFilters = z.infer<typeof InstallmentFilters>;
-export type Installment = z.infer<typeof Installment>;
-
-export const IncomeListResponseSchema = z.array(Income);
-export type IncomeListResponse = z.infer<typeof IncomeListResponseSchema>;
-
-export const PaymentListResponseSchema = z.array(Payment);
-export type PaymentListResponse = z.infer<typeof PaymentListResponseSchema>;
-
-export const DebtListResponseSchema = z.array(Debt);
-export type DebtListResponse = z.infer<typeof DebtListResponseSchema>;
-
-export const FinancialInstrumentListResponseSchema = z.array(FinancialInstrument);
-export type FinancialInstrumentListResponse = z.infer<typeof FinancialInstrumentListResponseSchema>;
-
-export const IncomeResponseSchema = Income;
-export type IncomeResponse = z.infer<typeof IncomeResponseSchema>;
-
-export const PaymentResponseSchema = Payment;
-export type PaymentResponse = z.infer<typeof PaymentResponseSchema>;
-
-export const DebtResponseSchema = Debt;
-export type DebtResponse = z.infer<typeof DebtResponseSchema>;
-
-export const FinancialInstrumentResponseSchema = FinancialInstrument;
-export type FinancialInstrumentResponse = z.infer<typeof FinancialInstrumentResponseSchema>;
-
-export const InstallmentListResponseSchema = z.array(Installment);
-export type InstallmentListResponse = z.infer<typeof InstallmentListResponseSchema>;

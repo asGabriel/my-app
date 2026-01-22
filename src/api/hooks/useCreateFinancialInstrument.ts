@@ -1,11 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  CreateFinancialInstrumentRequest, 
-  FinancialInstrument,
-  FinancialInstrumentResponseSchema 
-} from '../generated';
+import { CreateFinancialInstrumentRequest, FinancialInstrument, schemas } from '../generated';
 
 export function useCreateFinancialInstrument() {
   const { token } = useAuth();
@@ -22,7 +18,7 @@ export function useCreateFinancialInstrument() {
         }
       );
 
-      return FinancialInstrumentResponseSchema.parse(response);
+      return schemas.FinancialInstrument.parse(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['financial-instruments'] });
