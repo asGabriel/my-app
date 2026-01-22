@@ -13,7 +13,6 @@ Income:
   required:
     - id
     - clientId
-    - financialInstrumentId
     - description
     - amount
     - reference
@@ -29,6 +28,7 @@ Income:
     financialInstrumentId:
       type: string
       format: uuid
+      nullable: true
     description:
       type: string
     amount:

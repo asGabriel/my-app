@@ -26,7 +26,6 @@ Payment:
     - id
     - clientId
     - debtId
-    - financialInstrumentId
     - amount
     - paymentDate
     - createdAt
@@ -46,6 +45,7 @@ Payment:
     financialInstrumentId:
       type: string
       format: uuid
+      nullable: true
       description: "Unique identifier of the financial instrument"
     amount:
       type: string

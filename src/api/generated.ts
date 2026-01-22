@@ -35,7 +35,7 @@ const Income = z
   .object({
     id: z.string().uuid(),
     clientId: z.string().uuid(),
-    financialInstrumentId: z.string().uuid(),
+    financialInstrumentId: z.string().uuid().nullish(),
     description: z.string(),
     amount: z.string(),
     reference: z.string(),
@@ -65,7 +65,7 @@ const Payment = z
     id: z.string().uuid(),
     clientId: z.string().uuid(),
     debtId: z.string().uuid(),
-    financialInstrumentId: z.string().uuid(),
+    financialInstrumentId: z.string().uuid().nullish(),
     amount: z.string(),
     paymentDate: z.string(),
     createdAt: z.string(),
