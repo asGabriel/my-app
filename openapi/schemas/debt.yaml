@@ -223,3 +223,29 @@ Installment:
       type: string
       nullable: true
       description: "DateTime string"
+
+UpdateDebtRequest:
+  type: object
+  properties:
+    category:
+      $ref: "#/DebtCategory"
+      nullable: true
+      description: "Categoria do débito"
+    expenseType:
+      $ref: "#/ExpenseType"
+      nullable: true
+      description: "Tipo de despesa"
+    tags:
+      type: array
+      items:
+        type: string
+      nullable: true
+      description: "Tags do débito"
+    description:
+      type: string
+      nullable: true
+      description: "Descrição do débito"
+    dueDate:
+      type: string
+      nullable: true
+      description: "Data de vencimento (YYYY-MM-DD)"

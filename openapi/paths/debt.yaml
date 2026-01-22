@@ -61,3 +61,31 @@ listInstallments:
               type: array
               items:
                 $ref: "../schemas/debt.yaml#/Installment"
+
+update:
+  patch:
+    operationId: updateDebt
+    summary: Atualiza um débito existente
+    tags:
+      - Debt
+    parameters:
+      - name: debtId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID do débito a ser atualizado
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/debt.yaml#/UpdateDebtRequest"
+    responses:
+      "200":
+        description: Débito atualizado com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/debt.yaml#/Debt"

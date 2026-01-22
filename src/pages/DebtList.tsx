@@ -17,9 +17,10 @@ import {
     CalendarOutlined,
     DollarOutlined,
     ClockCircleOutlined,
+    EditOutlined,
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
-import { useDebts, useInstallments, Installment } from '../api';
+import { useDebts, useInstallments, Installment, Debt } from '../api';
 import { formatCurrency } from '../utils/format';
 import {
     DebtStatus,
@@ -29,6 +30,7 @@ import {
     DEBT_STATUS_COLORS,
     DEBT_CATEGORY_LABELS,
 } from '../utils/constants';
+import { DebtEditModal } from '../components/DebtEditModal';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -52,9 +54,10 @@ interface DebtDisplayItem {
 
 interface DebtCardProps {
     item: DebtDisplayItem;
+    onClick?: () => void;
 }
 
-function DebtCard({ item }: DebtCardProps) {
+function DebtCard({ item, onClick }: DebtCardProps) {
     const dueDate = dayjs(item.dueDate);
     const isOverdue = dueDate.isBefore(dayjs(), 'day') && item.status !== DEBT_STATUS.SETTLED;
     const periodAmount = parseFloat(item.periodAmount);
@@ -63,8 +66,11 @@ function DebtCard({ item }: DebtCardProps) {
     return (
         <Card
             size="small"
+            hoverable={!!onClick}
+            onClick={onClick}
             style={{
                 borderLeft: `4px solid ${isOverdue ? '#ff4d4f' : item.status === DEBT_STATUS.SETTLED ? '#52c41a' : '#1890ff'}`,
+                cursor: onClick ? 'pointer' : 'default',
             }}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -77,6 +83,9 @@ function DebtCard({ item }: DebtCardProps) {
                                 <Tag color="blue" style={{ margin: 0 }}>
                                     {item.installmentId}/{item.installmentCount}
                                 </Tag>
+                            )}
+                            {onClick && (
+                                <EditOutlined style={{ color: '#1890ff', fontSize: 12 }} />
                             )}
                         </Space>
                         <div>
@@ -139,6 +148,8 @@ export function DebtList() {
         dayjs().endOf('month'),
     ]);
     const [statuses, setStatuses] = useState<DebtStatus[]>(['UNPAID', 'PARTIALLY_PAID']);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
 
     const { data: debts, isLoading: isLoadingDebts } = useDebts({
         startDate: dateRange[0].format('YYYY-MM-DD'),
@@ -170,6 +181,25 @@ export function DebtList() {
         });
         return map;
     }, [installments]);
+
+    const debtsById = useMemo(() => {
+        const map = new Map<string, Debt>();
+        debts?.forEach(debt => map.set(debt.id, debt));
+        return map;
+    }, [debts]);
+
+    const handleCardClick = (debtId: string) => {
+        const debt = debtsById.get(debtId);
+        if (debt) {
+            setSelectedDebt(debt);
+            setEditModalOpen(true);
+        }
+    };
+
+    const handleEditModalClose = () => {
+        setEditModalOpen(false);
+        setSelectedDebt(null);
+    };
 
     const displayItems: DebtDisplayItem[] = useMemo(() => {
         if (!debts) return [];
@@ -340,7 +370,11 @@ export function DebtList() {
             ) : (
                 <Space direction="vertical" size={8} style={{ width: '100%' }}>
                     {displayItems.map(item => (
-                        <DebtCard key={item.id} item={item} />
+                        <DebtCard 
+                            key={item.id} 
+                            item={item} 
+                            onClick={() => handleCardClick(item.debtId)}
+                        />
                     ))}
 
                     {/* Rodapé com totais */}
@@ -365,6 +399,13 @@ export function DebtList() {
                     </Card>
                 </Space>
             )}
+
+            {/* Modal de Edição */}
+            <DebtEditModal
+                open={editModalOpen}
+                onClose={handleEditModalClose}
+                debt={selectedDebt}
+            />
         </div>
     );
 }

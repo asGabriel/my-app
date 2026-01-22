@@ -149,6 +149,27 @@ const Installment = z
     updatedAt: z.string().nullish(),
   })
   .passthrough();
+const DebtCategory = z.enum([
+  "UNKNOWN",
+  "HOME",
+  "TRANSPORT",
+  "HEALTH",
+  "FOOD",
+  "LIFESTYLE",
+  "EDUCATION",
+  "GOALS",
+  "PERSONAL",
+]);
+const UpdateDebtRequest = z
+  .object({
+    category: DebtCategory,
+    expenseType: ExpenseType,
+    tags: z.array(z.string()).nullable(),
+    description: z.string().nullable(),
+    dueDate: z.string().nullable(),
+  })
+  .partial()
+  .passthrough();
 const FinancialInstrumentType = z.enum([
   "CREDIT_CARD",
   "DEBIT_ACCOUNT",
@@ -216,6 +237,8 @@ export const schemas = {
   CreateDebtRequest,
   InstallmentFilters,
   Installment,
+  DebtCategory,
+  UpdateDebtRequest,
   FinancialInstrumentType,
   FinancialInstrumentListFilters,
   InstrumentConfiguration,
@@ -291,6 +314,25 @@ const endpoints = makeApi([
         name: "body",
         type: "Body",
         schema: CreateDebtRequest,
+      },
+    ],
+    response: Debt,
+  },
+  {
+    method: "patch",
+    path: "/financeManager/debt/:debtId",
+    alias: "updateDebt",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateDebtRequest,
+      },
+      {
+        name: "debtId",
+        type: "Path",
+        schema: z.string().uuid(),
       },
     ],
     response: Debt,
@@ -445,8 +487,10 @@ export type DebtFilters = z.infer<typeof DebtFilters>;
 export type ExpenseType = z.infer<typeof ExpenseType>;
 export type Debt = z.infer<typeof Debt>;
 export type CreateDebtRequest = z.infer<typeof CreateDebtRequest>;
+export type UpdateDebtRequest = z.infer<typeof UpdateDebtRequest>;
 export type InstallmentFilters = z.infer<typeof InstallmentFilters>;
 export type Installment = z.infer<typeof Installment>;
+export type DebtCategory = z.infer<typeof DebtCategory>;
 export type FinancialInstrumentType = z.infer<typeof FinancialInstrumentType>;
 export type FinancialInstrumentListFilters = z.infer<typeof FinancialInstrumentListFilters>;
 export type InstrumentConfiguration = z.infer<typeof InstrumentConfiguration>;

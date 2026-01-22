@@ -33,6 +33,8 @@ paths:
     $ref: "./paths/debt.yaml#/create"
   /financeManager/debt/installment/list:
     $ref: "./paths/debt.yaml#/listInstallments"
+  /financeManager/debt/{debtId}:
+    $ref: "./paths/debt.yaml#/update"
   /financeManager/financialInstrument/list:
     $ref: "./paths/financial_instrument.yaml#/list"
   /financeManager/financialInstrument:
@@ -88,6 +90,8 @@ components:
       $ref: "./schemas/debt.yaml#/InstallmentFilters"
     Installment:
       $ref: "./schemas/debt.yaml#/Installment"
+    UpdateDebtRequest:
+      $ref: "./schemas/debt.yaml#/UpdateDebtRequest"
   securitySchemes:
     bearerAuth:
       type: http

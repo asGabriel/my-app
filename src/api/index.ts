@@ -7,4 +7,6 @@ export * from './hooks/useFinancialInstruments';
 export * from './hooks/useCreateDebt';
 export * from './hooks/useCreatePayment';
 export * from './hooks/useCreateIncome';
-export * from './hooks/useCreateFinancialInstrument';export * from './hooks/useInstallments';
+export * from './hooks/useCreateFinancialInstrument';
+export * from './hooks/useInstallments';
+export * from './hooks/useUpdateDebt';
