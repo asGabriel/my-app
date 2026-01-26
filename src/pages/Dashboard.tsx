@@ -19,7 +19,7 @@ const CATEGORY_COLORS: Record<DebtCategory, string> = {
     UNKNOWN: '#8c8c8c',
 };
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 export function Dashboard() {
     const { token } = theme.useToken();
@@ -54,6 +54,13 @@ export function Dashboard() {
         if (!payments) return 0;
         return payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
     }, [payments]);
+
+    const pendingDebtsTotal = useMemo(() => {
+        if (!debts) return 0;
+        return debts
+            .filter(debt => debt.status !== 'SETTLED')
+            .reduce((sum, debt) => sum + parseFloat(debt.remainingAmount), 0);
+    }, [debts]);
 
     const recentDebts = useMemo(() => {
         if (!debts) return [];
@@ -99,20 +106,6 @@ export function Dashboard() {
     return (
         <div style={{ margin: -16 }}>
             <div
-                className="page-header"
-                style={{
-                    background: `linear-gradient(135deg, ${token.colorPrimary} 0%, ${token.colorPrimaryActive} 100%)`,
-                }}
-            >
-                <Title level={4} className="page-header__title" style={{ color: token.colorWhite }}>
-                    Dashboard
-                </Title>
-                <Text className="page-header__subtitle" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                    Visão geral das suas finanças
-                </Text>
-            </div>
-
-            <div
                 className="filter-section"
                 style={{
                     background: token.colorBgContainer,
@@ -153,6 +146,34 @@ export function Dashboard() {
                                     value={totalPayments}
                                     prefix="R$"
                                     valueStyle={{ color: token.colorError }}
+                                    formatter={(value) => formatCurrency(value as number)}
+                                />
+                            </Loading>
+                        </Card>
+                    </Col>
+
+                    <Col xs={12} sm={12} lg={6}>
+                        <Card size="small" hoverable className="stats-card">
+                            <Loading loading={isLoadingDebts}>
+                                <Statistic
+                                    title="Contas a Pagar"
+                                    value={pendingDebtsTotal}
+                                    prefix="R$"
+                                    valueStyle={{ color: token.colorWarning }}
+                                    formatter={(value) => formatCurrency(value as number)}
+                                />
+                            </Loading>
+                        </Card>
+                    </Col>
+
+                    <Col xs={12} sm={12} lg={6}>
+                        <Card size="small" hoverable className="stats-card">
+                            <Loading loading={isLoadingIncomes || isLoadingPayments}>
+                                <Statistic
+                                    title="Saldo"
+                                    value={totalIncome - totalPayments}
+                                    prefix="R$"
+                                    valueStyle={{ color: totalIncome - totalPayments >= 0 ? token.colorSuccess : token.colorError }}
                                     formatter={(value) => formatCurrency(value as number)}
                                 />
                             </Loading>

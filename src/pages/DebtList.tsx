@@ -6,16 +6,12 @@ import {
     Card,
     DatePicker,
     Select,
-    Row,
-    Col,
-    Statistic,
     Spin,
     Empty,
 } from 'antd';
 import {
     FilterOutlined,
     CalendarOutlined,
-    DollarOutlined,
     ClockCircleOutlined,
     EditOutlined,
 } from '@ant-design/icons';
@@ -251,23 +247,6 @@ export function DebtList() {
         return items.sort((a, b) => dayjs(a.dueDate).valueOf() - dayjs(b.dueDate).valueOf());
     }, [debts, installmentsByDebtId]);
 
-    const totals = useMemo(() => {
-        return displayItems.reduce(
-            (acc, item) => {
-                const periodAmount = parseFloat(item.periodAmount);
-                const paid = parseFloat(item.paidAmount);
-                const remaining = parseFloat(item.remainingAmount);
-
-                return {
-                    total: acc.total + periodAmount,
-                    paid: acc.paid + paid,
-                    remaining: acc.remaining + remaining,
-                };
-            },
-            { total: 0, paid: 0, remaining: 0 }
-        );
-    }, [displayItems]);
-
     const isLoading = isLoadingDebts || isLoadingInstallments;
 
     return (
@@ -321,43 +300,6 @@ export function DebtList() {
                 </Space>
             </Card>
 
-            {/* Cards de resumo */}
-            <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
-                <Col xs={24} sm={8}>
-                    <Card size="small">
-                        <Statistic
-                            title="Total do Período"
-                            value={totals.total}
-                            precision={2}
-                            prefix={<DollarOutlined />}
-                            formatter={(value) => formatCurrency(Number(value))}
-                        />
-                    </Card>
-                </Col>
-                <Col xs={12} sm={8}>
-                    <Card size="small">
-                        <Statistic
-                            title="Pago"
-                            value={totals.paid}
-                            precision={2}
-                            valueStyle={{ color: '#52c41a' }}
-                            formatter={(value) => formatCurrency(Number(value))}
-                        />
-                    </Card>
-                </Col>
-                <Col xs={12} sm={8}>
-                    <Card size="small">
-                        <Statistic
-                            title="Restante"
-                            value={totals.remaining}
-                            precision={2}
-                            valueStyle={{ color: '#ff4d4f' }}
-                            formatter={(value) => formatCurrency(Number(value))}
-                        />
-                    </Card>
-                </Col>
-            </Row>
-
             {/* Lista de Cards */}
             {isLoading ? (
                 <div style={{ textAlign: 'center', padding: 48 }}>
@@ -370,33 +312,17 @@ export function DebtList() {
             ) : (
                 <Space direction="vertical" size={8} style={{ width: '100%' }}>
                     {displayItems.map(item => (
-                        <DebtCard 
-                            key={item.id} 
-                            item={item} 
+                        <DebtCard
+                            key={item.id}
+                            item={item}
                             onClick={() => handleCardClick(item.debtId)}
                         />
                     ))}
 
-                    {/* Rodapé com totais */}
-                    <Card size="small" style={{ background: '#f5f5f5', marginTop: 8 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-                            <Text strong>{displayItems.length} item(s)</Text>
-                            <Space size={24} wrap>
-                                <div style={{ textAlign: 'right' }}>
-                                    <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Total</Text>
-                                    <Text strong>{formatCurrency(totals.total)}</Text>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Pago</Text>
-                                    <Text type="success" strong>{formatCurrency(totals.paid)}</Text>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Restante</Text>
-                                    <Text type="danger" strong>{formatCurrency(totals.remaining)}</Text>
-                                </div>
-                            </Space>
-                        </div>
-                    </Card>
+                    {/* Rodapé com contagem */}
+                    <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                        <Text type="secondary">{displayItems.length} item(s)</Text>
+                    </div>
                 </Space>
             )}
 
