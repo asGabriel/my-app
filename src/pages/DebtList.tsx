@@ -9,9 +9,10 @@ import {
     Empty,
     Row,
     Col,
+    Select,
 } from 'antd';
 import {
-    FilterOutlined, 
+    FilterOutlined,
     EditOutlined,
     CalendarOutlined,
     PushpinOutlined,
@@ -26,6 +27,7 @@ import {
     DEBT_STATUS_LABELS,
     DEBT_STATUS_COLORS,
     DEBT_CATEGORY_LABELS,
+    DEBT_CATEGORY_OPTIONS,
 } from '../utils/constants';
 import { DebtEditModal } from '../components/DebtEditModal';
 import { FilterBar, FilterBarValues, getDefaultFilters } from '../components/FilterBar';
@@ -135,6 +137,7 @@ type QuickFilterKey = 'due_soon' | 'fixed' | 'open' | null;
 export function DebtList() {
     const { token } = theme.useToken();
     const [filters, setFilters] = useState<FilterBarValues>(getDefaultFilters);
+    const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
     const [quickFilter, setQuickFilter] = useState<QuickFilterKey>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
@@ -241,11 +244,16 @@ export function DebtList() {
     }, [debts, installmentsByDebtId]);
 
     const filteredDisplayItems = useMemo(() => {
-        if (!quickFilter) return displayItems;
+        let result = displayItems;
+        if (categoryFilter.length > 0) {
+            const set = new Set(categoryFilter);
+            result = result.filter(item => set.has(item.category || 'UNKNOWN'));
+        }
+        if (!quickFilter) return result;
         const today = dayjs().startOf('day');
         if (quickFilter === 'due_soon') {
             const limit = today.add(DUE_SOON_DAYS, 'day');
-            return displayItems.filter(item => {
+            return result.filter(item => {
                 const due = dayjs(item.dueDate).startOf('day');
                 return (
                     item.status !== DEBT_STATUS.SETTLED &&
@@ -255,19 +263,20 @@ export function DebtList() {
             });
         }
         if (quickFilter === 'fixed') {
-            return displayItems.filter(item => item.expenseType === 'FIXED');
+            return result.filter(item => item.expenseType === 'FIXED');
         }
         if (quickFilter === 'open') {
-            return displayItems.filter(item => item.status === DEBT_STATUS.OPEN);
+            return result.filter(item => item.status === DEBT_STATUS.OPEN);
         }
-        return displayItems;
-    }, [displayItems, quickFilter]);
+        return result;
+    }, [displayItems, quickFilter, categoryFilter]);
 
     const itemsByStatus = useMemo(() => {
         const map = new Map<DebtStatus, DebtDisplayItem[]>();
         STATUS_TABS.forEach(({ key }) => map.set(key, []));
         filteredDisplayItems.forEach(item => {
-            const list = map.get(item.status);
+            const tabKey: DebtStatus = item.isInstallment ? 'INSTALLMENT' : item.status;
+            const list = map.get(tabKey);
             if (list) list.push(item);
         });
         return map;
@@ -307,13 +316,40 @@ export function DebtList() {
                     padding: 16,
                 }}
             >
-                <div className="filter-section__label" style={{ marginBottom: 8 }}>
-                    <FilterOutlined style={{ color: token.colorTextSecondary }} />
-                    <Text strong style={{ color: token.colorTextSecondary }}>
-                        Filtros
-                    </Text>
+                <div
+                    style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: 16,
+                        rowGap: 12,
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <FilterOutlined style={{ color: token.colorTextSecondary, fontSize: 14 }} />
+                        <Text strong style={{ color: token.colorTextSecondary, fontSize: 14, margin: 0 }}>
+                            Filtros
+                        </Text>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', minHeight: 32 }}>
+                        <FilterBar value={filters} onChange={setFilters} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 32 }}>
+                        <Text type="secondary" style={{ fontSize: 14, margin: 0, lineHeight: '32px' }}>
+                            Categoria:
+                        </Text>
+                        <Select
+                            mode="multiple"
+                            placeholder="Todas as categorias"
+                            allowClear
+                            options={DEBT_CATEGORY_OPTIONS}
+                            value={categoryFilter}
+                            onChange={setCategoryFilter}
+                            style={{ minWidth: 220 }}
+                            maxTagCount="responsive"
+                        />
+                    </div>
                 </div>
-                <FilterBar value={filters} onChange={setFilters} />
             </div>
 
             <Title level={3} style={{ marginBottom: 16 }}>

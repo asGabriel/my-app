@@ -109,6 +109,7 @@
 
 /* Tablet: optional full-width button for cadastros pages */
 @media (max-width: 768px) {
+
     .page-header-inline .btn-new-instrument,
     .page-header-inline .btn-new-recurrence {
         width: 100%;
@@ -128,6 +129,76 @@
 
     .stats-card .ant-statistic-content-prefix {
         font-size: 15px !important;
+    }
+}
+
+/* Debt Form Modal - mobile inputs */
+.debt-form-modal__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.debt-form-modal__field {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+@media (max-width: 576px) {
+    .debt-form-modal.ant-modal {
+        max-width: calc(100vw - 24px) !important;
+        top: 12px !important;
+        padding-bottom: 0;
+    }
+
+    .debt-form-modal .ant-modal-content {
+        max-width: 100%;
+    }
+
+    .debt-form-modal .ant-modal-body {
+        padding: 16px;
+        overflow-x: hidden;
+    }
+
+    .debt-form-modal__form .ant-form-item-control-input {
+        min-height: auto;
+    }
+
+    .debt-form-modal__form .ant-input,
+    .debt-form-modal__form .ant-input-number,
+    .debt-form-modal__form .ant-input-number-input,
+    .debt-form-modal__form .ant-select-selector,
+    .debt-form-modal__form .ant-picker {
+        width: 100% !important;
+        max-width: 100% !important;
+        font-size: 16px !important;
+        /* evita zoom no iOS */
+    }
+
+    .debt-form-modal__form .ant-input-number {
+        display: flex;
+        align-items: center;
+    }
+
+    .debt-form-modal__form .ant-input-number .ant-input-number-input-wrap {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .debt-form-modal__form .ant-input-number .ant-input-number-input {
+        width: 100% !important;
+    }
+
+    .debt-form-modal__row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .debt-form-modal__field {
+        flex: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
     }
 }
 
