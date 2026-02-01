@@ -178,6 +178,7 @@ const CreateRecurrenceRequest = z
     startDate: z.string(),
     endDate: z.string().nullish(),
     dayOfMonth: z.number().int(),
+    category: DebtCategory.nullish(),
   })
   .passthrough();
 const Recurrence = z
@@ -194,6 +195,7 @@ const Recurrence = z
     active: z.boolean(),
     createdAt: z.string(),
     updatedAt: z.string().nullish(),
+    category: DebtCategory.nullish(),
   })
   .passthrough();
 const RecurrenceFilters = z
