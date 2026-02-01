@@ -43,6 +43,10 @@ const menuItems: MenuItem[] = [
         key: '/cadastros/instrumentos-financeiros',
         label: 'Instrumentos Financeiros',
       },
+      {
+        key: '/cadastros/recorrencias',
+        label: 'Contas Recorrentes',
+      },
     ],
   },
   {

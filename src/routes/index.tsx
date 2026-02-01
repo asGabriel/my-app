@@ -4,6 +4,7 @@ import { Dashboard } from '../pages/Dashboard';
 import { Login } from '../pages/Login';
 import { FinancialInstruments } from '../pages/FinancialInstruments';
 import { DebtList } from '../pages/DebtList';
+import { Recurrences } from '../pages/Recurrences';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 
 export function AppRouter() {
@@ -22,6 +23,7 @@ export function AppRouter() {
           <Route index element={<Dashboard />} />
           <Route path="contas-a-pagar" element={<DebtList />} />
           <Route path="cadastros/instrumentos-financeiros" element={<FinancialInstruments />} />
+          <Route path="cadastros/recorrencias" element={<Recurrences />} />
           <Route path="configuracoes" element={<div>Página de Configurações (em construção)</div>} />
         </Route>
       </Routes>

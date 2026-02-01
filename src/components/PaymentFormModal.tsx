@@ -46,7 +46,7 @@ export function PaymentFormModal({ open, onClose }: PaymentFormModalProps) {
     const [showReconcile, setShowReconcile] = useState(false);
 
     const { data: debts, isLoading: isLoadingDebts } = useDebts({
-        statuses: ['UNPAID', 'PARTIALLY_PAID'],
+        statuses: ['OPEN', 'INSTALLMENT'],
     });
 
     const { data: instruments, isLoading: isLoadingInstruments } = useFinancialInstruments();

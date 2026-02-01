@@ -81,7 +81,7 @@ const CreatePaymentRequest = z
     reconcile: z.boolean().nullish(),
   })
   .passthrough();
-const DebtStatus = z.enum(["UNPAID", "PARTIALLY_PAID", "SETTLED"]);
+const DebtStatus = z.enum(["OPEN", "INSTALLMENT", "SETTLED"]);
 const DebtFilters = z
   .object({
     ids: z.array(z.string().uuid()),
@@ -170,6 +170,49 @@ const UpdateDebtRequest = z
   })
   .partial()
   .passthrough();
+const CreateRecurrenceRequest = z
+  .object({
+    financialInstrumentId: z.string().uuid().nullish(),
+    description: z.string(),
+    amount: z.string(),
+    startDate: z.string(),
+    endDate: z.string().nullish(),
+    dayOfMonth: z.number().int(),
+  })
+  .passthrough();
+const Recurrence = z
+  .object({
+    id: z.string().uuid(),
+    clientId: z.string().uuid().nullish(),
+    financialInstrumentId: z.string().uuid().nullish(),
+    description: z.string(),
+    amount: z.string(),
+    startDate: z.string(),
+    endDate: z.string().nullish(),
+    dayOfMonth: z.number().int(),
+    nextRunDate: z.string().nullish(),
+    active: z.boolean(),
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
+  })
+  .passthrough();
+const RecurrenceFilters = z
+  .object({
+    clientId: z.string().uuid().nullable(),
+    nextRunDate: z.string().nullable(),
+    active: z.boolean().nullable(),
+  })
+  .partial()
+  .passthrough();
+const UpdateRecurrenceRequest = z
+  .object({
+    description: z.string().nullable(),
+    dayOfMonth: z.number().int().nullable(),
+    endDate: z.string().nullable(),
+    active: z.boolean().nullable(),
+  })
+  .partial()
+  .passthrough();
 const FinancialInstrumentType = z.enum([
   "CREDIT_CARD",
   "DEBIT_ACCOUNT",
@@ -239,6 +282,10 @@ export const schemas = {
   Installment,
   DebtCategory,
   UpdateDebtRequest,
+  CreateRecurrenceRequest,
+  Recurrence,
+  RecurrenceFilters,
+  UpdateRecurrenceRequest,
   FinancialInstrumentType,
   FinancialInstrumentListFilters,
   InstrumentConfiguration,
@@ -367,6 +414,53 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/financeManager/debt/recurrence",
+    alias: "createRecurrence",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateRecurrenceRequest,
+      },
+    ],
+    response: Recurrence,
+  },
+  {
+    method: "patch",
+    path: "/financeManager/debt/recurrence/:recurrenceId",
+    alias: "updateRecurrence",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateRecurrenceRequest,
+      },
+      {
+        name: "recurrenceId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Recurrence,
+  },
+  {
+    method: "post",
+    path: "/financeManager/debt/recurrence/list",
+    alias: "listRecurrences",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: RecurrenceFilters,
+      },
+    ],
+    response: z.array(Recurrence),
+  },
+  {
+    method: "post",
     path: "/financeManager/financialInstrument",
     alias: "createFinancialInstrument",
     requestFormat: "json",
@@ -470,30 +564,3 @@ export const api = new Zodios(endpoints);
 export function createApiClient(baseUrl: string, options?: ZodiosOptions) {
   return new Zodios(baseUrl, endpoints, options);
 }
-
-// Type exports
-export type LoginRequest = z.infer<typeof LoginRequest>;
-export type UserResponse = z.infer<typeof UserResponse>;
-export type AuthResponse = z.infer<typeof AuthResponse>;
-export type RegisterRequest = z.infer<typeof RegisterRequest>;
-export type ListIncomesFilters = z.infer<typeof ListIncomesFilters>;
-export type Income = z.infer<typeof Income>;
-export type CreateIncomeRequest = z.infer<typeof CreateIncomeRequest>;
-export type ListPaymentsFilters = z.infer<typeof ListPaymentsFilters>;
-export type Payment = z.infer<typeof Payment>;
-export type CreatePaymentRequest = z.infer<typeof CreatePaymentRequest>;
-export type DebtStatus = z.infer<typeof DebtStatus>;
-export type DebtFilters = z.infer<typeof DebtFilters>;
-export type ExpenseType = z.infer<typeof ExpenseType>;
-export type Debt = z.infer<typeof Debt>;
-export type CreateDebtRequest = z.infer<typeof CreateDebtRequest>;
-export type UpdateDebtRequest = z.infer<typeof UpdateDebtRequest>;
-export type InstallmentFilters = z.infer<typeof InstallmentFilters>;
-export type Installment = z.infer<typeof Installment>;
-export type DebtCategory = z.infer<typeof DebtCategory>;
-export type FinancialInstrumentType = z.infer<typeof FinancialInstrumentType>;
-export type FinancialInstrumentListFilters = z.infer<typeof FinancialInstrumentListFilters>;
-export type InstrumentConfiguration = z.infer<typeof InstrumentConfiguration>;
-export type FinancialInstrument = z.infer<typeof FinancialInstrument>;
-export type CreateFinancialInstrumentRequest = z.infer<typeof CreateFinancialInstrumentRequest>;
-export type UpdateFinancialInstrumentRequest = z.infer<typeof UpdateFinancialInstrumentRequest>;

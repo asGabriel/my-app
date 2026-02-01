@@ -35,6 +35,12 @@ paths:
     $ref: "./paths/debt.yaml#/listInstallments"
   /financeManager/debt/{debtId}:
     $ref: "./paths/debt.yaml#/update"
+  /financeManager/debt/recurrence:
+    $ref: "./paths/debt.yaml#/createRecurrence"
+  /financeManager/debt/recurrence/list:
+    $ref: "./paths/debt.yaml#/listRecurrences"
+  /financeManager/debt/recurrence/{recurrenceId}:
+    $ref: "./paths/debt.yaml#/updateRecurrence"
   /financeManager/financialInstrument/list:
     $ref: "./paths/financial_instrument.yaml#/list"
   /financeManager/financialInstrument:
@@ -92,6 +98,14 @@ components:
       $ref: "./schemas/debt.yaml#/Installment"
     UpdateDebtRequest:
       $ref: "./schemas/debt.yaml#/UpdateDebtRequest"
+    CreateRecurrenceRequest:
+      $ref: "./schemas/debt.yaml#/CreateRecurrenceRequest"
+    RecurrenceFilters:
+      $ref: "./schemas/debt.yaml#/RecurrenceFilters"
+    Recurrence:
+      $ref: "./schemas/debt.yaml#/Recurrence"
+    UpdateRecurrenceRequest:
+      $ref: "./schemas/debt.yaml#/UpdateRecurrenceRequest"
   securitySchemes:
     bearerAuth:
       type: http

@@ -10,3 +10,6 @@ export * from './hooks/useCreateIncome';
 export * from './hooks/useCreateFinancialInstrument';
 export * from './hooks/useInstallments';
 export * from './hooks/useUpdateDebt';
+export * from './hooks/useRecurrences';
+export * from './hooks/useCreateRecurrence';
+export * from './hooks/useUpdateRecurrence';

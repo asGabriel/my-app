@@ -1,7 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { authRequest, ApiError } from '../services/api';
-import { UserResponse } from '../api/generated';
+import { schemas } from '../api/generated';
 import { queryClient } from '../services/queryClient';
+
+type UserResponse = typeof schemas.UserResponse._type;
 
 interface User {
     id: string;
@@ -88,6 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [logout]);
 
     const login = async (username: string, password: string) => {
+        queryClient.clear();
+
         const response = await authRequest<{ token: string; user: UserResponse }>('/login', {
             method: 'POST',
             body: JSON.stringify({ username, password }),

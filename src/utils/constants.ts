@@ -39,26 +39,26 @@ export const EXPENSE_TYPE_OPTIONS: { label: string; value: ExpenseType }[] = [
 ];
 
 export const DEBT_STATUS = {
-    UNPAID: 'UNPAID',
-    PARTIALLY_PAID: 'PARTIALLY_PAID',
+    OPEN: 'OPEN',
+    INSTALLMENT: 'INSTALLMENT',
     SETTLED: 'SETTLED',
 } as const;
 
 export const DEBT_STATUS_LABELS: Record<DebtStatus, string> = {
-    UNPAID: 'Não Pago',
-    PARTIALLY_PAID: 'Parcialmente Pago',
-    SETTLED: 'Quitado',
+    OPEN: 'Em Aberto',
+    INSTALLMENT: 'Parcelada',
+    SETTLED: 'Quitada',
 };
 
 export const DEBT_STATUS_OPTIONS: { label: string; value: DebtStatus }[] = [
-    { label: 'Não Pago', value: 'UNPAID' },
-    { label: 'Parcialmente Pago', value: 'PARTIALLY_PAID' },
-    { label: 'Quitado', value: 'SETTLED' },
+    { label: 'Em Aberto', value: 'OPEN' },
+    { label: 'Parcelada', value: 'INSTALLMENT' },
+    { label: 'Quitada', value: 'SETTLED' },
 ];
 
 export const DEBT_STATUS_COLORS: Record<DebtStatus, 'warning' | 'processing' | 'success' | 'red' | 'orange' | 'green'> = {
-    UNPAID: 'warning',
-    PARTIALLY_PAID: 'processing',
+    OPEN: 'warning',
+    INSTALLMENT: 'processing',
     SETTLED: 'success',
 };
 

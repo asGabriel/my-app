@@ -4,32 +4,35 @@ import {
     Space,
     Typography,
     Card,
-    DatePicker,
-    Select,
+    Tabs,
     Spin,
     Empty,
+    Row,
+    Col,
 } from 'antd';
 import {
     FilterOutlined,
-    CalendarOutlined,
     ClockCircleOutlined,
     EditOutlined,
+    CalendarOutlined,
+    PushpinOutlined,
+    UnorderedListOutlined,
 } from '@ant-design/icons';
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import { useDebts, useInstallments, Installment, Debt } from '../api';
 import { formatCurrency } from '../utils/format';
 import {
     DebtStatus,
     DEBT_STATUS,
-    DEBT_STATUS_OPTIONS,
     DEBT_STATUS_LABELS,
     DEBT_STATUS_COLORS,
     DEBT_CATEGORY_LABELS,
 } from '../utils/constants';
 import { DebtEditModal } from '../components/DebtEditModal';
+import { FilterBar, FilterBarValues, getDefaultFilters } from '../components/FilterBar';
+import { theme } from 'antd';
 
 const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
 
 interface DebtDisplayItem {
     id: string;
@@ -43,6 +46,7 @@ interface DebtDisplayItem {
     paidAmount: string;
     remainingAmount: string;
     status: DebtStatus;
+    expenseType?: string | null;
     installmentCount?: number | null;
     installmentId?: number;
     isInstallment: boolean;
@@ -70,7 +74,6 @@ function DebtCard({ item, onClick }: DebtCardProps) {
             }}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {/* Header: Descrição e Status */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <Space wrap size={4}>
@@ -90,12 +93,11 @@ function DebtCard({ item, onClick }: DebtCardProps) {
                             </Text>
                         </div>
                     </div>
-                    <Tag color={DEBT_STATUS_COLORS[item.status]} style={{ margin: 0 }}>
-                        {DEBT_STATUS_LABELS[item.status]}
+                    <Tag color={DEBT_STATUS_COLORS[item.status as DebtStatus] ?? 'default'} style={{ margin: 0 }}>
+                        {DEBT_STATUS_LABELS[item.status as DebtStatus] ?? item.status}
                     </Tag>
                 </div>
 
-                {/* Info: Categoria e Vencimento */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                     <Tag style={{ margin: 0 }}>
                         {DEBT_CATEGORY_LABELS[item.category as keyof typeof DEBT_CATEGORY_LABELS] || item.category}
@@ -108,7 +110,6 @@ function DebtCard({ item, onClick }: DebtCardProps) {
                     </Space>
                 </div>
 
-                {/* Valores */}
                 <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -138,19 +139,26 @@ function DebtCard({ item, onClick }: DebtCardProps) {
     );
 }
 
+const STATUS_TABS: { key: DebtStatus; label: string }[] = [
+    { key: 'OPEN', label: 'Em Aberto' },
+    { key: 'INSTALLMENT', label: 'Parcelada' },
+    { key: 'SETTLED', label: 'Quitada' },
+];
+
+const DUE_SOON_DAYS = 7;
+
+type QuickFilterKey = 'due_soon' | 'fixed' | 'open' | null;
+
 export function DebtList() {
-    const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
-        dayjs().startOf('month'),
-        dayjs().endOf('month'),
-    ]);
-    const [statuses, setStatuses] = useState<DebtStatus[]>(['UNPAID', 'PARTIALLY_PAID']);
+    const { token } = theme.useToken();
+    const [filters, setFilters] = useState<FilterBarValues>(getDefaultFilters);
+    const [quickFilter, setQuickFilter] = useState<QuickFilterKey>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
 
     const { data: debts, isLoading: isLoadingDebts } = useDebts({
-        startDate: dateRange[0].format('YYYY-MM-DD'),
-        endDate: dateRange[1].format('YYYY-MM-DD'),
-        statuses,
+        startDate: filters.startDate,
+        endDate: filters.endDate,
     });
 
     const installmentDebtIds = useMemo(() => {
@@ -162,8 +170,8 @@ export function DebtList() {
     const { data: installments, isLoading: isLoadingInstallments } = useInstallments(
         {
             debtIds: installmentDebtIds.length > 0 ? installmentDebtIds : undefined,
-            startDate: dateRange[0].format('YYYY-MM-DD'),
-            endDate: dateRange[1].format('YYYY-MM-DD'),
+            startDate: filters.startDate,
+            endDate: filters.endDate,
         },
         installmentDebtIds.length > 0
     );
@@ -219,7 +227,8 @@ export function DebtList() {
                         periodAmount: inst.amount,
                         paidAmount: inst.isPaid ? inst.amount : '0',
                         remainingAmount: inst.isPaid ? '0' : inst.amount,
-                        status: inst.isPaid ? DEBT_STATUS.SETTLED : DEBT_STATUS.UNPAID,
+                        status: inst.isPaid ? DEBT_STATUS.SETTLED : DEBT_STATUS.OPEN,
+                        expenseType: debt.expenseType ?? null,
                         installmentCount: debt.installmentCount,
                         installmentId: inst.installmentId,
                         isInstallment: true,
@@ -238,6 +247,7 @@ export function DebtList() {
                     paidAmount: debt.paidAmount,
                     remainingAmount: debt.remainingAmount,
                     status: debt.status,
+                    expenseType: debt.expenseType ?? null,
                     installmentCount: debt.installmentCount,
                     isInstallment: false,
                 });
@@ -247,86 +257,249 @@ export function DebtList() {
         return items.sort((a, b) => dayjs(a.dueDate).valueOf() - dayjs(b.dueDate).valueOf());
     }, [debts, installmentsByDebtId]);
 
+    const filteredDisplayItems = useMemo(() => {
+        if (!quickFilter) return displayItems;
+        const today = dayjs().startOf('day');
+        if (quickFilter === 'due_soon') {
+            const limit = today.add(DUE_SOON_DAYS, 'day');
+            return displayItems.filter(item => {
+                const due = dayjs(item.dueDate).startOf('day');
+                return (
+                    item.status !== DEBT_STATUS.SETTLED &&
+                    !due.isBefore(today) &&
+                    !due.isAfter(limit)
+                );
+            });
+        }
+        if (quickFilter === 'fixed') {
+            return displayItems.filter(item => item.expenseType === 'FIXED');
+        }
+        if (quickFilter === 'open') {
+            return displayItems.filter(item => item.status === DEBT_STATUS.OPEN);
+        }
+        return displayItems;
+    }, [displayItems, quickFilter]);
+
+    const itemsByStatus = useMemo(() => {
+        const map = new Map<DebtStatus, DebtDisplayItem[]>();
+        STATUS_TABS.forEach(({ key }) => map.set(key, []));
+        filteredDisplayItems.forEach(item => {
+            const list = map.get(item.status);
+            if (list) list.push(item);
+        });
+        return map;
+    }, [filteredDisplayItems]);
+
+    const dueSoonCount = useMemo(() => {
+        const today = dayjs().startOf('day');
+        const limit = today.add(DUE_SOON_DAYS, 'day');
+        return displayItems.filter(item => {
+            if (item.status === DEBT_STATUS.SETTLED) return false;
+            const due = dayjs(item.dueDate).startOf('day');
+            return !due.isBefore(today) && !due.isAfter(limit);
+        }).length;
+    }, [displayItems]);
+
+    const fixedExpensesCount = useMemo(
+        () => displayItems.filter(item => item.expenseType === 'FIXED').length,
+        [displayItems]
+    );
+
+    const openCount = useMemo(
+        () => displayItems.filter(item => item.status === DEBT_STATUS.OPEN).length,
+        [displayItems]
+    );
+
     const isLoading = isLoadingDebts || isLoadingInstallments;
 
     return (
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            {/* Header */}
+            <div
+                className="filter-section"
+                style={{
+                    background: token.colorBgContainer,
+                    borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                    margin: -24,
+                    marginBottom: 24,
+                    padding: 16,
+                }}
+            >
+                <div className="filter-section__label" style={{ marginBottom: 8 }}>
+                    <FilterOutlined style={{ color: token.colorTextSecondary }} />
+                    <Text strong style={{ color: token.colorTextSecondary }}>
+                        Filtros
+                    </Text>
+                </div>
+                <FilterBar value={filters} onChange={setFilters} />
+            </div>
+
             <Title level={3} style={{ marginBottom: 16 }}>
                 Contas a Pagar
             </Title>
 
-            {/* Filtros */}
-            <Card size="small" style={{ marginBottom: 16 }}>
-                <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                    <div>
-                        <Space size={8} align="center" style={{ marginBottom: 8 }}>
-                            <CalendarOutlined />
-                            <Text strong>Período</Text>
+            <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
+                <Col xs={24} sm={12} md={8}>
+                    <Card
+                        size="small"
+                        hoverable
+                        onClick={() => setQuickFilter(quickFilter === 'open' ? null : 'open')}
+                        style={{
+                            cursor: 'pointer',
+                            borderColor: quickFilter === 'open' ? token.colorPrimary : undefined,
+                            borderWidth: quickFilter === 'open' ? 2 : 1,
+                            background: quickFilter === 'open' ? token.colorPrimaryBg : undefined,
+                            minHeight: 88,
+                        }}
+                        styles={{ body: { padding: '12px 16px' } }}
+                    >
+                        <Space size={12} style={{ width: '100%' }} align="start">
+                            <div
+                                style={{
+                                    width: 44,
+                                    height: 44,
+                                    minWidth: 44,
+                                    borderRadius: 10,
+                                    background: token.colorErrorBg,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <UnorderedListOutlined style={{ fontSize: 20, color: token.colorError }} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <Text strong style={{ display: 'block', fontSize: 15 }}>
+                                    Contas em aberto
+                                </Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    Ainda não quitadas
+                                </Text>
+                                <Text strong style={{ fontSize: 18, color: token.colorError, display: 'block', marginTop: 4 }}>
+                                    {openCount} {openCount === 1 ? 'conta' : 'contas'}
+                                </Text>
+                            </div>
                         </Space>
-                        <RangePicker
-                            value={dateRange}
-                            onChange={(dates) => {
-                                if (dates && dates[0] && dates[1]) {
-                                    setDateRange([dates[0], dates[1]]);
-                                }
-                            }}
-                            format="DD/MM/YYYY"
-                            allowClear={false}
-                            style={{ width: '100%' }}
-                            presets={[
-                                { label: 'Este mês', value: [dayjs().startOf('month'), dayjs().endOf('month')] },
-                                { label: 'Próximo mês', value: [dayjs().add(1, 'month').startOf('month'), dayjs().add(1, 'month').endOf('month')] },
-                                { label: 'Últimos 30 dias', value: [dayjs().subtract(30, 'day'), dayjs()] },
-                                { label: 'Próximos 30 dias', value: [dayjs(), dayjs().add(30, 'day')] },
-                            ]}
-                        />
-                    </div>
-                    <div>
-                        <Space size={8} align="center" style={{ marginBottom: 8 }}>
-                            <FilterOutlined />
-                            <Text strong>Status</Text>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} md={8}>
+                    <Card
+                        size="small"
+                        hoverable
+                        onClick={() => setQuickFilter(quickFilter === 'due_soon' ? null : 'due_soon')}
+                        style={{
+                            cursor: 'pointer',
+                            borderColor: quickFilter === 'due_soon' ? token.colorPrimary : undefined,
+                            borderWidth: quickFilter === 'due_soon' ? 2 : 1,
+                            background: quickFilter === 'due_soon' ? token.colorPrimaryBg : undefined,
+                            minHeight: 88,
+                        }}
+                        styles={{ body: { padding: '12px 16px' } }}
+                    >
+                        <Space size={12} style={{ width: '100%' }} align="start">
+                            <div
+                                style={{
+                                    width: 44,
+                                    height: 44,
+                                    minWidth: 44,
+                                    borderRadius: 10,
+                                    background: token.colorWarningBg,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <CalendarOutlined style={{ fontSize: 20, color: token.colorWarning }} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <Text strong style={{ display: 'block', fontSize: 15 }}>
+                                    Próximas do vencimento
+                                </Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    Vencem nos próximos {DUE_SOON_DAYS} dias
+                                </Text>
+                                <Text strong style={{ fontSize: 18, color: token.colorWarning, display: 'block', marginTop: 4 }}>
+                                    {dueSoonCount} {dueSoonCount === 1 ? 'conta' : 'contas'}
+                                </Text>
+                            </div>
                         </Space>
-                        <Select
-                            mode="multiple"
-                            allowClear
-                            style={{ width: '100%' }}
-                            placeholder="Todos os status"
-                            value={statuses}
-                            onChange={setStatuses}
-                            options={DEBT_STATUS_OPTIONS}
-                        />
-                    </div>
-                </Space>
-            </Card>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} md={8}>
+                    <Card
+                        size="small"
+                        hoverable
+                        onClick={() => setQuickFilter(quickFilter === 'fixed' ? null : 'fixed')}
+                        style={{
+                            cursor: 'pointer',
+                            borderColor: quickFilter === 'fixed' ? token.colorPrimary : undefined,
+                            borderWidth: quickFilter === 'fixed' ? 2 : 1,
+                            background: quickFilter === 'fixed' ? token.colorPrimaryBg : undefined,
+                            minHeight: 88,
+                        }}
+                        styles={{ body: { padding: '12px 16px' } }}
+                    >
+                        <Space size={12} style={{ width: '100%' }} align="start">
+                            <div
+                                style={{
+                                    width: 44,
+                                    height: 44,
+                                    minWidth: 44,
+                                    borderRadius: 10,
+                                    background: token.colorPrimaryBg,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <PushpinOutlined style={{ fontSize: 20, color: token.colorPrimary }} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <Text strong style={{ display: 'block', fontSize: 15 }}>
+                                    Despesas fixas
+                                </Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    Valor recorrente mensal
+                                </Text>
+                                <Text strong style={{ fontSize: 18, color: token.colorPrimary, display: 'block', marginTop: 4 }}>
+                                    {fixedExpensesCount} {fixedExpensesCount === 1 ? 'conta' : 'contas'}
+                                </Text>
+                            </div>
+                        </Space>
+                    </Card>
+                </Col>
+            </Row>
 
-            {/* Lista de Cards */}
             {isLoading ? (
                 <div style={{ textAlign: 'center', padding: 48 }}>
                     <Spin size="large" />
                 </div>
-            ) : displayItems.length === 0 ? (
-                <Card>
-                    <Empty description="Nenhuma conta encontrada no período" />
-                </Card>
             ) : (
-                <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                    {displayItems.map(item => (
-                        <DebtCard
-                            key={item.id}
-                            item={item}
-                            onClick={() => handleCardClick(item.debtId)}
-                        />
-                    ))}
-
-                    {/* Rodapé com contagem */}
-                    <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                        <Text type="secondary">{displayItems.length} item(s)</Text>
-                    </div>
-                </Space>
+                <Tabs
+                    defaultActiveKey="OPEN"
+                    items={STATUS_TABS.map(({ key, label }) => ({
+                        key,
+                        label: `${label} (${itemsByStatus.get(key)?.length ?? 0})`,
+                        children: (
+                            <Space direction="vertical" size={8} style={{ width: '100%', paddingTop: 8 }}>
+                                {(itemsByStatus.get(key) ?? []).length === 0 ? (
+                                    <Card>
+                                        <Empty description={`Nenhuma conta com status "${label}" no período`} />
+                                    </Card>
+                                ) : (
+                                    (itemsByStatus.get(key) ?? []).map(item => (
+                                        <DebtCard
+                                            key={item.id}
+                                            item={item}
+                                            onClick={() => handleCardClick(item.debtId)}
+                                        />
+                                    ))
+                                )}
+                            </Space>
+                        ),
+                    }))}
+                />
             )}
 
-            {/* Modal de Edição */}
             <DebtEditModal
                 open={editModalOpen}
                 onClose={handleEditModalClose}
