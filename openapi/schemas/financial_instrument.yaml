@@ -1,0 +1,116 @@
+FinancialInstrumentType:
+  type: string
+  enum:
+    - CREDIT_CARD
+    - DEBIT_ACCOUNT
+    - INVESTMENT_BOX
+
+InstrumentConfiguration:
+  type: object
+  properties:
+    defaultDueDate:
+      type: integer
+      nullable: true
+      description: "Obrigatório quando instrumentType = CREDIT_CARD"
+
+FinancialInstrumentListFilters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      format: uuid
+      description: "Client identifier"
+    ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "List of financial instrument IDs to filter"
+    identifications:
+      type: array
+      items:
+        type: string
+      description: "List of financial instrument identifications to filter"
+    instrumentTypes:
+      type: array
+      items:
+        $ref: "#/FinancialInstrumentType"
+      description: "List of instrument types to filter"
+
+FinancialInstrument:
+  type: object
+  required:
+    - id
+    - clientId
+    - name
+    - owner
+    - identification
+    - configuration
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: "Unique identifier"
+    clientId:
+      type: string
+      format: uuid
+      description: "Client identifier"
+    name:
+      type: string
+      description: "Financial instrument name"
+    owner:
+      type: string
+      description: "Financial instrument owner"
+    identification:
+      type: string
+      description: "Financial instrument identification"
+    instrumentType:
+      $ref: "#/FinancialInstrumentType"
+    configuration:
+      $ref: "#/InstrumentConfiguration"
+    createdAt:
+      type: string
+      format: date-time
+      description: "DateTime string"
+    updatedAt:
+      type: string
+      format: date-time
+      nullable: true
+      description: "DateTime string"
+
+CreateFinancialInstrumentRequest:
+  type: object
+  required:
+    - name
+    - owner
+  properties:
+    name:
+      type: string
+      description: "Financial instrument name"
+    owner:
+      type: string
+      description: "Financial instrument owner"
+    instrumentType:
+      $ref: "#/FinancialInstrumentType"
+    configuration:
+      $ref: "#/InstrumentConfiguration"
+
+UpdateFinancialInstrumentRequest:
+  type: object
+  required:
+    - identification
+  properties:
+    identification:
+      type: string
+      description: "Financial instrument identification"
+    name:
+      type: string
+      description: "Financial instrument name"
+    owner:
+      type: string
+      description: "Financial instrument owner"
+    instrumentType:
+      $ref: "#/FinancialInstrumentType"
+    configuration:
+      $ref: "#/InstrumentConfiguration"

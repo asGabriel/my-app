@@ -1,16 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { ListIncomesFilters, Income, schemas } from '../generated';
+import { FinancialInstrumentListFilters, FinancialInstrument, schemas } from '../generated';
 
-export function useIncomes(filters: ListIncomesFilters) {
+export function useFinancialInstruments(filters: FinancialInstrumentListFilters = {}) {
   const { token } = useAuth();
 
   return useQuery({
-    queryKey: ['incomes', filters],
+    queryKey: ['financial-instruments', filters],
     queryFn: async () => {
-      const data = await apiRequest<Income[]>(
-        '/income/list',
+      const data = await apiRequest<FinancialInstrument[]>(
+        '/financialInstrument/list',
         {
           method: 'POST',
           body: JSON.stringify(filters),
@@ -18,7 +18,7 @@ export function useIncomes(filters: ListIncomesFilters) {
         }
       );
 
-      return schemas.Income.array().parse(data);
+      return schemas.FinancialInstrument.array().parse(data);
     },
     enabled: !!token,
   });

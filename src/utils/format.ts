@@ -22,21 +22,3 @@ export const formatShortDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 };
-
-export type DebtStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'SETTLED';
-
-export const debtStatusLabels: Record<DebtStatus, string> = {
-  UNPAID: 'Nova dívida',
-  PARTIALLY_PAID: 'Parcialmente paga',
-  SETTLED: 'Paga',
-};
-
-export const debtStatusColors: Record<DebtStatus, 'warning' | 'processing' | 'success'> = {
-  UNPAID: 'warning',
-  PARTIALLY_PAID: 'processing',
-  SETTLED: 'success',
-};
-
-export const formatDebtStatus = (status: DebtStatus): string => {
-  return debtStatusLabels[status] || status;
-};

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { CreatePaymentRequest, PaymentResponse, PaymentResponseSchema } from '../generated';
+import { CreatePaymentRequest, Payment, schemas } from '../generated';
 
 export function useCreatePayment() {
   const { token } = useAuth();
@@ -9,16 +9,18 @@ export function useCreatePayment() {
 
   return useMutation({
     mutationFn: async (data: CreatePaymentRequest) => {
-      const response = await apiRequest<PaymentResponse>(
+      if (!token) throw new Error('Not authenticated');
+      
+      const response = await apiRequest<Payment>(
         '/payment',
         {
           method: 'POST',
           body: JSON.stringify(data),
-          token: token || undefined,
+          token,
         }
       );
 
-      return PaymentResponseSchema.parse(response);
+      return schemas.Payment.parse(response);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });

@@ -8,6 +8,8 @@ import {
   UserOutlined,
   MenuOutlined,
   LogoutOutlined,
+  AppstoreOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import type { MenuProps } from 'antd';
@@ -28,9 +30,24 @@ const menuItems: MenuItem[] = [
     label: 'Dashboard',
   },
   {
-    key: '/usuarios',
-    icon: <UserOutlined />,
-    label: 'Usuários',
+    key: '/contas-a-pagar',
+    icon: <FileTextOutlined />,
+    label: 'Contas a Pagar',
+  },
+  {
+    key: '/cadastros',
+    icon: <AppstoreOutlined />,
+    label: 'Cadastros',
+    children: [
+      {
+        key: '/cadastros/instrumentos-financeiros',
+        label: 'Instrumentos Financeiros',
+      },
+      {
+        key: '/cadastros/recorrencias',
+        label: 'Contas Recorrentes',
+      },
+    ],
   },
   {
     key: '/configuracoes',

@@ -13,6 +13,12 @@ servers:
         description: Base URL from VITE_API_URL env var
 
 paths:
+  /auth/login:
+    $ref: "./paths/auth.yaml#/login"
+  /auth/register:
+    $ref: "./paths/auth.yaml#/register"
+  /auth/me:
+    $ref: "./paths/auth.yaml#/me"
   /financeManager/income/list:
     $ref: "./paths/income.yaml#/list"
   /financeManager/income:
@@ -25,9 +31,31 @@ paths:
     $ref: "./paths/debt.yaml#/list"
   /financeManager/debt:
     $ref: "./paths/debt.yaml#/create"
+  /financeManager/debt/installment/list:
+    $ref: "./paths/debt.yaml#/listInstallments"
+  /financeManager/debt/{debtId}:
+    $ref: "./paths/debt.yaml#/update"
+  /financeManager/debt/recurrence:
+    $ref: "./paths/debt.yaml#/createRecurrence"
+  /financeManager/debt/recurrence/list:
+    $ref: "./paths/debt.yaml#/listRecurrences"
+  /financeManager/debt/recurrence/{recurrenceId}:
+    $ref: "./paths/debt.yaml#/updateRecurrence"
+  /financeManager/financialInstrument/list:
+    $ref: "./paths/financial_instrument.yaml#/list"
+  /financeManager/financialInstrument:
+    $ref: "./paths/financial_instrument.yaml#/createOrUpdate"
 
 components:
   schemas:
+    LoginRequest:
+      $ref: "./schemas/auth.yaml#/LoginRequest"
+    RegisterRequest:
+      $ref: "./schemas/auth.yaml#/RegisterRequest"
+    UserResponse:
+      $ref: "./schemas/auth.yaml#/UserResponse"
+    AuthResponse:
+      $ref: "./schemas/auth.yaml#/AuthResponse"
     ListIncomesFilters:
       $ref: "./schemas/income.yaml#/ListIncomesFilters"
     Income:
@@ -46,6 +74,38 @@ components:
       $ref: "./schemas/debt.yaml#/DebtFilters"
     Debt:
       $ref: "./schemas/debt.yaml#/Debt"
+    FinancialInstrumentType:
+      $ref: "./schemas/financial_instrument.yaml#/FinancialInstrumentType"
+    InstrumentConfiguration:
+      $ref: "./schemas/financial_instrument.yaml#/InstrumentConfiguration"
+    FinancialInstrumentListFilters:
+      $ref: "./schemas/financial_instrument.yaml#/FinancialInstrumentListFilters"
+    FinancialInstrument:
+      $ref: "./schemas/financial_instrument.yaml#/FinancialInstrument"
+    CreateFinancialInstrumentRequest:
+      $ref: "./schemas/financial_instrument.yaml#/CreateFinancialInstrumentRequest"
+    UpdateFinancialInstrumentRequest:
+      $ref: "./schemas/financial_instrument.yaml#/UpdateFinancialInstrumentRequest"
+    DebtCategory:
+      $ref: "./schemas/debt.yaml#/DebtCategory"
+    DebtStatus:
+      $ref: "./schemas/debt.yaml#/DebtStatus"
+    ExpenseType:
+      $ref: "./schemas/debt.yaml#/ExpenseType"
+    InstallmentFilters:
+      $ref: "./schemas/debt.yaml#/InstallmentFilters"
+    Installment:
+      $ref: "./schemas/debt.yaml#/Installment"
+    UpdateDebtRequest:
+      $ref: "./schemas/debt.yaml#/UpdateDebtRequest"
+    CreateRecurrenceRequest:
+      $ref: "./schemas/debt.yaml#/CreateRecurrenceRequest"
+    RecurrenceFilters:
+      $ref: "./schemas/debt.yaml#/RecurrenceFilters"
+    Recurrence:
+      $ref: "./schemas/debt.yaml#/Recurrence"
+    UpdateRecurrenceRequest:
+      $ref: "./schemas/debt.yaml#/UpdateRecurrenceRequest"
   securitySchemes:
     bearerAuth:
       type: http

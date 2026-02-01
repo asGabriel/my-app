@@ -1,11 +1,13 @@
-const API_PATH = '/api/financeManager';
+const API_BASE = '/api';
+const FINANCE_PATH = `${API_BASE}/financeManager`;
+const AUTH_PATH = `${API_BASE}/auth`;
 
 interface RequestOptions extends RequestInit {
   token?: string;
 }
 
-export async function apiRequest<T>(
-  endpoint: string,
+async function request<T>(
+  url: string,
   options: RequestOptions = {}
 ): Promise<T> {
   const { token, ...fetchOptions } = options;
@@ -16,14 +18,36 @@ export async function apiRequest<T>(
     ...options.headers,
   };
 
-  const response = await fetch(`${API_PATH}${endpoint}`, {
+  const response = await fetch(url, {
     ...fetchOptions,
     headers,
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, errorData.message || `API Error: ${response.status}`);
   }
 
   return response.json();
+}
+
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export async function apiRequest<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  return request<T>(`${FINANCE_PATH}${endpoint}`, options);
+}
+
+export async function authRequest<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  return request<T>(`${AUTH_PATH}${endpoint}`, options);
 }

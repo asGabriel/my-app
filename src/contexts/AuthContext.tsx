@@ -1,9 +1,19 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { authRequest, ApiError } from '../services/api';
+import { schemas } from '../api/generated';
+import { queryClient } from '../services/queryClient';
+
+type UserResponse = typeof schemas.UserResponse._type;
 
 interface User {
     id: string;
+    clientId: string;
+    username: string;
     name: string;
     email: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt?: string | null;
 }
 
 interface AuthContextType {
@@ -11,7 +21,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     token: string | null;
-    login: (email: string, password: string) => Promise<void>;
+    login: (username: string, password: string) => Promise<void>;
     logout: () => void;
 }
 
@@ -20,52 +30,79 @@ const AuthContext = createContext<AuthContextType | null>(null);
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
 
-const MOCK_CREDENTIALS = {
-    email: import.meta.env.VITE_EMAIL_DEFAULT,
-    password: import.meta.env.VITE_PWD_DEFAULT,
-    jwt: import.meta.env.VITE_JWT_DEFAULT,
-};
+function mapUserResponse(response: UserResponse): User {
+    return {
+        id: response.id,
+        clientId: response.clientId,
+        username: response.username,
+        name: response.name,
+        email: response.email,
+        isActive: response.is_active,
+        createdAt: response.created_at,
+        updatedAt: response.updated_at,
+    };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const storedUser = localStorage.getItem(USER_KEY);
-        const storedToken = localStorage.getItem(TOKEN_KEY);
-
-        if (storedUser && storedToken) {
-            setUser(JSON.parse(storedUser));
-            setToken(storedToken);
-        }
-
-        setIsLoading(false);
-    }, []);
-
-    const login = async (email: string, password: string) => {
-        // TODO: Replace with your backend API call
-        if (email !== MOCK_CREDENTIALS.email || password !== MOCK_CREDENTIALS.password) {
-            throw new Error('Invalid credentials');
-        }
-
-        const mockUser: User = {
-            id: '1',
-            name: 'Administrador',
-            email: MOCK_CREDENTIALS.email,
-        };
-
-        localStorage.setItem(TOKEN_KEY, MOCK_CREDENTIALS.jwt);
-        localStorage.setItem(USER_KEY, JSON.stringify(mockUser));
-        setToken(MOCK_CREDENTIALS.jwt);
-        setUser(mockUser);
-    };
-
-    const logout = () => {
+    const logout = useCallback(() => {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
         setToken(null);
         setUser(null);
+        queryClient.clear();
+    }, []);
+
+    useEffect(() => {
+        const initAuth = async () => {
+            const storedToken = localStorage.getItem(TOKEN_KEY);
+            const storedUser = localStorage.getItem(USER_KEY);
+
+            if (storedToken) {
+                setToken(storedToken);
+
+                if (storedUser) {
+                    setUser(JSON.parse(storedUser));
+                }
+
+                try {
+                    const response = await authRequest<UserResponse>('/me', {
+                        method: 'GET',
+                        token: storedToken,
+                    });
+                    const userData = mapUserResponse(response);
+                    setUser(userData);
+                    localStorage.setItem(USER_KEY, JSON.stringify(userData));
+                } catch (error) {
+                    if (error instanceof ApiError && error.status === 401) {
+                        logout();
+                    }
+                }
+            }
+
+            setIsLoading(false);
+        };
+
+        initAuth();
+    }, [logout]);
+
+    const login = async (username: string, password: string) => {
+        queryClient.clear();
+
+        const response = await authRequest<{ token: string; user: UserResponse }>('/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, password }),
+        });
+
+        const userData = mapUserResponse(response.user);
+
+        localStorage.setItem(TOKEN_KEY, response.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(userData));
+        setToken(response.token);
+        setUser(userData);
     };
 
     return (

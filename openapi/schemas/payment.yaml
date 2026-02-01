@@ -7,12 +7,12 @@ ListPaymentsFilters:
         type: string
         format: uuid
       description: "Lista de IDs de dívidas para filtrar"
-    accountIds:
+    financialInstrumentIds:
       type: array
       items:
         type: string
         format: uuid
-      description: "Lista de IDs de contas para filtrar"
+      description: "Lista de IDs de instrumentos financeiros para filtrar"
     startDate:
       type: string
       description: "Data de início (formato: YYYY-MM-DD)"
@@ -24,8 +24,8 @@ Payment:
   type: object
   required:
     - id
+    - clientId
     - debtId
-    - accountId
     - amount
     - paymentDate
     - createdAt
@@ -34,14 +34,19 @@ Payment:
       type: string
       format: uuid
       description: "Unique identifier"
+    clientId:
+      type: string
+      format: uuid
+      description: "Client identifier"
     debtId:
       type: string
       format: uuid
       description: "Unique identifier of the debt"
-    accountId:
+    financialInstrumentId:
       type: string
       format: uuid
-      description: "Unique identifier of the account (conta de pagamento)"
+      nullable: true
+      description: "Unique identifier of the financial instrument"
     amount:
       type: string
       description: "Decimal value as string"
@@ -66,10 +71,10 @@ CreatePaymentRequest:
       type: string
       format: uuid
       description: "Unique identifier of the debt to pay"
-    accountId:
+    financialInstrumentId:
       type: string
       format: uuid
-      description: "Unique identifier of the account"
+      description: "Unique identifier of the financial instrument"
       nullable: true
     paymentDate:
       type: string

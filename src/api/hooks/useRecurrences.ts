@@ -1,16 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { ListIncomesFilters, Income, schemas } from '../generated';
+import { RecurrenceFilters, Recurrence, schemas } from '../generated';
 
-export function useIncomes(filters: ListIncomesFilters) {
+export function useRecurrences(filters: RecurrenceFilters) {
   const { token } = useAuth();
 
   return useQuery({
-    queryKey: ['incomes', filters],
+    queryKey: ['recurrences', filters],
     queryFn: async () => {
-      const data = await apiRequest<Income[]>(
-        '/income/list',
+      const data = await apiRequest<Recurrence[]>(
+        '/debt/recurrence/list',
         {
           method: 'POST',
           body: JSON.stringify(filters),
@@ -18,7 +18,7 @@ export function useIncomes(filters: ListIncomesFilters) {
         }
       );
 
-      return schemas.Income.array().parse(data);
+      return schemas.Recurrence.array().parse(data);
     },
     enabled: !!token,
   });

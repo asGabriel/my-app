@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Modal,
     Form,
     DatePicker,
     InputNumber,
     Switch,
+    Select,
     List,
     Card,
     Empty,
@@ -13,11 +14,21 @@ import {
     Typography,
     Space,
     Tag,
+    Alert,
 } from 'antd';
 import dayjs from 'dayjs';
-import { useDebts, useCreatePayment, Debt, CreatePaymentRequest } from '../api';
+import {
+    useDebts,
+    useCreatePayment,
+    useFinancialInstruments,
+    useInstallments,
+    Debt,
+    Installment,
+    CreatePaymentRequest
+} from '../api';
 import { Loading } from './Loading';
-import { formatCurrency, formatDebtStatus, debtStatusColors } from '../utils/format';
+import { formatCurrency } from '../utils/format';
+import { formatDebtStatus, DEBT_STATUS_COLORS } from '../utils/constants';
 
 interface PaymentFormModalProps {
     open: boolean;
@@ -31,17 +42,42 @@ export function PaymentFormModal({ open, onClose }: PaymentFormModalProps) {
     const { message } = App.useApp();
     const { token } = theme.useToken();
     const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
+    const [selectedInstallment, setSelectedInstallment] = useState<Installment | null>(null);
     const [showReconcile, setShowReconcile] = useState(false);
 
-    const { data: debts, isLoading } = useDebts({
-        statuses: ['UNPAID', 'PARTIALLY_PAID'],
+    const { data: debts, isLoading: isLoadingDebts } = useDebts({
+        statuses: ['OPEN', 'INSTALLMENT'],
     });
 
+    const { data: instruments, isLoading: isLoadingInstruments } = useFinancialInstruments();
+
+    const isInstallmentDebt = !!(selectedDebt?.installmentCount && selectedDebt.installmentCount >= 1);
+
+    const { data: installments, isLoading: isLoadingInstallments } = useInstallments(
+        {
+            debtIds: selectedDebt ? [selectedDebt.id] : undefined,
+        },
+        !!selectedDebt && isInstallmentDebt
+    );
+
     const createPayment = useCreatePayment();
+
+    const isLoading = isLoadingDebts || isLoadingInstruments;
+
+    const nextInstallment = useMemo(() => {
+        if (!selectedDebt || !installments || installments.length === 0) return null;
+
+        const unpaidInstallments = installments
+            .filter(i => i.debtId === selectedDebt.id && !i.isPaid)
+            .sort((a, b) => a.installmentId - b.installmentId);
+
+        return unpaidInstallments[0] || null;
+    }, [installments, selectedDebt]);
 
     useEffect(() => {
         if (open) {
             setSelectedDebt(null);
+            setSelectedInstallment(null);
             setShowReconcile(false);
             form.resetFields();
             form.setFieldsValue({
@@ -51,11 +87,29 @@ export function PaymentFormModal({ open, onClose }: PaymentFormModalProps) {
         }
     }, [open, form]);
 
+    useEffect(() => {
+        if (nextInstallment && isInstallmentDebt && selectedDebt) {
+            if (nextInstallment.debtId === selectedDebt.id) {
+                setSelectedInstallment(nextInstallment);
+                form.setFieldsValue({
+                    amount: parseFloat(nextInstallment.amount),
+                });
+            }
+        }
+    }, [nextInstallment, isInstallmentDebt, selectedDebt, form]);
+
     const handleSelectDebt = (debt: Debt) => {
+        setSelectedInstallment(null);
+        setShowReconcile(false);
+        form.setFieldValue('amount', undefined);
+
         setSelectedDebt(debt);
-        form.setFieldsValue({
-            amount: parseFloat(debt.remainingAmount),
-        });
+
+        if (!debt.installmentCount || debt.installmentCount <= 1) {
+            form.setFieldsValue({
+                amount: parseFloat(debt.remainingAmount),
+            });
+        }
     };
 
     const handleSubmit = async () => {
@@ -72,8 +126,7 @@ export function PaymentFormModal({ open, onClose }: PaymentFormModalProps) {
                 paymentDate: values.paymentDate.format('YYYY-MM-DD'),
                 amount: values.amount?.toString() || '',
                 reconcile: values.reconcile || false,
-                // TODO: implement account selection - using mock accountId for now
-                accountId: '00000000-0000-0000-0000-000000000000',
+                financialInstrumentId: values.financialInstrumentId,
             };
 
             await createPayment.mutateAsync(payload);
@@ -110,7 +163,7 @@ export function PaymentFormModal({ open, onClose }: PaymentFormModalProps) {
 
                         <List
                             dataSource={unpaidDebts}
-                            style={{ maxHeight: 300, overflow: 'auto' }}
+                            style={{ maxHeight: 250, overflow: 'auto' }}
                             renderItem={(debt) => (
                                 <Card
                                     size="small"
@@ -128,8 +181,13 @@ export function PaymentFormModal({ open, onClose }: PaymentFormModalProps) {
                                 >
                                     <Space direction="vertical" size={4} style={{ width: '100%' }}>
                                         <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                                            <Text strong>{debt.description}</Text>
-                                            <Tag color={debtStatusColors[debt.status]}>
+                                            <Space>
+                                                <Text strong>{debt.description}</Text>
+                                                {debt.installmentCount && debt.installmentCount >= 1 && (
+                                                    <Tag color="blue">{debt.installmentCount}x</Tag>
+                                                )}
+                                            </Space>
+                                            <Tag color={DEBT_STATUS_COLORS[debt.status]}>
                                                 {formatDebtStatus(debt.status)}
                                             </Tag>
                                         </Space>
@@ -147,51 +205,112 @@ export function PaymentFormModal({ open, onClose }: PaymentFormModalProps) {
                         />
 
                         {selectedDebt && (
-                            <Form
-                                form={form}
-                                layout="vertical"
-                            >
-                                <Form.Item
-                                    name="paymentDate"
-                                    label="Data do Pagamento"
-                                    rules={[{ required: true, message: 'Informe a data do pagamento' }]}
-                                >
-                                    <DatePicker
-                                        format="DD/MM/YYYY"
-                                        placeholder="Selecione a data"
-                                        style={{ width: '100%' }}
+                            <>
+                                {isInstallmentDebt && isLoadingInstallments && (
+                                    <Alert
+                                        message="Buscando parcelas..."
+                                        type="info"
+                                        showIcon
                                     />
-                                </Form.Item>
-
-                                <Form.Item
-                                    name="amount"
-                                    label="Valor do Pagamento"
-                                >
-                                    <InputNumber
-                                        prefix="R$"
-                                        placeholder="0,00"
-                                        style={{ width: '100%' }}
-                                        precision={2}
-                                        decimalSeparator=","
-                                        min={0}
-                                        onChange={(value) => {
-                                            const remaining = parseFloat(selectedDebt.remainingAmount);
-                                            setShowReconcile(value !== null && value !== remaining);
-                                        }}
-                                    />
-                                </Form.Item>
-
-                                {showReconcile && (
-                                    <Form.Item
-                                        name="reconcile"
-                                        label="Baixar débito com este valor?"
-                                        valuePropName="checked"
-                                        tooltip="Marque se o valor pago é diferente do valor restante, mas deve baixar o débito completamente"
-                                    >
-                                        <Switch />
-                                    </Form.Item>
                                 )}
-                            </Form>
+
+                                {isInstallmentDebt && selectedInstallment && (
+                                    <Card
+                                        size="small"
+                                        style={{
+                                            backgroundColor: token.colorInfoBg,
+                                            borderColor: token.colorInfoBorder,
+                                        }}
+                                    >
+                                        <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                                            <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                                                <Text strong style={{ fontSize: 16 }}>
+                                                    Parcela {selectedInstallment.installmentId}/{selectedDebt.installmentCount}
+                                                </Text>
+                                                <Tag color="processing">
+                                                    {formatCurrency(parseFloat(selectedInstallment.amount))}
+                                                </Tag>
+                                            </Space>
+                                            <Text type="secondary">
+                                                Vencimento: {dayjs(selectedInstallment.dueDate).format('DD/MM/YYYY')}
+                                            </Text>
+                                        </Space>
+                                    </Card>
+                                )}
+
+                                {isInstallmentDebt && !isLoadingInstallments && !selectedInstallment && installments?.length === 0 && (
+                                    <Alert
+                                        message="Nenhuma parcela em aberto encontrada"
+                                        type="warning"
+                                        showIcon
+                                    />
+                                )}
+
+                                <Form
+                                    form={form}
+                                    layout="vertical"
+                                >
+                                    <Form.Item
+                                        name="financialInstrumentId"
+                                        label="Instrumento Financeiro"
+                                        rules={[{ required: true, message: 'Selecione o instrumento' }]}
+                                    >
+                                        <Select
+                                            placeholder="Selecione o instrumento"
+                                            loading={isLoadingInstruments}
+                                            options={instruments?.map((instrument) => ({
+                                                label: `${instrument.name} - ${instrument.identification}`,
+                                                value: instrument.id,
+                                            }))}
+                                            showSearch
+                                            optionFilterProp="label"
+                                        />
+                                    </Form.Item>
+
+                                    <Form.Item
+                                        name="paymentDate"
+                                        label="Data do Pagamento"
+                                        rules={[{ required: true, message: 'Informe a data do pagamento' }]}
+                                    >
+                                        <DatePicker
+                                            format="DD/MM/YYYY"
+                                            placeholder="Selecione a data"
+                                            style={{ width: '100%' }}
+                                        />
+                                    </Form.Item>
+
+                                    <Form.Item
+                                        name="amount"
+                                        label="Valor do Pagamento"
+                                    >
+                                        <InputNumber
+                                            prefix="R$"
+                                            placeholder="0,00"
+                                            style={{ width: '100%' }}
+                                            precision={2}
+                                            decimalSeparator=","
+                                            min={0}
+                                            onChange={(value) => {
+                                                const compareValue = selectedInstallment
+                                                    ? parseFloat(selectedInstallment.amount)
+                                                    : parseFloat(selectedDebt.remainingAmount);
+                                                setShowReconcile(value !== null && value !== compareValue);
+                                            }}
+                                        />
+                                    </Form.Item>
+
+                                    {showReconcile && (
+                                        <Form.Item
+                                            name="reconcile"
+                                            label="Baixar débito com este valor?"
+                                            valuePropName="checked"
+                                            tooltip="Marque se o valor pago é diferente do valor restante, mas deve baixar o débito completamente"
+                                        >
+                                            <Switch />
+                                        </Form.Item>
+                                    )}
+                                </Form>
+                            </>
                         )}
                     </div>
                 )}

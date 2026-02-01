@@ -39,3 +39,123 @@ create:
           application/json:
             schema:
               $ref: "../schemas/debt.yaml#/Debt"
+
+listInstallments:
+  post:
+    operationId: listInstallments
+    summary: Lista as parcelas dos débitos
+    tags:
+      - Debt
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/debt.yaml#/InstallmentFilters"
+    responses:
+      "200":
+        description: Lista de parcelas
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/debt.yaml#/Installment"
+
+update:
+  patch:
+    operationId: updateDebt
+    summary: Atualiza um débito existente
+    tags:
+      - Debt
+    parameters:
+      - name: debtId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID do débito a ser atualizado
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/debt.yaml#/UpdateDebtRequest"
+    responses:
+      "200":
+        description: Débito atualizado com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/debt.yaml#/Debt"
+
+createRecurrence:
+  post:
+    operationId: createRecurrence
+    summary: Cria uma nova recorrência de débito
+    tags:
+      - Debt
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/debt.yaml#/CreateRecurrenceRequest"
+    responses:
+      "201":
+        description: Recorrência criada com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/debt.yaml#/Recurrence"
+
+listRecurrences:
+  post:
+    operationId: listRecurrences
+    summary: Lista as recorrências de débito
+    tags:
+      - Debt
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/debt.yaml#/RecurrenceFilters"
+    responses:
+      "200":
+        description: Lista de recorrências
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/debt.yaml#/Recurrence"
+
+updateRecurrence:
+  patch:
+    operationId: updateRecurrence
+    summary: Atualiza uma recorrência existente
+    tags:
+      - Debt
+    parameters:
+      - name: recurrenceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID da recorrência a ser atualizada
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/debt.yaml#/UpdateRecurrenceRequest"
+    responses:
+      "200":
+        description: Recorrência atualizada com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/debt.yaml#/Recurrence"

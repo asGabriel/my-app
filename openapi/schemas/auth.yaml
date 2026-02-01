@@ -1,0 +1,74 @@
+LoginRequest:
+  type: object
+  required:
+    - username
+    - password
+  properties:
+    username:
+      type: string
+    password:
+      type: string
+
+RegisterRequest:
+  type: object
+  required:
+    - username
+    - email
+    - password
+    - name
+  properties:
+    username:
+      type: string
+    email:
+      type: string
+      format: email
+    password:
+      type: string
+    name:
+      type: string
+
+UserResponse:
+  type: object
+  required:
+    - id
+    - clientId
+    - username
+    - email
+    - name
+    - is_active
+    - created_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    clientId:
+      type: string
+      format: uuid
+      description: "Client identifier"
+    username:
+      type: string
+    email:
+      type: string
+      format: email
+    name:
+      type: string
+    is_active:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+      nullable: true
+
+AuthResponse:
+  type: object
+  required:
+    - token
+    - user
+  properties:
+    token:
+      type: string
+    user:
+      $ref: "#/UserResponse"

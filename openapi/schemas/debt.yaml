@@ -1,3 +1,29 @@
+DebtCategory:
+  type: string
+  enum:
+    - UNKNOWN
+    - HOME
+    - TRANSPORT
+    - HEALTH
+    - FOOD
+    - LIFESTYLE
+    - EDUCATION
+    - GOALS
+    - PERSONAL
+
+DebtStatus:
+  type: string
+  enum:
+    - OPEN
+    - INSTALLMENT
+    - SETTLED
+
+ExpenseType:
+  type: string
+  enum:
+    - FIXED
+    - VARIABLE
+
 CreateDebtRequest:
   type: object
   required:
@@ -30,19 +56,22 @@ CreateDebtRequest:
       type: string
       description: "Valor de desconto"
     status:
-      type: string
-      enum: [UNPAID, PARTIALLY_PAID, SETTLED]
+      $ref: "#/DebtStatus"
       description: "Status do débito"
     isPaid:
       type: boolean
       description: "Se o débito já foi pago"
-    accountId:
+    financialInstrumentId:
       type: string
       format: uuid
-      description: "ID da conta de pagamento"
+      description: "ID do instrumento financeiro"
     installmentCount:
       type: integer
       description: "Número de parcelas"
+    expenseType:
+      $ref: "#/ExpenseType"
+      nullable: true
+      description: "Tipo de despesa"
 
 DebtFilters:
   type: object
@@ -56,8 +85,7 @@ DebtFilters:
     statuses:
       type: array
       items:
-        type: string
-        enum: [UNPAID, PARTIALLY_PAID, SETTLED]
+        $ref: "#/DebtStatus"
       description: "Lista de status para filtrar"
     startDate:
       type: string
@@ -70,6 +98,7 @@ Debt:
   type: object
   required:
     - id
+    - clientId
     - category
     - tags
     - identification
@@ -86,6 +115,10 @@ Debt:
       type: string
       format: uuid
       description: "Unique identifier"
+    clientId:
+      type: string
+      format: uuid
+      description: "Client identifier"
     category:
       type: string
       description: "The category of the debt"
@@ -116,13 +149,15 @@ Debt:
       type: string
       description: "Due date (YYYY-MM-DD)"
     status:
-      type: string
-      enum: [UNPAID, PARTIALLY_PAID, SETTLED]
+      $ref: "#/DebtStatus"
       description: "The status of the debt"
     installmentCount:
       type: integer
       nullable: true
       description: "The number of installments"
+    expenseType:
+      $ref: "#/ExpenseType"
+      description: "The expense type"
     createdAt:
       type: string
       description: "DateTime string"
@@ -130,3 +165,210 @@ Debt:
       type: string
       nullable: true
       description: "DateTime string"
+
+InstallmentFilters:
+  type: object
+  properties:
+    debtIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "Lista de IDs de débitos para filtrar parcelas"
+    isPaid:
+      type: boolean
+      description: "Filtrar por parcelas pagas ou não pagas"
+    startDate:
+      type: string
+      description: "Data de início (formato: YYYY-MM-DD)"
+    endDate:
+      type: string
+      description: "Data de fim (formato: YYYY-MM-DD)"
+
+Installment:
+  type: object
+  required:
+    - debtId
+    - installmentId
+    - dueDate
+    - amount
+    - isPaid
+    - createdAt
+  properties:
+    debtId:
+      type: string
+      format: uuid
+      description: "ID do débito"
+    installmentId:
+      type: integer
+      description: "Número da parcela"
+    dueDate:
+      type: string
+      description: "Data de vencimento (YYYY-MM-DD)"
+    amount:
+      type: string
+      description: "Valor da parcela"
+    isPaid:
+      type: boolean
+      description: "Se a parcela foi paga"
+    paymentId:
+      type: string
+      format: uuid
+      nullable: true
+      description: "ID do pagamento (se pago)"
+    createdAt:
+      type: string
+      description: "DateTime string"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string"
+
+UpdateDebtRequest:
+  type: object
+  properties:
+    category:
+      $ref: "#/DebtCategory"
+      nullable: true
+      description: "Categoria do débito"
+    expenseType:
+      $ref: "#/ExpenseType"
+      nullable: true
+      description: "Tipo de despesa"
+    tags:
+      type: array
+      items:
+        type: string
+      nullable: true
+      description: "Tags do débito"
+    description:
+      type: string
+      nullable: true
+      description: "Descrição do débito"
+    dueDate:
+      type: string
+      nullable: true
+      description: "Data de vencimento (YYYY-MM-DD)"
+
+CreateRecurrenceRequest:
+  type: object
+  required:
+    - description
+    - amount
+    - startDate
+    - dayOfMonth
+  properties:
+    financialInstrumentId:
+      type: string
+      format: uuid
+      nullable: true
+      description: "ID do instrumento financeiro"
+    description:
+      type: string
+      description: "Descrição da recorrência"
+    amount:
+      type: string
+      description: "Valor da recorrência (Decimal)"
+    startDate:
+      type: string
+      description: "Data de início (YYYY-MM-DD)"
+    endDate:
+      type: string
+      nullable: true
+      description: "Data de término (YYYY-MM-DD)"
+    dayOfMonth:
+      type: integer
+      description: "Dia do mês para a recorrência"
+
+RecurrenceFilters:
+  type: object
+  properties:
+    clientId:
+      type: string
+      format: uuid
+      nullable: true
+      description: "ID do cliente"
+    nextRunDate:
+      type: string
+      nullable: true
+      description: "Data da próxima execução (YYYY-MM-DD)"
+    active:
+      type: boolean
+      nullable: true
+      description: "Filtrar por recorrências ativas"
+
+UpdateRecurrenceRequest:
+  type: object
+  properties:
+    description:
+      type: string
+      nullable: true
+      description: "Descrição da recorrência"
+    dayOfMonth:
+      type: integer
+      nullable: true
+      description: "Dia do mês para a recorrência"
+    endDate:
+      type: string
+      nullable: true
+      description: "Data de término (YYYY-MM-DD)"
+    active:
+      type: boolean
+      nullable: true
+      description: "Se a recorrência está ativa"
+
+Recurrence:
+  type: object
+  required:
+    - id
+    - description
+    - amount
+    - startDate
+    - dayOfMonth
+    - active
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: "Identificador único"
+    clientId:
+      type: string
+      format: uuid
+      nullable: true
+      description: "ID do cliente"
+    financialInstrumentId:
+      type: string
+      format: uuid
+      nullable: true
+      description: "ID do instrumento financeiro"
+    description:
+      type: string
+      description: "Descrição da recorrência"
+    amount:
+      type: string
+      description: "Valor da recorrência (Decimal)"
+    startDate:
+      type: string
+      description: "Data de início (YYYY-MM-DD)"
+    endDate:
+      type: string
+      nullable: true
+      description: "Data de término (YYYY-MM-DD)"
+    dayOfMonth:
+      type: integer
+      description: "Dia do mês para a recorrência"
+    nextRunDate:
+      type: string
+      nullable: true
+      description: "Data da próxima execução (YYYY-MM-DD)"
+    active:
+      type: boolean
+      description: "Se a recorrência está ativa"
+    createdAt:
+      type: string
+      description: "Data de criação (DateTime)"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "Data de atualização (DateTime)"

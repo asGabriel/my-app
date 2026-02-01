@@ -1,11 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  ListPaymentsFilters, 
-  PaymentListResponse, 
-  PaymentListResponseSchema 
-} from '../generated';
+import { ListPaymentsFilters, Payment, schemas } from '../generated';
 
 export function usePayments(filters: ListPaymentsFilters) {
   const { token } = useAuth();
@@ -13,16 +9,17 @@ export function usePayments(filters: ListPaymentsFilters) {
   return useQuery({
     queryKey: ['payments', filters],
     queryFn: async () => {
-      const data = await apiRequest<PaymentListResponse>(
+      const data = await apiRequest<Payment[]>(
         '/payment/list',
         {
           method: 'POST',
           body: JSON.stringify(filters),
-          token: token || undefined,
+          token: token!,
         }
       );
 
-      return PaymentListResponseSchema.parse(data);
+      return schemas.Payment.array().parse(data);
     },
+    enabled: !!token,
   });
 }

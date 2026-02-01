@@ -1,18 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { CreateIncomeRequest, Income, schemas } from '../generated';
+import { CreateRecurrenceRequest, Recurrence, schemas } from '../generated';
 
-export function useCreateIncome() {
+export function useCreateRecurrence() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateIncomeRequest) => {
+    mutationFn: async (data: CreateRecurrenceRequest) => {
       if (!token) throw new Error('Not authenticated');
       
-      const response = await apiRequest<Income>(
-        '/income',
+      const response = await apiRequest<Recurrence>(
+        '/debt/recurrence',
         {
           method: 'POST',
           body: JSON.stringify(data),
@@ -20,10 +20,10 @@ export function useCreateIncome() {
         }
       );
 
-      return schemas.Income.parse(response);
+      return schemas.Recurrence.parse(response);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['incomes'] });
+      queryClient.invalidateQueries({ queryKey: ['recurrences'] });
     },
   });
 }

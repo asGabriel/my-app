@@ -1,11 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  DebtFilters, 
-  DebtListResponse, 
-  DebtListResponseSchema 
-} from '../generated';
+import { DebtFilters, Debt, schemas } from '../generated';
 
 export function useDebts(filters: DebtFilters) {
   const { token } = useAuth();
@@ -13,16 +9,17 @@ export function useDebts(filters: DebtFilters) {
   return useQuery({
     queryKey: ['debts', filters],
     queryFn: async () => {
-      const data = await apiRequest<DebtListResponse>(
+      const data = await apiRequest<Debt[]>(
         '/debt/list',
         {
           method: 'POST',
           body: JSON.stringify(filters),
-          token: token || undefined,
+          token: token!,
         }
       );
 
-      return DebtListResponseSchema.parse(data);
+      return schemas.Debt.array().parse(data);
     },
+    enabled: !!token,
   });
 }

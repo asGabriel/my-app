@@ -1,6 +1,32 @@
 import { makeApi, Zodios, type ZodiosOptions } from "@zodios/core";
 import { z } from "zod";
 
+const LoginRequest = z
+  .object({ username: z.string(), password: z.string() })
+  .passthrough();
+const UserResponse = z
+  .object({
+    id: z.string().uuid(),
+    clientId: z.string().uuid(),
+    username: z.string(),
+    email: z.string().email(),
+    name: z.string(),
+    is_active: z.boolean(),
+    created_at: z.string().datetime({ offset: true }),
+    updated_at: z.string().datetime({ offset: true }).nullish(),
+  })
+  .passthrough();
+const AuthResponse = z
+  .object({ token: z.string(), user: UserResponse })
+  .passthrough();
+const RegisterRequest = z
+  .object({
+    username: z.string(),
+    email: z.string().email(),
+    password: z.string(),
+    name: z.string(),
+  })
+  .passthrough();
 const ListIncomesFilters = z
   .object({ startDate: z.string(), endDate: z.string() })
   .partial()
@@ -8,7 +34,8 @@ const ListIncomesFilters = z
 const Income = z
   .object({
     id: z.string().uuid(),
-    accountId: z.string().uuid(),
+    clientId: z.string().uuid(),
+    financialInstrumentId: z.string().uuid().nullish(),
     description: z.string(),
     amount: z.string(),
     reference: z.string(),
@@ -18,7 +45,7 @@ const Income = z
   .passthrough();
 const CreateIncomeRequest = z
   .object({
-    accountIdentification: z.string(),
+    financialInstrumentIdentification: z.string(),
     description: z.string(),
     amount: z.string(),
     dateReference: z.string(),
@@ -27,7 +54,7 @@ const CreateIncomeRequest = z
 const ListPaymentsFilters = z
   .object({
     debtIds: z.array(z.string().uuid()),
-    accountIds: z.array(z.string().uuid()),
+    financialInstrumentIds: z.array(z.string().uuid()),
     startDate: z.string(),
     endDate: z.string(),
   })
@@ -36,8 +63,9 @@ const ListPaymentsFilters = z
 const Payment = z
   .object({
     id: z.string().uuid(),
+    clientId: z.string().uuid(),
     debtId: z.string().uuid(),
-    accountId: z.string().uuid(),
+    financialInstrumentId: z.string().uuid().nullish(),
     amount: z.string(),
     paymentDate: z.string(),
     createdAt: z.string(),
@@ -47,24 +75,27 @@ const Payment = z
 const CreatePaymentRequest = z
   .object({
     debtId: z.string().uuid(),
-    accountId: z.string().uuid().nullish(),
+    financialInstrumentId: z.string().uuid().nullish(),
     paymentDate: z.string(),
     amount: z.string().nullish(),
     reconcile: z.boolean().nullish(),
   })
   .passthrough();
+const DebtStatus = z.enum(["OPEN", "INSTALLMENT", "SETTLED"]);
 const DebtFilters = z
   .object({
     ids: z.array(z.string().uuid()),
-    statuses: z.array(z.enum(["UNPAID", "PARTIALLY_PAID", "SETTLED"])),
+    statuses: z.array(DebtStatus),
     startDate: z.string(),
     endDate: z.string(),
   })
   .partial()
   .passthrough();
+const ExpenseType = z.enum(["FIXED", "VARIABLE"]);
 const Debt = z
   .object({
     id: z.string().uuid(),
+    clientId: z.string().uuid(),
     category: z.string(),
     tags: z.array(z.string()),
     identification: z.string(),
@@ -74,8 +105,9 @@ const Debt = z
     discountAmount: z.string(),
     remainingAmount: z.string(),
     dueDate: z.string(),
-    status: z.enum(["UNPAID", "PARTIALLY_PAID", "SETTLED"]),
+    status: DebtStatus,
     installmentCount: z.number().int().nullish(),
+    expenseType: ExpenseType.optional(),
     createdAt: z.string(),
     updatedAt: z.string().nullish(),
   })
@@ -89,26 +121,236 @@ const CreateDebtRequest = z
     totalAmount: z.string(),
     paidAmount: z.string().optional(),
     discountAmount: z.string().optional(),
-    status: z.enum(["UNPAID", "PARTIALLY_PAID", "SETTLED"]).optional(),
+    status: DebtStatus.optional(),
     isPaid: z.boolean(),
-    accountId: z.string().uuid().optional(),
+    financialInstrumentId: z.string().uuid().optional(),
     installmentCount: z.number().int().optional(),
+    expenseType: ExpenseType.optional(),
+  })
+  .passthrough();
+const InstallmentFilters = z
+  .object({
+    debtIds: z.array(z.string().uuid()),
+    isPaid: z.boolean(),
+    startDate: z.string(),
+    endDate: z.string(),
+  })
+  .partial()
+  .passthrough();
+const Installment = z
+  .object({
+    debtId: z.string().uuid(),
+    installmentId: z.number().int(),
+    dueDate: z.string(),
+    amount: z.string(),
+    isPaid: z.boolean(),
+    paymentId: z.string().uuid().nullish(),
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
+  })
+  .passthrough();
+const DebtCategory = z.enum([
+  "UNKNOWN",
+  "HOME",
+  "TRANSPORT",
+  "HEALTH",
+  "FOOD",
+  "LIFESTYLE",
+  "EDUCATION",
+  "GOALS",
+  "PERSONAL",
+]);
+const UpdateDebtRequest = z
+  .object({
+    category: DebtCategory,
+    expenseType: ExpenseType,
+    tags: z.array(z.string()).nullable(),
+    description: z.string().nullable(),
+    dueDate: z.string().nullable(),
+  })
+  .partial()
+  .passthrough();
+const CreateRecurrenceRequest = z
+  .object({
+    financialInstrumentId: z.string().uuid().nullish(),
+    description: z.string(),
+    amount: z.string(),
+    startDate: z.string(),
+    endDate: z.string().nullish(),
+    dayOfMonth: z.number().int(),
+  })
+  .passthrough();
+const Recurrence = z
+  .object({
+    id: z.string().uuid(),
+    clientId: z.string().uuid().nullish(),
+    financialInstrumentId: z.string().uuid().nullish(),
+    description: z.string(),
+    amount: z.string(),
+    startDate: z.string(),
+    endDate: z.string().nullish(),
+    dayOfMonth: z.number().int(),
+    nextRunDate: z.string().nullish(),
+    active: z.boolean(),
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
+  })
+  .passthrough();
+const RecurrenceFilters = z
+  .object({
+    clientId: z.string().uuid().nullable(),
+    nextRunDate: z.string().nullable(),
+    active: z.boolean().nullable(),
+  })
+  .partial()
+  .passthrough();
+const UpdateRecurrenceRequest = z
+  .object({
+    description: z.string().nullable(),
+    dayOfMonth: z.number().int().nullable(),
+    endDate: z.string().nullable(),
+    active: z.boolean().nullable(),
+  })
+  .partial()
+  .passthrough();
+const FinancialInstrumentType = z.enum([
+  "CREDIT_CARD",
+  "DEBIT_ACCOUNT",
+  "INVESTMENT_BOX",
+]);
+const FinancialInstrumentListFilters = z
+  .object({
+    clientId: z.string().uuid(),
+    ids: z.array(z.string().uuid()),
+    identifications: z.array(z.string()),
+    instrumentTypes: z.array(FinancialInstrumentType),
+  })
+  .partial()
+  .passthrough();
+const InstrumentConfiguration = z
+  .object({ defaultDueDate: z.number().int().nullable() })
+  .partial()
+  .passthrough();
+const FinancialInstrument = z
+  .object({
+    id: z.string().uuid(),
+    clientId: z.string().uuid(),
+    name: z.string(),
+    owner: z.string(),
+    identification: z.string(),
+    instrumentType: FinancialInstrumentType.optional(),
+    configuration: InstrumentConfiguration,
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullish(),
+  })
+  .passthrough();
+const CreateFinancialInstrumentRequest = z
+  .object({
+    name: z.string(),
+    owner: z.string(),
+    instrumentType: FinancialInstrumentType.optional(),
+    configuration: InstrumentConfiguration.optional(),
+  })
+  .passthrough();
+const UpdateFinancialInstrumentRequest = z
+  .object({
+    identification: z.string(),
+    name: z.string().optional(),
+    owner: z.string().optional(),
+    instrumentType: FinancialInstrumentType.optional(),
+    configuration: InstrumentConfiguration.optional(),
   })
   .passthrough();
 
 export const schemas = {
+  LoginRequest,
+  UserResponse,
+  AuthResponse,
+  RegisterRequest,
   ListIncomesFilters,
   Income,
   CreateIncomeRequest,
   ListPaymentsFilters,
   Payment,
   CreatePaymentRequest,
+  DebtStatus,
   DebtFilters,
+  ExpenseType,
   Debt,
   CreateDebtRequest,
+  InstallmentFilters,
+  Installment,
+  DebtCategory,
+  UpdateDebtRequest,
+  CreateRecurrenceRequest,
+  Recurrence,
+  RecurrenceFilters,
+  UpdateRecurrenceRequest,
+  FinancialInstrumentType,
+  FinancialInstrumentListFilters,
+  InstrumentConfiguration,
+  FinancialInstrument,
+  CreateFinancialInstrumentRequest,
+  UpdateFinancialInstrumentRequest,
 };
 
 const endpoints = makeApi([
+  {
+    method: "post",
+    path: "/auth/login",
+    alias: "login",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: LoginRequest,
+      },
+    ],
+    response: AuthResponse,
+    errors: [
+      {
+        status: 401,
+        description: `Credenciais inválidas`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/auth/me",
+    alias: "getMe",
+    requestFormat: "json",
+    response: UserResponse,
+    errors: [
+      {
+        status: 401,
+        description: `Não autenticado`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/auth/register",
+    alias: "register",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: RegisterRequest,
+      },
+    ],
+    response: AuthResponse,
+    errors: [
+      {
+        status: 400,
+        description: `Dados inválidos`,
+        schema: z.void(),
+      },
+    ],
+  },
   {
     method: "post",
     path: "/financeManager/debt",
@@ -124,6 +366,39 @@ const endpoints = makeApi([
     response: Debt,
   },
   {
+    method: "patch",
+    path: "/financeManager/debt/:debtId",
+    alias: "updateDebt",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateDebtRequest,
+      },
+      {
+        name: "debtId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Debt,
+  },
+  {
+    method: "post",
+    path: "/financeManager/debt/installment/list",
+    alias: "listInstallments",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: InstallmentFilters,
+      },
+    ],
+    response: z.array(Installment),
+  },
+  {
     method: "post",
     path: "/financeManager/debt/list",
     alias: "listDebts",
@@ -136,6 +411,95 @@ const endpoints = makeApi([
       },
     ],
     response: z.array(Debt),
+  },
+  {
+    method: "post",
+    path: "/financeManager/debt/recurrence",
+    alias: "createRecurrence",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateRecurrenceRequest,
+      },
+    ],
+    response: Recurrence,
+  },
+  {
+    method: "patch",
+    path: "/financeManager/debt/recurrence/:recurrenceId",
+    alias: "updateRecurrence",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateRecurrenceRequest,
+      },
+      {
+        name: "recurrenceId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Recurrence,
+  },
+  {
+    method: "post",
+    path: "/financeManager/debt/recurrence/list",
+    alias: "listRecurrences",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: RecurrenceFilters,
+      },
+    ],
+    response: z.array(Recurrence),
+  },
+  {
+    method: "post",
+    path: "/financeManager/financialInstrument",
+    alias: "createFinancialInstrument",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateFinancialInstrumentRequest,
+      },
+    ],
+    response: FinancialInstrument,
+  },
+  {
+    method: "patch",
+    path: "/financeManager/financialInstrument",
+    alias: "updateFinancialInstrument",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateFinancialInstrumentRequest,
+      },
+    ],
+    response: FinancialInstrument,
+  },
+  {
+    method: "post",
+    path: "/financeManager/financialInstrument/list",
+    alias: "listFinancialInstruments",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: FinancialInstrumentListFilters,
+      },
+    ],
+    response: z.array(FinancialInstrument),
   },
   {
     method: "post",
@@ -200,31 +564,3 @@ export const api = new Zodios(endpoints);
 export function createApiClient(baseUrl: string, options?: ZodiosOptions) {
   return new Zodios(baseUrl, endpoints, options);
 }
-
-export type ListIncomesFilters = z.infer<typeof ListIncomesFilters>;
-export type Income = z.infer<typeof Income>;
-export type CreateIncomeRequest = z.infer<typeof CreateIncomeRequest>;
-export type ListPaymentsFilters = z.infer<typeof ListPaymentsFilters>;
-export type Payment = z.infer<typeof Payment>;
-export type CreatePaymentRequest = z.infer<typeof CreatePaymentRequest>;
-export type DebtFilters = z.infer<typeof DebtFilters>;
-export type Debt = z.infer<typeof Debt>;
-export type CreateDebtRequest = z.infer<typeof CreateDebtRequest>;
-
-export const IncomeListResponseSchema = z.array(Income);
-export type IncomeListResponse = z.infer<typeof IncomeListResponseSchema>;
-
-export const PaymentListResponseSchema = z.array(Payment);
-export type PaymentListResponse = z.infer<typeof PaymentListResponseSchema>;
-
-export const DebtListResponseSchema = z.array(Debt);
-export type DebtListResponse = z.infer<typeof DebtListResponseSchema>;
-
-export const IncomeResponseSchema = Income;
-export type IncomeResponse = z.infer<typeof IncomeResponseSchema>;
-
-export const PaymentResponseSchema = Payment;
-export type PaymentResponse = z.infer<typeof PaymentResponseSchema>;
-
-export const DebtResponseSchema = Debt;
-export type DebtResponse = z.infer<typeof DebtResponseSchema>;
