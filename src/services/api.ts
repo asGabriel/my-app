@@ -6,6 +6,12 @@ interface RequestOptions extends RequestInit {
   token?: string;
 }
 
+let onUnauthorized: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorized = handler;
+}
+
 async function request<T>(
   url: string,
   options: RequestOptions = {}
@@ -24,6 +30,9 @@ async function request<T>(
   });
 
   if (!response.ok) {
+    if (response.status === 401 && token && onUnauthorized) {
+      onUnauthorized();
+    }
     const errorData = await response.json().catch(() => ({}));
     throw new ApiError(response.status, errorData.message || `API Error: ${response.status}`);
   }

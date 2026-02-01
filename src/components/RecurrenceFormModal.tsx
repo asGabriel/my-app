@@ -6,10 +6,12 @@ import {
     DatePicker,
     InputNumber,
     Switch,
+    Select,
     App,
 } from 'antd';
 import dayjs from 'dayjs';
 import { useCreateRecurrence, useUpdateRecurrence, CreateRecurrenceRequest, Recurrence } from '../api';
+import { DEBT_CATEGORY_OPTIONS } from '../utils/constants';
 
 interface RecurrenceFormModalProps {
     open: boolean;
@@ -31,6 +33,7 @@ export function RecurrenceFormModal({ open, onClose, recurrence }: RecurrenceFor
             if (recurrence) {
                 form.setFieldsValue({
                     description: recurrence.description,
+                    category: recurrence.category ?? undefined,
                     amount: parseFloat(recurrence.amount),
                     startDate: dayjs(recurrence.startDate),
                     endDate: recurrence.endDate ? dayjs(recurrence.endDate) : undefined,
@@ -70,6 +73,7 @@ export function RecurrenceFormModal({ open, onClose, recurrence }: RecurrenceFor
                     startDate: values.startDate.format('YYYY-MM-DD'),
                     endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : undefined,
                     dayOfMonth: values.dayOfMonth,
+                    category: values.category ?? undefined,
                 };
                 await createRecurrence.mutateAsync(payload);
                 message.success('Conta recorrente criada com sucesso!');
@@ -107,6 +111,14 @@ export function RecurrenceFormModal({ open, onClose, recurrence }: RecurrenceFor
                     rules={[{ required: true, message: 'Informe a descrição' }]}
                 >
                     <Input placeholder="Ex: Netflix, Spotify, Aluguel, etc" />
+                </Form.Item>
+
+                <Form.Item name="category" label="Categoria">
+                    <Select
+                        placeholder="Selecione a categoria (opcional)"
+                        allowClear
+                        options={DEBT_CATEGORY_OPTIONS}
+                    />
                 </Form.Item>
 
                 <Form.Item

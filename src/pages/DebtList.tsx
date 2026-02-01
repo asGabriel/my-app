@@ -72,14 +72,18 @@ function DebtCard({ item, onClick }: DebtCardProps) {
                 borderLeft: `4px solid ${isOverdue ? '#ff4d4f' : item.status === DEBT_STATUS.SETTLED ? '#52c41a' : '#1890ff'}`,
                 cursor: onClick ? 'pointer' : 'default',
             }}
+            styles={{ body: { padding: '10px 12px' } }}
         >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 6 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <Space wrap size={4}>
-                            <Text strong style={{ wordBreak: 'break-word' }}>{item.description}</Text>
+                        <Space wrap size={4} style={{ marginBottom: 2 }}>
+                            <Text strong style={{ wordBreak: 'break-word', fontSize: 13 }}>{item.description}</Text>
+                            <Tag style={{ margin: 0, fontSize: 11 }}>
+                                {DEBT_CATEGORY_LABELS[item.category as keyof typeof DEBT_CATEGORY_LABELS] || item.category}
+                            </Tag>
                             {item.isInstallment && item.installmentId && (
-                                <Tag color="blue" style={{ margin: 0 }}>
+                                <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
                                     {item.installmentId}/{item.installmentCount}
                                 </Tag>
                             )}
@@ -87,52 +91,32 @@ function DebtCard({ item, onClick }: DebtCardProps) {
                                 <EditOutlined style={{ color: '#1890ff', fontSize: 12 }} />
                             )}
                         </Space>
-                        <div>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                {item.identification}
-                            </Text>
-                        </div>
+                        <Text type="secondary" style={{ fontSize: 11 }}>{item.identification}</Text>
                     </div>
-                    <Tag color={DEBT_STATUS_COLORS[item.status as DebtStatus] ?? 'default'} style={{ margin: 0 }}>
+                    <Tag color={DEBT_STATUS_COLORS[item.status as DebtStatus] ?? 'default'} style={{ margin: 0, fontSize: 11 }}>
                         {DEBT_STATUS_LABELS[item.status as DebtStatus] ?? item.status}
                     </Tag>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                    <Tag style={{ margin: 0 }}>
-                        {DEBT_CATEGORY_LABELS[item.category as keyof typeof DEBT_CATEGORY_LABELS] || item.category}
-                    </Tag>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                     <Space size={4}>
-                        <ClockCircleOutlined style={{ color: isOverdue ? '#ff4d4f' : undefined }} />
-                        <Text type={isOverdue ? 'danger' : 'secondary'} style={{ fontSize: 13 }}>
-                            {dueDate.format('DD/MM/YYYY')}
+                        <CalendarOutlined style={{ fontSize: 12, color: isOverdue ? '#ff4d4f' : undefined }} />
+                        <Text type={isOverdue ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
+                            {dueDate.format('DD/MM')}
                         </Text>
                     </Space>
-                </div>
-
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    background: '#fafafa',
-                    padding: '8px 12px',
-                    borderRadius: 6,
-                    marginTop: 4,
-                }}>
-                    <div>
-                        <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>Valor</Text>
-                        <Text strong style={{ fontSize: 16 }}>
-                            {formatCurrency(periodAmount)}
-                        </Text>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                        <span>
+                            <Text type="secondary" style={{ fontSize: 10 }}>Valor </Text>
+                            <Text strong style={{ fontSize: 14 }}>{formatCurrency(periodAmount)}</Text>
+                        </span>
+                        {remainingAmount > 0 && (
+                            <span>
+                                <Text type="secondary" style={{ fontSize: 10 }}>Restante </Text>
+                                <Text type="danger" strong style={{ fontSize: 14 }}>{formatCurrency(remainingAmount)}</Text>
+                            </span>
+                        )}
                     </div>
-                    {remainingAmount > 0 && (
-                        <div style={{ textAlign: 'right' }}>
-                            <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>Restante</Text>
-                            <Text type="danger" strong style={{ fontSize: 16 }}>
-                                {formatCurrency(remainingAmount)}
-                            </Text>
-                        </div>
-                    )}
                 </div>
             </div>
         </Card>

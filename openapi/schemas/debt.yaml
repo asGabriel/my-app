@@ -279,6 +279,10 @@ CreateRecurrenceRequest:
     dayOfMonth:
       type: integer
       description: "Dia do mês para a recorrência"
+    category:
+      $ref: "#/DebtCategory"
+      nullable: true
+      description: "Categoria da recorrência (opcional)"
 
 RecurrenceFilters:
   type: object
@@ -345,6 +349,10 @@ Recurrence:
     description:
       type: string
       description: "Descrição da recorrência"
+    category:
+      $ref: "#/DebtCategory"
+      nullable: true
+      description: "Categoria da recorrência"
     amount:
       type: string
       description: "Valor da recorrência (Decimal)"

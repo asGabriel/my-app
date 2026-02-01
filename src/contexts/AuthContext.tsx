@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { authRequest, ApiError } from '../services/api';
+import { authRequest, ApiError, setUnauthorizedHandler } from '../services/api';
 import { schemas } from '../api/generated';
 import { queryClient } from '../services/queryClient';
 
@@ -55,6 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         queryClient.clear();
     }, []);
+
+    useEffect(() => {
+        setUnauthorizedHandler(logout);
+        return () => setUnauthorizedHandler(null);
+    }, [logout]);
 
     useEffect(() => {
         const initAuth = async () => {

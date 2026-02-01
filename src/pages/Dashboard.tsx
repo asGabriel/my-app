@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Card, Col, Row, Statistic, Typography, Space, theme, Progress } from 'antd';
+import { Card, Col, Row, Statistic, Typography, theme, Progress } from 'antd';
 import { FilterOutlined } from '@ant-design/icons';
-import { useIncomes, usePayments, useDebts, Debt } from '../api';
+import { useIncomes, usePayments, useDebts, useInstallments, type Debt } from '../api';
 import { FilterBar, FilterBarValues, getDefaultFilters } from '../components/FilterBar';
 import { Loading } from '../components/Loading';
-import { formatCurrency, formatRelativeTime } from '../utils/format';
-import { formatDebtStatus, DEBT_STATUS_COLORS, DebtStatus, DEBT_CATEGORY_LABELS, DebtCategory } from '../utils/constants';
+import { formatCurrency } from '../utils/format';
+import { DEBT_CATEGORY_LABELS, DebtCategory } from '../utils/constants';
 
 const CATEGORY_COLORS: Record<DebtCategory, string> = {
     HOME: '#1890ff',
@@ -40,6 +40,12 @@ export function Dashboard() {
         endDate: filters.endDate,
     });
 
+    const { data: installments, isLoading: isLoadingInstallments } = useInstallments({
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        isPaid: false,
+    });
+
     const debtsMap = useMemo(() => {
         if (!debts) return new Map<string, Debt>();
         return new Map(debts.map((debt) => [debt.id, debt]));
@@ -56,42 +62,71 @@ export function Dashboard() {
     }, [payments]);
 
     const pendingDebtsTotal = useMemo(() => {
-        if (!debts) return 0;
-        return debts
-            .filter(debt => debt.status !== 'SETTLED')
-            .reduce((sum, debt) => sum + parseFloat(debt.remainingAmount), 0);
-    }, [debts]);
+        let total = 0;
+        const start = new Date(filters.startDate);
+        const end = new Date(filters.endDate);
+        if (installments && installments.length > 0) {
+            total += installments
+                .filter(inst => {
+                    const due = new Date(inst.dueDate);
+                    return due >= start && due <= end && !inst.isPaid;
+                })
+                .reduce((sum, inst) => sum + parseFloat(inst.amount), 0);
+        }
+        if (debts) {
+            debts
+                .filter(debt => {
+                    if (debt.status !== 'OPEN') return false;
+                    const hasInstallments = debt.installmentCount != null && debt.installmentCount >= 1;
+                    if (hasInstallments) return false;
+                    const due = new Date(debt.dueDate);
+                    return due >= start && due <= end;
+                })
+                .forEach(debt => {
+                    total += parseFloat(debt.remainingAmount);
+                });
+        }
+        return total;
+    }, [debts, installments, filters.startDate, filters.endDate]);
 
-    const recentDebts = useMemo(() => {
-        if (!debts) return [];
-        return [...debts]
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .slice(0, 5);
-    }, [debts]);
-
-    const recentPayments = useMemo(() => {
-        if (!payments) return [];
-        return [...payments]
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .slice(0, 5)
-            .map((payment) => ({
-                ...payment,
-                debt: debtsMap.get(payment.debtId),
-            }));
-    }, [payments, debtsMap]);
-
+    // Mesmo princípio do "Contas a Pagar": parcelas do período (categoria = débito pai) + débitos OPEN sem parcelas
     const categoryDistribution = useMemo(() => {
-        if (!debts || debts.length === 0) return [];
-
+        const start = new Date(filters.startDate);
+        const end = new Date(filters.endDate);
         const categoryTotals = new Map<string, number>();
         let grandTotal = 0;
 
-        debts.forEach(debt => {
-            const amount = parseFloat(debt.totalAmount);
-            const category = debt.category || 'UNKNOWN';
-            categoryTotals.set(category, (categoryTotals.get(category) || 0) + amount);
-            grandTotal += amount;
-        });
+        if (installments && debtsMap.size > 0) {
+            installments
+                .filter(inst => {
+                    const due = new Date(inst.dueDate);
+                    return due >= start && due <= end && !inst.isPaid;
+                })
+                .forEach(inst => {
+                    const parentDebt = debtsMap.get(inst.debtId);
+                    const category = (parentDebt?.category || 'UNKNOWN') as DebtCategory;
+                    const amount = parseFloat(inst.amount);
+                    categoryTotals.set(category, (categoryTotals.get(category) || 0) + amount);
+                    grandTotal += amount;
+                });
+        }
+
+        if (debts) {
+            debts
+                .filter(debt => {
+                    if (debt.status !== 'OPEN') return false;
+                    const hasInstallments = debt.installmentCount != null && debt.installmentCount >= 1;
+                    if (hasInstallments) return false;
+                    const due = new Date(debt.dueDate);
+                    return due >= start && due <= end;
+                })
+                .forEach(debt => {
+                    const category = (debt.category || 'UNKNOWN') as DebtCategory;
+                    const amount = parseFloat(debt.remainingAmount);
+                    categoryTotals.set(category, (categoryTotals.get(category) || 0) + amount);
+                    grandTotal += amount;
+                });
+        }
 
         return Array.from(categoryTotals.entries())
             .map(([category, total]) => ({
@@ -101,7 +136,7 @@ export function Dashboard() {
                 color: CATEGORY_COLORS[category as DebtCategory] || CATEGORY_COLORS.UNKNOWN,
             }))
             .sort((a, b) => b.total - a.total);
-    }, [debts]);
+    }, [debts, installments, debtsMap, filters.startDate, filters.endDate]);
 
     return (
         <div style={{ margin: -16 }}>
@@ -154,7 +189,7 @@ export function Dashboard() {
 
                     <Col xs={12} sm={12} lg={6}>
                         <Card size="small" hoverable className="stats-card">
-                            <Loading loading={isLoadingDebts}>
+                            <Loading loading={isLoadingDebts || isLoadingInstallments}>
                                 <Statistic
                                     title="Contas a Pagar"
                                     value={pendingDebtsTotal}
@@ -185,7 +220,7 @@ export function Dashboard() {
                 <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
                     <Col xs={24}>
                         <Card title="Distribuição por Categoria" size="small">
-                            <Loading loading={isLoadingDebts}>
+                            <Loading loading={isLoadingDebts || isLoadingInstallments}>
                                 {categoryDistribution.length === 0 ? (
                                     <Text type="secondary" style={{ fontSize: 13 }}>
                                         Nenhum débito no período
@@ -222,147 +257,6 @@ export function Dashboard() {
                     </Col>
                 </Row>
 
-                <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
-                    <Col xs={24} lg={12}>
-                        <Card title="Últimos Débitos" size="small">
-                            <Loading loading={isLoadingDebts}>
-                                {recentDebts.length === 0 ? (
-                                    <Text type="secondary" style={{ fontSize: 13 }}>
-                                        Nenhum débito no período
-                                    </Text>
-                                ) : (
-                                    <Space direction="vertical" style={{ width: '100%' }} size={4}>
-                                        {recentDebts.map((debt, index) => (
-                                            <div
-                                                key={debt.id}
-                                                style={{
-                                                    padding: '8px 0',
-                                                    borderBottom: index < recentDebts.length - 1
-                                                        ? `1px solid ${token.colorBorderSecondary}`
-                                                        : 'none',
-                                                }}
-                                            >
-                                                <div className="flex-between">
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <Text
-                                                            strong
-                                                            style={{ fontSize: 13 }}
-                                                            className="text-truncate"
-                                                        >
-                                                            {debt.description}
-                                                        </Text>
-                                                        <div style={{ marginTop: 2 }}>
-                                                            <Text
-                                                                style={{
-                                                                    fontSize: 11,
-                                                                    padding: '1px 6px',
-                                                                    borderRadius: 4,
-                                                                    background: DEBT_STATUS_COLORS[debt.status as DebtStatus] === 'success'
-                                                                        ? token.colorSuccessBg
-                                                                        : DEBT_STATUS_COLORS[debt.status as DebtStatus] === 'warning'
-                                                                            ? token.colorWarningBg
-                                                                            : token.colorInfoBg,
-                                                                    color: DEBT_STATUS_COLORS[debt.status as DebtStatus] === 'success'
-                                                                        ? token.colorSuccess
-                                                                        : DEBT_STATUS_COLORS[debt.status as DebtStatus] === 'warning'
-                                                                            ? token.colorWarning
-                                                                            : token.colorInfo,
-                                                                }}
-                                                            >
-                                                                {formatDebtStatus(debt.status as DebtStatus)}
-                                                            </Text>
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ textAlign: 'right', marginLeft: 8 }}>
-                                                        <Text
-                                                            style={{
-                                                                fontSize: 13,
-                                                                color: token.colorWarning,
-                                                                fontWeight: 500,
-                                                            }}
-                                                        >
-                                                            R$ {formatCurrency(parseFloat(debt.totalAmount))}
-                                                        </Text>
-                                                        <Text
-                                                            type="secondary"
-                                                            style={{ fontSize: 11, display: 'block' }}
-                                                        >
-                                                            {formatRelativeTime(debt.createdAt)}
-                                                        </Text>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </Space>
-                                )}
-                            </Loading>
-                        </Card>
-                    </Col>
-
-                    <Col xs={24} lg={12}>
-                        <Card title="Últimos Pagamentos" size="small">
-                            <Loading loading={isLoadingPayments}>
-                                {recentPayments.length === 0 ? (
-                                    <Text type="secondary" style={{ fontSize: 13 }}>
-                                        Nenhum pagamento no período
-                                    </Text>
-                                ) : (
-                                    <Space direction="vertical" style={{ width: '100%' }} size={4}>
-                                        {recentPayments.map((payment, index) => (
-                                            <div
-                                                key={payment.id}
-                                                style={{
-                                                    padding: '8px 0',
-                                                    borderBottom: index < recentPayments.length - 1
-                                                        ? `1px solid ${token.colorBorderSecondary}`
-                                                        : 'none',
-                                                }}
-                                            >
-                                                <div className="flex-between">
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <Text
-                                                            strong
-                                                            style={{ fontSize: 13 }}
-                                                            className="text-truncate"
-                                                        >
-                                                            {payment.debt?.description || 'Pagamento'}
-                                                        </Text>
-                                                        {payment.debt && (
-                                                            <Text
-                                                                type="secondary"
-                                                                style={{ fontSize: 11, display: 'block' }}
-                                                                className="text-truncate"
-                                                            >
-                                                                {payment.debt.identification}
-                                                            </Text>
-                                                        )}
-                                                    </div>
-                                                    <div style={{ textAlign: 'right', marginLeft: 8 }}>
-                                                        <Text
-                                                            style={{
-                                                                fontSize: 13,
-                                                                color: token.colorError,
-                                                                fontWeight: 500,
-                                                            }}
-                                                        >
-                                                            -R$ {formatCurrency(parseFloat(payment.amount))}
-                                                        </Text>
-                                                        <Text
-                                                            type="secondary"
-                                                            style={{ fontSize: 11, display: 'block' }}
-                                                        >
-                                                            {formatRelativeTime(payment.createdAt)}
-                                                        </Text>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </Space>
-                                )}
-                            </Loading>
-                        </Card>
-                    </Col>
-                </Row>
             </div>
         </div>
     );
