@@ -35,13 +35,11 @@ export function IncomeFormModal({ open, onClose }: IncomeFormModalProps) {
         try {
             const values = await form.validateFields();
 
-            const selectedInstrument = instruments?.find(i => i.id === values.financialInstrumentId);
-            
             const payload: CreateIncomeRequest = {
+                financialInstrumentId: values.financialInstrumentId,
                 description: values.description,
                 amount: values.amount.toString(),
                 dateReference: values.dateReference.format('YYYY-MM-DD'),
-                financialInstrumentIdentification: selectedInstrument?.identification || '',
             };
 
             await createIncome.mutateAsync(payload);

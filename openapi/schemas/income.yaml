@@ -48,20 +48,21 @@ Income:
 CreateIncomeRequest:
   type: object
   required:
-    - financialInstrumentIdentification
+    - financialInstrumentId
     - description
     - amount
     - dateReference
   properties:
-    financialInstrumentIdentification:
+    financialInstrumentId:
       type: string
-      description: "Financial instrument identification"
+      format: uuid
+      description: "ID do instrumento financeiro"
     description:
       type: string
-      description: "Income description"
+      description: "Descrição da receita"
     amount:
       type: string
-      description: "Decimal value as string"
+      description: "Valor (decimal como string)"
     dateReference:
       type: string
-      description: "Reference date (YYYY-MM-DD)"
+      description: "Data de referência (YYYY-MM-DD)"

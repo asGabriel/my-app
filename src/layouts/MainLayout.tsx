@@ -10,6 +10,7 @@ import {
   LogoutOutlined,
   AppstoreOutlined,
   FileTextOutlined,
+  RiseOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import type { MenuProps } from 'antd';
@@ -33,6 +34,11 @@ const menuItems: MenuItem[] = [
     key: '/contas-a-pagar',
     icon: <FileTextOutlined />,
     label: 'Contas a Pagar',
+  },
+  {
+    key: '/receitas',
+    icon: <RiseOutlined />,
+    label: 'Receitas',
   },
   {
     key: '/cadastros',
@@ -202,10 +208,35 @@ export function MainLayout() {
           <span style={{ fontWeight: 600, fontSize: 18, flex: 1 }}>Dashboard</span>
 
           <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-            <Avatar
-              style={{ backgroundColor: '#1890ff', cursor: 'pointer' }}
-              icon={<UserOutlined />}
-            />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: 8,
+                maxWidth: 'min(180px, 50vw)',
+              }}
+            >
+              <span
+                style={{
+                  fontWeight: 500,
+                  fontSize: 14,
+                  color: 'inherit',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {user?.name || 'Usuário'}
+              </span>
+              <Avatar
+                size="small"
+                style={{ backgroundColor: '#1890ff' }}
+                icon={<UserOutlined />}
+              />
+            </div>
           </Dropdown>
         </Header>
 

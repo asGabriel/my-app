@@ -45,7 +45,7 @@ const Income = z
   .passthrough();
 const CreateIncomeRequest = z
   .object({
-    financialInstrumentIdentification: z.string(),
+    financialInstrumentId: z.string().uuid(),
     description: z.string(),
     amount: z.string(),
     dateReference: z.string(),
