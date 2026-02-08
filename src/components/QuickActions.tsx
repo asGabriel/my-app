@@ -4,12 +4,10 @@ import {
     PlusOutlined,
     RiseOutlined,
     CreditCardOutlined,
-    WalletOutlined,
 } from '@ant-design/icons';
 
 interface QuickActionsProps {
     onAddDebt?: () => void;
-    onAddPayment?: () => void;
     onAddIncome?: () => void;
 }
 
@@ -21,12 +19,6 @@ const ACTIONS = [
         color: '#faad14',
     },
     {
-        key: 'payment' as const,
-        label: 'Novo Pagamento',
-        icon: <WalletOutlined />,
-        color: '#ff4d4f',
-    },
-    {
         key: 'income' as const,
         label: 'Nova Receita',
         icon: <RiseOutlined />,
@@ -34,13 +26,12 @@ const ACTIONS = [
     },
 ];
 
-export function QuickActions({ onAddDebt, onAddPayment, onAddIncome }: QuickActionsProps) {
+export function QuickActions({ onAddDebt, onAddIncome }: QuickActionsProps) {
     const [open, setOpen] = useState(false);
 
-    const handleAction = (key: 'debt' | 'payment' | 'income') => {
+    const handleAction = (key: 'debt' | 'income') => {
         setOpen(false);
         if (key === 'debt') onAddDebt?.();
-        else if (key === 'payment') onAddPayment?.();
         else onAddIncome?.();
     };
 
