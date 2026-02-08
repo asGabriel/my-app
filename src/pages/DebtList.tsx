@@ -7,19 +7,18 @@ import {
     Tabs,
     Spin,
     Empty,
-    Row,
-    Col,
     Select,
 } from 'antd';
 import {
     FilterOutlined,
     EditOutlined,
     CalendarOutlined,
-    PushpinOutlined,
     UnorderedListOutlined,
+    CheckCircleOutlined,
+    ClockCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useDebts, useInstallments, Installment, Debt } from '../api';
+import { useDebts, useInstallments, Debt } from '../api';
 import { formatCurrency } from '../utils/format';
 import {
     DebtStatus,
@@ -28,12 +27,15 @@ import {
     DEBT_STATUS_COLORS,
     DEBT_CATEGORY_LABELS,
     DEBT_CATEGORY_OPTIONS,
+    EXPENSE_TYPE_LABELS,
 } from '../utils/constants';
 import { DebtEditModal } from '../components/DebtEditModal';
 import { FilterBar, FilterBarValues, getDefaultFilters } from '../components/FilterBar';
 import { theme } from 'antd';
 
 const { Title, Text } = Typography;
+
+type TabKey = 'open' | 'paid';
 
 interface DebtDisplayItem {
     id: string;
@@ -88,6 +90,11 @@ function DebtCard({ item, onClick }: DebtCardProps) {
                                     {item.installmentId}/{item.installmentCount}
                                 </Tag>
                             )}
+                            {item.expenseType && (
+                                <Tag color={item.expenseType === 'FIXED' ? 'purple' : 'cyan'} style={{ margin: 0, fontSize: 11 }}>
+                                    {EXPENSE_TYPE_LABELS[item.expenseType as keyof typeof EXPENSE_TYPE_LABELS] || item.expenseType}
+                                </Tag>
+                            )}
                             {onClick && (
                                 <EditOutlined style={{ color: '#1890ff', fontSize: 12 }} />
                             )}
@@ -124,15 +131,14 @@ function DebtCard({ item, onClick }: DebtCardProps) {
     );
 }
 
-const STATUS_TABS: { key: DebtStatus; label: string }[] = [
-    { key: 'OPEN', label: 'Em Aberto' },
-    { key: 'INSTALLMENT', label: 'Parcelada' },
-    { key: 'SETTLED', label: 'Quitada' },
+const STATUS_TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+    { key: 'open', label: 'Em Aberto', icon: <ClockCircleOutlined /> },
+    { key: 'paid', label: 'Pagas', icon: <CheckCircleOutlined /> },
 ];
 
 const DUE_SOON_DAYS = 7;
 
-type QuickFilterKey = 'due_soon' | 'fixed' | 'open' | null;
+type QuickFilterKey = 'due_soon' | 'installment' | null;
 
 export function DebtList() {
     const { token } = theme.useToken();
@@ -142,41 +148,39 @@ export function DebtList() {
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
 
+    // Busca débitos não parcelados do período
     const { data: debts, isLoading: isLoadingDebts } = useDebts({
         startDate: filters.startDate,
         endDate: filters.endDate,
     });
 
-    const installmentDebtIds = useMemo(() => {
-        return debts
-            ?.filter(d => d.installmentCount && d.installmentCount >= 1)
-            .map(d => d.id) || [];
-    }, [debts]);
+    // Busca todas as parcelas do período (independente do dueDate do débito pai)
+    const { data: installments, isLoading: isLoadingInstallments } = useInstallments({
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+    });
 
-    const { data: installments, isLoading: isLoadingInstallments } = useInstallments(
-        {
-            debtIds: installmentDebtIds.length > 0 ? installmentDebtIds : undefined,
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-        },
+    // Coleta os debtIds das parcelas para buscar os débitos pai
+    const installmentDebtIds = useMemo(() => {
+        if (!installments) return [];
+        const ids = new Set<string>();
+        installments.forEach(inst => ids.add(inst.debtId));
+        return Array.from(ids);
+    }, [installments]);
+
+    // Busca os débitos pai das parcelas (podem ter dueDate fora do período)
+    const { data: parentDebts, isLoading: isLoadingParentDebts } = useDebts(
+        { ids: installmentDebtIds },
         installmentDebtIds.length > 0
     );
 
-    const installmentsByDebtId = useMemo(() => {
-        const map = new Map<string, Installment[]>();
-        installments?.forEach(inst => {
-            const existing = map.get(inst.debtId) || [];
-            existing.push(inst);
-            map.set(inst.debtId, existing);
-        });
-        return map;
-    }, [installments]);
-
-    const debtsById = useMemo(() => {
+    // Combina todos os débitos em um mapa
+    const allDebtsById = useMemo(() => {
         const map = new Map<string, Debt>();
         debts?.forEach(debt => map.set(debt.id, debt));
+        parentDebts?.forEach(debt => map.set(debt.id, debt));
         return map;
-    }, [debts]);
+    }, [debts, parentDebts]);
 
     const handleCardClick = (debtId: string) => {
         const debt = debtsById.get(debtId);
