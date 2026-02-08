@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { MainLayout } from '../layouts/MainLayout';
 import { Dashboard } from '../pages/Dashboard';
 import { Login } from '../pages/Login';
@@ -28,6 +28,8 @@ export function AppRouter() {
           <Route path="cadastros/recorrencias" element={<Recurrences />} />
           <Route path="configuracoes" element={<div>Página de Configurações (em construção)</div>} />
         </Route>
+        {/* Rota catch-all: redireciona para home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
