@@ -3,7 +3,7 @@ import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { DebtFilters, Debt, schemas } from '../generated';
 
-export function useDebts(filters: DebtFilters) {
+export function useDebts(filters: DebtFilters, enabled = true) {
   const { token } = useAuth();
 
   return useQuery({
@@ -20,6 +20,6 @@ export function useDebts(filters: DebtFilters) {
 
       return schemas.Debt.array().parse(data);
     },
-    enabled: !!token,
+    enabled: !!token && enabled,
   });
 }
