@@ -183,7 +183,7 @@ export function DebtList() {
     }, [debts, parentDebts]);
 
     const handleCardClick = (debtId: string) => {
-        const debt = debtsById.get(debtId);
+        const debt = allDebtsById.get(debtId);
         if (debt) {
             setSelectedDebt(debt);
             setEditModalOpen(true);
@@ -196,56 +196,57 @@ export function DebtList() {
     };
 
     const displayItems: DebtDisplayItem[] = useMemo(() => {
-        if (!debts) return [];
-
         const items: DebtDisplayItem[] = [];
 
-        debts.forEach(debt => {
-            const isInstallmentDebt = debt.installmentCount && debt.installmentCount >= 1;
-            const debtInstallments = installmentsByDebtId.get(debt.id) || [];
+        // Primeiro, processa as parcelas do período
+        installments?.forEach(inst => {
+            const debt = allDebtsById.get(inst.debtId);
+            if (!debt) return;
 
-            if (isInstallmentDebt) {
-                debtInstallments.forEach(inst => {
-                    items.push({
-                        id: `${debt.id}-${inst.installmentId}`,
-                        debtId: debt.id,
-                        description: debt.description,
-                        identification: debt.identification,
-                        category: debt.category,
-                        dueDate: inst.dueDate,
-                        totalAmount: debt.totalAmount,
-                        periodAmount: inst.amount,
-                        paidAmount: inst.isPaid ? inst.amount : '0',
-                        remainingAmount: inst.isPaid ? '0' : inst.amount,
-                        status: inst.isPaid ? DEBT_STATUS.SETTLED : DEBT_STATUS.OPEN,
-                        expenseType: debt.expenseType ?? null,
-                        installmentCount: debt.installmentCount,
-                        installmentId: inst.installmentId,
-                        isInstallment: true,
-                    });
-                });
-            } else {
-                items.push({
-                    id: debt.id,
-                    debtId: debt.id,
-                    description: debt.description,
-                    identification: debt.identification,
-                    category: debt.category,
-                    dueDate: debt.dueDate,
-                    totalAmount: debt.totalAmount,
-                    periodAmount: debt.totalAmount,
-                    paidAmount: debt.paidAmount,
-                    remainingAmount: debt.remainingAmount,
-                    status: debt.status,
-                    expenseType: debt.expenseType ?? null,
-                    installmentCount: debt.installmentCount,
-                    isInstallment: false,
-                });
-            }
+            items.push({
+                id: `${debt.id}-${inst.installmentId}`,
+                debtId: debt.id,
+                description: debt.description,
+                identification: debt.identification,
+                category: debt.category,
+                dueDate: inst.dueDate,
+                totalAmount: debt.totalAmount,
+                periodAmount: inst.amount,
+                paidAmount: inst.isPaid ? inst.amount : '0',
+                remainingAmount: inst.isPaid ? '0' : inst.amount,
+                status: inst.isPaid ? DEBT_STATUS.SETTLED : DEBT_STATUS.OPEN,
+                expenseType: debt.expenseType ?? null,
+                installmentCount: debt.installmentCount,
+                installmentId: inst.installmentId,
+                isInstallment: true,
+            });
+        });
+
+        // Depois, processa os débitos não parcelados do período
+        debts?.forEach(debt => {
+            // Pula débitos parcelados (já foram processados pelas parcelas)
+            if (debt.installmentCount && debt.installmentCount >= 1) return;
+
+            items.push({
+                id: debt.id,
+                debtId: debt.id,
+                description: debt.description,
+                identification: debt.identification,
+                category: debt.category,
+                dueDate: debt.dueDate,
+                totalAmount: debt.totalAmount,
+                periodAmount: debt.totalAmount,
+                paidAmount: debt.paidAmount,
+                remainingAmount: debt.remainingAmount,
+                status: debt.status,
+                expenseType: debt.expenseType ?? null,
+                installmentCount: debt.installmentCount,
+                isInstallment: false,
+            });
         });
 
         return items.sort((a, b) => dayjs(a.dueDate).valueOf() - dayjs(b.dueDate).valueOf());
-    }, [debts, installmentsByDebtId]);
+    }, [debts, installments, allDebtsById]);
 
     const filteredDisplayItems = useMemo(() => {
         let result = displayItems;
@@ -266,20 +267,17 @@ export function DebtList() {
                 );
             });
         }
-        if (quickFilter === 'fixed') {
-            return result.filter(item => item.expenseType === 'FIXED');
-        }
-        if (quickFilter === 'open') {
-            return result.filter(item => item.status === DEBT_STATUS.OPEN);
+        if (quickFilter === 'installment') {
+            return result.filter(item => item.isInstallment);
         }
         return result;
     }, [displayItems, quickFilter, categoryFilter]);
 
-    const itemsByStatus = useMemo(() => {
-        const map = new Map<DebtStatus, DebtDisplayItem[]>();
+    const itemsByTab = useMemo(() => {
+        const map = new Map<TabKey, DebtDisplayItem[]>();
         STATUS_TABS.forEach(({ key }) => map.set(key, []));
         filteredDisplayItems.forEach(item => {
-            const tabKey: DebtStatus = item.isInstallment ? 'INSTALLMENT' : item.status;
+            const tabKey: TabKey = item.status === DEBT_STATUS.SETTLED ? 'paid' : 'open';
             const list = map.get(tabKey);
             if (list) list.push(item);
         });
@@ -296,17 +294,12 @@ export function DebtList() {
         }).length;
     }, [displayItems]);
 
-    const fixedExpensesCount = useMemo(
-        () => displayItems.filter(item => item.expenseType === 'FIXED').length,
+    const installmentCount = useMemo(
+        () => displayItems.filter(item => item.isInstallment).length,
         [displayItems]
     );
 
-    const openCount = useMemo(
-        () => displayItems.filter(item => item.status === DEBT_STATUS.OPEN).length,
-        [displayItems]
-    );
-
-    const isLoading = isLoadingDebts || isLoadingInstallments;
+    const isLoading = isLoadingDebts || isLoadingInstallments || isLoadingParentDebts;
 
     return (
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -360,137 +353,48 @@ export function DebtList() {
                 Contas a Pagar
             </Title>
 
-            <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
-                <Col xs={24} sm={12} md={8}>
-                    <Card
-                        size="small"
-                        hoverable
-                        onClick={() => setQuickFilter(quickFilter === 'open' ? null : 'open')}
-                        style={{
-                            cursor: 'pointer',
-                            borderColor: quickFilter === 'open' ? token.colorPrimary : undefined,
-                            borderWidth: quickFilter === 'open' ? 2 : 1,
-                            background: quickFilter === 'open' ? token.colorPrimaryBg : undefined,
-                            minHeight: 88,
-                        }}
-                        styles={{ body: { padding: '12px 16px' } }}
-                    >
-                        <Space size={12} style={{ width: '100%' }} align="start">
-                            <div
-                                style={{
-                                    width: 44,
-                                    height: 44,
-                                    minWidth: 44,
-                                    borderRadius: 10,
-                                    background: token.colorErrorBg,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <UnorderedListOutlined style={{ fontSize: 20, color: token.colorError }} />
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <Text strong style={{ display: 'block', fontSize: 15 }}>
-                                    Contas em aberto
-                                </Text>
-                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                    Ainda não quitadas
-                                </Text>
-                                <Text strong style={{ fontSize: 18, color: token.colorError, display: 'block', marginTop: 4 }}>
-                                    {openCount} {openCount === 1 ? 'conta' : 'contas'}
-                                </Text>
-                            </div>
-                        </Space>
-                    </Card>
-                </Col>
-                <Col xs={24} sm={12} md={8}>
-                    <Card
-                        size="small"
-                        hoverable
-                        onClick={() => setQuickFilter(quickFilter === 'due_soon' ? null : 'due_soon')}
-                        style={{
-                            cursor: 'pointer',
-                            borderColor: quickFilter === 'due_soon' ? token.colorPrimary : undefined,
-                            borderWidth: quickFilter === 'due_soon' ? 2 : 1,
-                            background: quickFilter === 'due_soon' ? token.colorPrimaryBg : undefined,
-                            minHeight: 88,
-                        }}
-                        styles={{ body: { padding: '12px 16px' } }}
-                    >
-                        <Space size={12} style={{ width: '100%' }} align="start">
-                            <div
-                                style={{
-                                    width: 44,
-                                    height: 44,
-                                    minWidth: 44,
-                                    borderRadius: 10,
-                                    background: token.colorWarningBg,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <CalendarOutlined style={{ fontSize: 20, color: token.colorWarning }} />
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <Text strong style={{ display: 'block', fontSize: 15 }}>
-                                    Próximas do vencimento
-                                </Text>
-                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                    Vencem nos próximos {DUE_SOON_DAYS} dias
-                                </Text>
-                                <Text strong style={{ fontSize: 18, color: token.colorWarning, display: 'block', marginTop: 4 }}>
-                                    {dueSoonCount} {dueSoonCount === 1 ? 'conta' : 'contas'}
-                                </Text>
-                            </div>
-                        </Space>
-                    </Card>
-                </Col>
-                <Col xs={24} sm={12} md={8}>
-                    <Card
-                        size="small"
-                        hoverable
-                        onClick={() => setQuickFilter(quickFilter === 'fixed' ? null : 'fixed')}
-                        style={{
-                            cursor: 'pointer',
-                            borderColor: quickFilter === 'fixed' ? token.colorPrimary : undefined,
-                            borderWidth: quickFilter === 'fixed' ? 2 : 1,
-                            background: quickFilter === 'fixed' ? token.colorPrimaryBg : undefined,
-                            minHeight: 88,
-                        }}
-                        styles={{ body: { padding: '12px 16px' } }}
-                    >
-                        <Space size={12} style={{ width: '100%' }} align="start">
-                            <div
-                                style={{
-                                    width: 44,
-                                    height: 44,
-                                    minWidth: 44,
-                                    borderRadius: 10,
-                                    background: token.colorPrimaryBg,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <PushpinOutlined style={{ fontSize: 20, color: token.colorPrimary }} />
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <Text strong style={{ display: 'block', fontSize: 15 }}>
-                                    Despesas fixas
-                                </Text>
-                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                    Valor recorrente mensal
-                                </Text>
-                                <Text strong style={{ fontSize: 18, color: token.colorPrimary, display: 'block', marginTop: 4 }}>
-                                    {fixedExpensesCount} {fixedExpensesCount === 1 ? 'conta' : 'contas'}
-                                </Text>
-                            </div>
-                        </Space>
-                    </Card>
-                </Col>
-            </Row>
+            <Space size={8} style={{ marginBottom: 16 }} wrap>
+                <Card
+                    size="small"
+                    hoverable
+                    onClick={() => setQuickFilter(quickFilter === 'due_soon' ? null : 'due_soon')}
+                    style={{
+                        cursor: 'pointer',
+                        borderColor: quickFilter === 'due_soon' ? token.colorWarning : undefined,
+                        borderWidth: quickFilter === 'due_soon' ? 2 : 1,
+                        background: quickFilter === 'due_soon' ? token.colorWarningBg : undefined,
+                    }}
+                    styles={{ body: { padding: '8px 12px' } }}
+                >
+                    <Space size={8}>
+                        <CalendarOutlined style={{ fontSize: 16, color: token.colorWarning }} />
+                        <Text strong style={{ fontSize: 13 }}>
+                            Vencendo em {DUE_SOON_DAYS} dias
+                        </Text>
+                        <Tag color="warning" style={{ margin: 0 }}>{dueSoonCount}</Tag>
+                    </Space>
+                </Card>
+                <Card
+                    size="small"
+                    hoverable
+                    onClick={() => setQuickFilter(quickFilter === 'installment' ? null : 'installment')}
+                    style={{
+                        cursor: 'pointer',
+                        borderColor: quickFilter === 'installment' ? '#1890ff' : undefined,
+                        borderWidth: quickFilter === 'installment' ? 2 : 1,
+                        background: quickFilter === 'installment' ? '#e6f7ff' : undefined,
+                    }}
+                    styles={{ body: { padding: '8px 12px' } }}
+                >
+                    <Space size={8}>
+                        <UnorderedListOutlined style={{ fontSize: 16, color: '#1890ff' }} />
+                        <Text strong style={{ fontSize: 13 }}>
+                            Parceladas
+                        </Text>
+                        <Tag color="blue" style={{ margin: 0 }}>{installmentCount}</Tag>
+                    </Space>
+                </Card>
+            </Space>
 
             {isLoading ? (
                 <div style={{ textAlign: 'center', padding: 48 }}>
@@ -498,18 +402,24 @@ export function DebtList() {
                 </div>
             ) : (
                 <Tabs
-                    defaultActiveKey="OPEN"
-                    items={STATUS_TABS.map(({ key, label }) => ({
+                    defaultActiveKey="open"
+                    items={STATUS_TABS.map(({ key, label, icon }) => ({
                         key,
-                        label: `${label} (${itemsByStatus.get(key)?.length ?? 0})`,
+                        label: (
+                            <Space size={4}>
+                                {icon}
+                                <span>{label}</span>
+                                <Tag style={{ margin: 0 }}>{itemsByTab.get(key)?.length ?? 0}</Tag>
+                            </Space>
+                        ),
                         children: (
                             <Space direction="vertical" size={8} style={{ width: '100%', paddingTop: 8 }}>
-                                {(itemsByStatus.get(key) ?? []).length === 0 ? (
+                                {(itemsByTab.get(key) ?? []).length === 0 ? (
                                     <Card>
-                                        <Empty description={`Nenhuma conta com status "${label}" no período`} />
+                                        <Empty description={`Nenhuma conta "${label.toLowerCase()}" no período`} />
                                     </Card>
                                 ) : (
-                                    (itemsByStatus.get(key) ?? []).map(item => (
+                                    (itemsByTab.get(key) ?? []).map(item => (
                                         <DebtCard
                                             key={item.id}
                                             item={item}
