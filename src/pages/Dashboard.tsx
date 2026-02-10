@@ -45,6 +45,20 @@ export function Dashboard() {
         endDate: filters.endDate,
     });
 
+    // IDs de débitos referenciados por payments/installments que podem não estar no filtro por data
+    const extraDebtIds = useMemo(() => {
+        const fromDebts = new Set(debts?.map(d => d.id) ?? []);
+        const ids = new Set<string>();
+        payments?.forEach(p => { if (!fromDebts.has(p.debtId)) ids.add(p.debtId); });
+        installments?.forEach(i => { if (!fromDebts.has(i.debtId)) ids.add(i.debtId); });
+        return Array.from(ids);
+    }, [debts, payments, installments]);
+
+    const { data: extraDebts } = useDebts(
+        { ids: extraDebtIds },
+        extraDebtIds.length > 0
+    );
+
     const totalIncome = useMemo(() => {
         if (!incomes) return 0;
         return incomes.reduce((sum, income) => sum + parseFloat(income.amount), 0);
@@ -80,9 +94,11 @@ export function Dashboard() {
     }, [debts, installments]);
 
     const debtsMap = useMemo(() => {
-        if (!debts) return new Map<string, Debt>();
-        return new Map(debts.map(debt => [debt.id, debt]));
-    }, [debts]);
+        const map = new Map<string, Debt>();
+        debts?.forEach(debt => map.set(debt.id, debt));
+        extraDebts?.forEach(debt => map.set(debt.id, debt));
+        return map;
+    }, [debts, extraDebts]);
 
     const categoryDistribution = useMemo(() => {
         const categoryData = new Map<string, { paid: number; unpaid: number }>();
