@@ -2,6 +2,7 @@ list:
   post:
     operationId: listPayments
     summary: Lista os pagamentos do período
+    description: Lista pagamentos com filtros por período, débitos, instrumentos financeiros e contas.
     tags:
       - Payment
     requestBody:
@@ -10,6 +11,11 @@ list:
         application/json:
           schema:
             $ref: "../schemas/payment.yaml#/ListPaymentsFilters"
+          example:
+            accountIds:
+              - "1f687ce9-034a-4e72-8268-7db5f9989474"
+            startDate: "2026-02-01"
+            endDate: "2026-02-29"
     responses:
       "200":
         description: Lista de pagamentos

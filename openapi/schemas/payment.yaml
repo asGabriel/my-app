@@ -13,6 +13,12 @@ ListPaymentsFilters:
         type: string
         format: uuid
       description: "Lista de IDs de instrumentos financeiros para filtrar"
+    accountIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "Lista de IDs de contas para filtrar"
     startDate:
       type: string
       description: "Data de início (formato: YYYY-MM-DD)"

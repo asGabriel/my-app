@@ -3,7 +3,7 @@ import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { ListPaymentsFilters, Payment, schemas } from '../generated';
 
-export function usePayments(filters: ListPaymentsFilters) {
+export function usePayments(filters: ListPaymentsFilters, enabled = true) {
   const { token } = useAuth();
 
   return useQuery({
@@ -20,6 +20,6 @@ export function usePayments(filters: ListPaymentsFilters) {
 
       return schemas.Payment.array().parse(data);
     },
-    enabled: !!token,
+    enabled: !!token && enabled,
   });
 }
