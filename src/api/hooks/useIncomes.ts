@@ -1,10 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { ListIncomesFilters, Income, schemas } from '../generated';
 
-export function useIncomes(filters: ListIncomesFilters) {
+type IncomesQueryOptions = Omit<UseQueryOptions<Income[]>, 'queryKey' | 'queryFn'>;
+
+export function useIncomes(filters: ListIncomesFilters, options: IncomesQueryOptions = {}) {
   const { token } = useAuth();
+  const { enabled = true, ...queryOptions } = options;
 
   return useQuery({
     queryKey: ['incomes', filters],
@@ -20,6 +23,7 @@ export function useIncomes(filters: ListIncomesFilters) {
 
       return schemas.Income.array().parse(data);
     },
-    enabled: !!token,
+    ...queryOptions,
+    enabled: !!token && enabled,
   });
 }

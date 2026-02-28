@@ -11,6 +11,7 @@ import {
   AppstoreOutlined,
   FileTextOutlined,
   RiseOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import type { MenuProps } from 'antd';
@@ -38,6 +39,11 @@ const menuItems: MenuItem[] = [
     key: '/receitas',
     icon: <RiseOutlined />,
     label: 'Receitas',
+  },
+  {
+    key: '/movimentacoes-conta',
+    icon: <SwapOutlined />,
+    label: 'Extrato',
   },
   {
     key: '/cadastros',

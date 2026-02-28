@@ -1,6 +1,12 @@
 ListIncomesFilters:
   type: object
   properties:
+    financialInstrumentIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "Lista de IDs de instrumentos financeiros (contas) para filtrar"
     startDate:
       type: string
       description: "Data de início (formato: YYYY-MM-DD)"

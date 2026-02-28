@@ -6,6 +6,7 @@ import { FinancialInstruments } from '../pages/FinancialInstruments';
 import { DebtList } from '../pages/DebtList';
 import { IncomeList } from '../pages/IncomeList';
 import { Recurrences } from '../pages/Recurrences';
+import { AccountMovements } from '../pages/AccountMovements';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 
 export function AppRouter() {
@@ -24,6 +25,7 @@ export function AppRouter() {
           <Route index element={<Dashboard />} />
           <Route path="contas-a-pagar" element={<DebtList />} />
           <Route path="receitas" element={<IncomeList />} />
+          <Route path="movimentacoes-conta" element={<AccountMovements />} />
           <Route path="cadastros/instrumentos-financeiros" element={<FinancialInstruments />} />
           <Route path="cadastros/recorrencias" element={<Recurrences />} />
           <Route path="configuracoes" element={<div>Página de Configurações (em construção)</div>} />
