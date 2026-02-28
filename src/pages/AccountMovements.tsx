@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Card, Collapse, Col, Grid, List, Row, Select, Statistic, Table, Tabs, Tag, theme, Typography } from "antd";
+import { Card, Collapse, Col, Grid, List, Row, Select, Statistic, Table, Tabs, Tag, theme } from "antd";
 import { useFinancialInstruments } from "../api/hooks/useFinancialInstruments";
 import { usePayments } from "../api/hooks/usePayments";
 import { FilterBar, FilterBarValues, getDefaultFilters } from "../components/FilterBar";
@@ -49,7 +49,7 @@ export function AccountMovements() {
       .map((debt) => debt.id);
   }, [debts]);
 
-  const { data: installments, isLoading: isLoadingInstallments } = useInstallments(
+  const { data: installments } = useInstallments(
     {
       debtIds: installmentDebtIds,
     },
