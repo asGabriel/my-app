@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Card, Col, Row, Statistic, Typography, theme } from 'antd';
+import { Card, Col, Grid, Row, Statistic, Typography, theme } from 'antd';
 import { FilterOutlined } from '@ant-design/icons';
-import { useIncomes, useDebts, useInstallments, usePayments, type Debt } from '../api';
+import { useIncomes, useDebts, useInstallments, usePayments, useFinancialInstruments, type Debt } from '../api';
 import { FilterBar, FilterBarValues, getDefaultFilters } from '../components/FilterBar';
 import { Loading } from '../components/Loading';
 import { formatCurrency } from '../utils/format';
@@ -23,6 +23,8 @@ const { Text } = Typography;
 
 export function Dashboard() {
     const { token } = theme.useToken();
+    const screens = Grid.useBreakpoint();
+    const stackAccountMovementRow = screens.sm === false;
     const [filters, setFilters] = useState<FilterBarValues>(getDefaultFilters);
 
     const { data: incomes, isLoading: isLoadingIncomes } = useIncomes({
@@ -44,6 +46,8 @@ export function Dashboard() {
         startDate: filters.startDate,
         endDate: filters.endDate,
     });
+
+    const { data: financialInstruments, isLoading: isLoadingInstruments } = useFinancialInstruments();
 
     // IDs de débitos referenciados por payments/installments que podem não estar no filtro por data
     const extraDebtIds = useMemo(() => {
@@ -99,6 +103,41 @@ export function Dashboard() {
         extraDebts?.forEach(debt => map.set(debt.id, debt));
         return map;
     }, [debts, extraDebts]);
+
+    /** Contas (instrumentos): mesmo id usado em `Payment.accountId` e em receitas (`financialInstrumentId`). */
+    const accountLabelById = useMemo(() => {
+        const map = new Map<string, string>();
+        financialInstruments?.forEach((inst) => {
+            map.set(inst.id, `${inst.owner} · ${inst.name}`);
+        });
+        return map;
+    }, [financialInstruments]);
+
+    const instrumentMovementRows = useMemo(() => {
+        const sums = new Map<string, { entrada: number; saida: number }>();
+
+        const add = (accountId: string, field: 'entrada' | 'saida', amount: number) => {
+            const cur = sums.get(accountId) ?? { entrada: 0, saida: 0 };
+            cur[field] += amount;
+            sums.set(accountId, cur);
+        };
+
+        incomes?.forEach((income) => {
+            const id = income.financialInstrumentId;
+            if (id) add(id, 'entrada', parseFloat(income.amount));
+        });
+
+        payments?.forEach((payment) => {
+            add(payment.accountId, 'saida', parseFloat(payment.amount));
+        });
+
+        const rows = Array.from(sums.entries()).map(([accountId, { entrada, saida }]) => {
+            const label = accountLabelById.get(accountId) ?? `Conta (${accountId.slice(0, 8)}…)`;
+            return { accountId, label, entrada, saida, total: entrada + saida };
+        });
+
+        return rows.sort((a, b) => b.total - a.total);
+    }, [incomes, payments, accountLabelById]);
 
     const categoryDistribution = useMemo(() => {
         const categoryData = new Map<string, { paid: number; unpaid: number }>();
@@ -186,7 +225,7 @@ export function Dashboard() {
             <div className="page-content">
                 <Row gutter={[12, 12]} className="stats-grid">
 
-                    <Col xs={12} sm={12} lg={6}>
+                    <Col xs={12} sm={12} lg={8}>
                         <Card size="small" hoverable className="stats-card">
                             <Loading loading={isLoadingIncomes}>
                                 <Statistic
@@ -200,7 +239,7 @@ export function Dashboard() {
                         </Card>
                     </Col>
 
-                    <Col xs={12} sm={12} lg={6}>
+                    <Col xs={12} sm={12} lg={8}>
                         <Card size="small" hoverable className="stats-card">
                             <Loading loading={isLoadingPayments}>
                                 <Statistic
@@ -214,7 +253,7 @@ export function Dashboard() {
                         </Card>
                     </Col>
 
-                    <Col xs={12} sm={12} lg={6}>
+                    <Col xs={12} sm={12} lg={8}>
                         <Card size="small" hoverable className="stats-card">
                             <Loading loading={isLoadingDebts || isLoadingInstallments}>
                                 <Statistic
@@ -228,20 +267,176 @@ export function Dashboard() {
                         </Card>
                     </Col>
 
-                    <Col xs={12} sm={12} lg={6}>
-                        <Card size="small" hoverable className="stats-card">
-                            <Loading loading={isLoadingIncomes || isLoadingPayments}>
-                                <Statistic
-                                    title="Saldo"
-                                    value={totalIncome - totalPaid}
-                                    prefix="R$"
-                                    valueStyle={{ color: totalIncome - totalPaid >= 0 ? token.colorSuccess : token.colorError }}
-                                    formatter={(value) => formatCurrency(value as number)}
-                                />
+                </Row>
+
+                <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
+                    <Col xs={24}>
+                        <Card title="Entradas / saídas por conta" size="small">
+                            <Loading loading={isLoadingIncomes || isLoadingPayments || isLoadingInstruments}>
+                                {instrumentMovementRows.length === 0 ? (
+                                    <Text type="secondary" style={{ fontSize: 13 }}>
+                                        Nenhuma movimentação por conta no período
+                                    </Text>
+                                ) : (
+                                    <div>
+                                        {instrumentMovementRows.map((row, index) => {
+                                            const entrada = row.entrada;
+                                            const saida = row.saida;
+                                            const consumedPct =
+                                                entrada > 0
+                                                    ? Math.min(100, (saida / entrada) * 100)
+                                                    : saida > 0
+                                                      ? 100
+                                                      : 0;
+                                            const overspent = entrada > 0 && saida > entrada;
+                                            const saldo = entrada - saida;
+
+                                            const amountsLine = (
+                                                <>
+                                                    <span style={{ color: token.colorSuccess }}>
+                                                        R$ {formatCurrency(entrada)}
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            color: token.colorTextQuaternary,
+                                                            margin: '0 4px',
+                                                        }}
+                                                    >
+                                                        /
+                                                    </span>
+                                                    <span style={{ color: token.colorError }}>
+                                                        R$ {formatCurrency(saida)}
+                                                    </span>
+                                                </>
+                                            );
+
+                                            const saldoLine = (
+                                                <span>
+                                                    <span
+                                                        style={{
+                                                            fontSize: 13,
+                                                            color: token.colorTextSecondary,
+                                                            marginRight: 4,
+                                                        }}
+                                                    >
+                                                        Saldo
+                                                    </span>
+                                                    <span
+                                                        style={{
+                                                            fontSize: 13,
+                                                            color: token.colorPrimary,
+                                                        }}
+                                                    >
+                                                        R$ {formatCurrency(saldo)}
+                                                    </span>
+                                                </span>
+                                            );
+
+                                            return (
+                                                <div
+                                                    key={row.accountId}
+                                                    style={{
+                                                        padding: '8px 0',
+                                                        borderTop:
+                                                            index === 0
+                                                                ? undefined
+                                                                : `1px solid ${token.colorBorderSecondary}`,
+                                                    }}
+                                                >
+                                                    <div
+                                                        style={{
+                                                            display: 'flex',
+                                                            flexDirection: stackAccountMovementRow ? 'column' : 'row',
+                                                            justifyContent: stackAccountMovementRow
+                                                                ? 'flex-start'
+                                                                : 'space-between',
+                                                            alignItems: stackAccountMovementRow ? 'stretch' : 'center',
+                                                            gap: stackAccountMovementRow ? 6 : 12,
+                                                            marginBottom: 6,
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={{
+                                                                fontSize: 13,
+                                                                ...(stackAccountMovementRow
+                                                                    ? { whiteSpace: 'normal', wordBreak: 'break-word' }
+                                                                    : {}),
+                                                            }}
+                                                            ellipsis={!stackAccountMovementRow}
+                                                        >
+                                                            {row.label}
+                                                        </Text>
+                                                        <div
+                                                            style={{
+                                                                display: 'flex',
+                                                                flexDirection: stackAccountMovementRow
+                                                                    ? 'column'
+                                                                    : 'row',
+                                                                alignItems: stackAccountMovementRow
+                                                                    ? 'flex-end'
+                                                                    : 'center',
+                                                                gap: stackAccountMovementRow ? 4 : 0,
+                                                                flexShrink: 0,
+                                                                whiteSpace: stackAccountMovementRow
+                                                                    ? 'normal'
+                                                                    : 'nowrap',
+                                                            }}
+                                                        >
+                                                            <Text style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+                                                                {amountsLine}
+                                                                {!stackAccountMovementRow && (
+                                                                    <>
+                                                                        <span
+                                                                            style={{
+                                                                                color: token.colorTextQuaternary,
+                                                                                margin: '0 6px',
+                                                                            }}
+                                                                        >
+                                                                            ·
+                                                                        </span>
+                                                                        {saldoLine}
+                                                                    </>
+                                                                )}
+                                                            </Text>
+                                                            {stackAccountMovementRow && (
+                                                                <Text style={{ fontSize: 13 }}>{saldoLine}</Text>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div
+                                                        title={
+                                                            entrada > 0
+                                                                ? `${consumedPct.toFixed(0)}% da entrada consumido pelas saídas`
+                                                                : undefined
+                                                        }
+                                                        style={{
+                                                            height: 6,
+                                                            borderRadius: 3,
+                                                            background: `${token.colorSuccess}28`,
+                                                            overflow: 'hidden',
+                                                        }}
+                                                    >
+                                                        <div
+                                                            style={{
+                                                                width: `${consumedPct}%`,
+                                                                height: '100%',
+                                                                borderRadius: 3,
+                                                                minWidth: consumedPct > 0 ? 2 : 0,
+                                                                background: overspent
+                                                                    ? token.colorWarning
+                                                                    : token.colorErrorBorderHover,
+                                                                transition: 'width 0.2s ease',
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </Loading>
                         </Card>
                     </Col>
-
                 </Row>
 
                 <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
