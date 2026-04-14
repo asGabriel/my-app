@@ -8,6 +8,7 @@ import {
     Spin,
     Empty,
     Select,
+    Input,
 } from 'antd';
 import {
     FilterOutlined,
@@ -41,7 +42,6 @@ interface DebtDisplayItem {
     id: string;
     debtId: string;
     description: string;
-    identification: string;
     category: string;
     dueDate: string;
     totalAmount: string;
@@ -99,7 +99,6 @@ function DebtCard({ item, onClick }: DebtCardProps) {
                                 <EditOutlined style={{ color: '#1890ff', fontSize: 12 }} />
                             )}
                         </Space>
-                        <Text type="secondary" style={{ fontSize: 11 }}>{item.identification}</Text>
                     </div>
                     <Tag color={DEBT_STATUS_COLORS[item.status as DebtStatus] ?? 'default'} style={{ margin: 0, fontSize: 11 }}>
                         {DEBT_STATUS_LABELS[item.status as DebtStatus] ?? item.status}
@@ -144,6 +143,7 @@ export function DebtList() {
     const { token } = theme.useToken();
     const [filters, setFilters] = useState<FilterBarValues>(getDefaultFilters);
     const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+    const [descriptionSearch, setDescriptionSearch] = useState('');
     const [quickFilter, setQuickFilter] = useState<QuickFilterKey>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
@@ -207,7 +207,6 @@ export function DebtList() {
                 id: `${debt.id}-${inst.installmentId}`,
                 debtId: debt.id,
                 description: debt.description,
-                identification: debt.identification,
                 category: debt.category,
                 dueDate: inst.dueDate,
                 totalAmount: debt.totalAmount,
@@ -231,7 +230,6 @@ export function DebtList() {
                 id: debt.id,
                 debtId: debt.id,
                 description: debt.description,
-                identification: debt.identification,
                 category: debt.category,
                 dueDate: debt.dueDate,
                 totalAmount: debt.totalAmount,
@@ -250,6 +248,12 @@ export function DebtList() {
 
     const filteredDisplayItems = useMemo(() => {
         let result = displayItems;
+        const q = descriptionSearch.trim().toLowerCase();
+        if (q) {
+            result = result.filter(item =>
+                item.description.toLowerCase().includes(q)
+            );
+        }
         if (categoryFilter.length > 0) {
             const set = new Set(categoryFilter);
             result = result.filter(item => set.has(item.category || 'UNKNOWN'));
@@ -271,7 +275,7 @@ export function DebtList() {
             return result.filter(item => item.isInstallment);
         }
         return result;
-    }, [displayItems, quickFilter, categoryFilter]);
+    }, [displayItems, quickFilter, categoryFilter, descriptionSearch]);
 
     const itemsByTab = useMemo(() => {
         const map = new Map<TabKey, DebtDisplayItem[]>();
@@ -331,10 +335,7 @@ export function DebtList() {
                     <div style={{ display: 'flex', alignItems: 'center', minHeight: 32 }}>
                         <FilterBar value={filters} onChange={setFilters} />
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 32 }}>
-                        <Text type="secondary" style={{ fontSize: 14, margin: 0, lineHeight: '32px' }}>
-                            Categoria:
-                        </Text>
+                    <div style={{ display: 'flex', alignItems: 'center', minHeight: 32, flex: '1 1 220px', minWidth: 0 }}>
                         <Select
                             mode="multiple"
                             placeholder="Todas as categorias"
@@ -342,8 +343,17 @@ export function DebtList() {
                             options={DEBT_CATEGORY_OPTIONS}
                             value={categoryFilter}
                             onChange={setCategoryFilter}
-                            style={{ minWidth: 220 }}
+                            style={{ width: '100%', minWidth: 0 }}
                             maxTagCount="responsive"
+                        />
+                    </div>
+                    <div style={{ flex: '1 1 200px', minWidth: 0, maxWidth: 400 }}>
+                        <Input.Search
+                            allowClear
+                            placeholder="Buscar por descrição"
+                            value={descriptionSearch}
+                            onChange={(e) => setDescriptionSearch(e.target.value)}
+                            style={{ width: '100%' }}
                         />
                     </div>
                 </div>
