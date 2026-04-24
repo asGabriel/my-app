@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { CreateDebtRequest, Debt, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { CreateDebtRequest, Debt } from '../inferredTypes';
 
 export function useCreateDebt() {
   const { token } = useAuth();

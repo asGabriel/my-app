@@ -1,7 +1,8 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { ListIncomesFilters, Income, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { ListIncomesFilters, Income } from '../inferredTypes';
 
 type IncomesQueryOptions = Omit<UseQueryOptions<Income[]>, 'queryKey' | 'queryFn'>;
 

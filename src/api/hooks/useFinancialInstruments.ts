@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { FinancialInstrumentListFilters, FinancialInstrument, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { FinancialInstrumentListFilters, FinancialInstrument } from '../inferredTypes';
 
 export function useFinancialInstruments(filters: FinancialInstrumentListFilters = {}) {
   const { token } = useAuth();
