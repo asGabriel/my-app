@@ -1,0 +1,33 @@
+import { z } from 'zod';
+import { schemas } from './generated';
+
+/** Inferidos de `schemas` em `generated.ts` (preservados ao rodar `generate-api`). */
+export type LoginRequest = z.infer<typeof schemas.LoginRequest>;
+export type UserResponse = z.infer<typeof schemas.UserResponse>;
+export type AuthResponse = z.infer<typeof schemas.AuthResponse>;
+export type RegisterRequest = z.infer<typeof schemas.RegisterRequest>;
+export type ListIncomesFilters = z.infer<typeof schemas.ListIncomesFilters>;
+export type Income = z.infer<typeof schemas.Income>;
+export type CreateIncomeRequest = z.infer<typeof schemas.CreateIncomeRequest>;
+export type ListPaymentsFilters = z.infer<typeof schemas.ListPaymentsFilters>;
+export type Payment = z.infer<typeof schemas.Payment>;
+export type CreatePaymentRequest = z.infer<typeof schemas.CreatePaymentRequest>;
+export type DebtStatus = z.infer<typeof schemas.DebtStatus>;
+export type DebtFilters = z.infer<typeof schemas.DebtFilters>;
+export type ExpenseType = z.infer<typeof schemas.ExpenseType>;
+export type Debt = z.infer<typeof schemas.Debt>;
+export type CreateDebtRequest = z.infer<typeof schemas.CreateDebtRequest>;
+export type InstallmentFilters = z.infer<typeof schemas.InstallmentFilters>;
+export type Installment = z.infer<typeof schemas.Installment>;
+export type DebtCategory = z.infer<typeof schemas.DebtCategory>;
+export type UpdateDebtRequest = z.infer<typeof schemas.UpdateDebtRequest>;
+export type CreateRecurrenceRequest = z.infer<typeof schemas.CreateRecurrenceRequest>;
+export type Recurrence = z.infer<typeof schemas.Recurrence>;
+export type RecurrenceFilters = z.infer<typeof schemas.RecurrenceFilters>;
+export type UpdateRecurrenceRequest = z.infer<typeof schemas.UpdateRecurrenceRequest>;
+export type FinancialInstrumentType = z.infer<typeof schemas.FinancialInstrumentType>;
+export type FinancialInstrumentListFilters = z.infer<typeof schemas.FinancialInstrumentListFilters>;
+export type InstrumentConfiguration = z.infer<typeof schemas.InstrumentConfiguration>;
+export type FinancialInstrument = z.infer<typeof schemas.FinancialInstrument>;
+export type CreateFinancialInstrumentRequest = z.infer<typeof schemas.CreateFinancialInstrumentRequest>;
+export type UpdateFinancialInstrumentRequest = z.infer<typeof schemas.UpdateFinancialInstrumentRequest>;

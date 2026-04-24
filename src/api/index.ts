@@ -1,4 +1,5 @@
 export * from './generated';
+export * from './inferredTypes';
 export * from './hooks/useAuth';
 export * from './hooks/useIncomes';
 export * from './hooks/usePayments';

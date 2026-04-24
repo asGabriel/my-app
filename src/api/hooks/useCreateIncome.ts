@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { CreateIncomeRequest, Income, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { CreateIncomeRequest, Income } from '../inferredTypes';
 
 export function useCreateIncome() {
   const { token } = useAuth();

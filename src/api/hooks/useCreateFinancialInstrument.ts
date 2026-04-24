@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { CreateFinancialInstrumentRequest, FinancialInstrument, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { CreateFinancialInstrumentRequest, FinancialInstrument } from '../inferredTypes';
 
 export function useCreateFinancialInstrument() {
   const { token } = useAuth();

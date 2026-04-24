@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { ListPaymentsFilters, Payment, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { ListPaymentsFilters, Payment } from '../inferredTypes';
 
 export function usePayments(filters: ListPaymentsFilters, enabled = true) {
   const { token } = useAuth();

@@ -70,6 +70,7 @@ const Payment = z
     id: z.string().uuid(),
     clientId: z.string().uuid(),
     debtId: z.string().uuid(),
+    accountId: z.string().uuid(),
     financialInstrumentId: z.string().uuid().nullish(),
     amount: z.string(),
     paymentDate: z.string(),
@@ -300,36 +301,6 @@ export const schemas = {
   CreateFinancialInstrumentRequest,
   UpdateFinancialInstrumentRequest,
 };
-
-export type LoginRequest = z.infer<typeof LoginRequest>;
-export type UserResponse = z.infer<typeof UserResponse>;
-export type AuthResponse = z.infer<typeof AuthResponse>;
-export type RegisterRequest = z.infer<typeof RegisterRequest>;
-export type ListIncomesFilters = z.infer<typeof ListIncomesFilters>;
-export type Income = z.infer<typeof Income>;
-export type CreateIncomeRequest = z.infer<typeof CreateIncomeRequest>;
-export type ListPaymentsFilters = z.infer<typeof ListPaymentsFilters>;
-export type Payment = z.infer<typeof Payment>;
-export type CreatePaymentRequest = z.infer<typeof CreatePaymentRequest>;
-export type DebtStatus = z.infer<typeof DebtStatus>;
-export type DebtFilters = z.infer<typeof DebtFilters>;
-export type ExpenseType = z.infer<typeof ExpenseType>;
-export type Debt = z.infer<typeof Debt>;
-export type CreateDebtRequest = z.infer<typeof CreateDebtRequest>;
-export type InstallmentFilters = z.infer<typeof InstallmentFilters>;
-export type Installment = z.infer<typeof Installment>;
-export type DebtCategory = z.infer<typeof DebtCategory>;
-export type UpdateDebtRequest = z.infer<typeof UpdateDebtRequest>;
-export type CreateRecurrenceRequest = z.infer<typeof CreateRecurrenceRequest>;
-export type Recurrence = z.infer<typeof Recurrence>;
-export type RecurrenceFilters = z.infer<typeof RecurrenceFilters>;
-export type UpdateRecurrenceRequest = z.infer<typeof UpdateRecurrenceRequest>;
-export type FinancialInstrumentType = z.infer<typeof FinancialInstrumentType>;
-export type FinancialInstrumentListFilters = z.infer<typeof FinancialInstrumentListFilters>;
-export type InstrumentConfiguration = z.infer<typeof InstrumentConfiguration>;
-export type FinancialInstrument = z.infer<typeof FinancialInstrument>;
-export type CreateFinancialInstrumentRequest = z.infer<typeof CreateFinancialInstrumentRequest>;
-export type UpdateFinancialInstrumentRequest = z.infer<typeof UpdateFinancialInstrumentRequest>;
 
 const endpoints = makeApi([
   {

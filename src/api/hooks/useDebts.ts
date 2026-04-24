@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { DebtFilters, Debt, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { Debt, DebtFilters } from '../inferredTypes';
 
 export function useDebts(filters: DebtFilters, enabled = true) {
   const { token } = useAuth();

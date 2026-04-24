@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { CreateRecurrenceRequest, Recurrence, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { CreateRecurrenceRequest, Recurrence } from '../inferredTypes';
 
 export function useCreateRecurrence() {
   const { token } = useAuth();

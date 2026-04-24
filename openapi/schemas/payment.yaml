@@ -32,6 +32,7 @@ Payment:
     - id
     - clientId
     - debtId
+    - accountId
     - amount
     - paymentDate
     - createdAt
@@ -48,6 +49,10 @@ Payment:
       type: string
       format: uuid
       description: "Unique identifier of the debt"
+    accountId:
+      type: string
+      format: uuid
+      description: "ID da conta de onde saiu o pagamento (obrigatório)"
     financialInstrumentId:
       type: string
       format: uuid

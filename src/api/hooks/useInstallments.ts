@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { InstallmentFilters, Installment, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { InstallmentFilters, Installment } from '../inferredTypes';
 
 export function useInstallments(filters: InstallmentFilters = {}, enabled = true) {
   const { token } = useAuth();

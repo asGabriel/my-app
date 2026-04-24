@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { RecurrenceFilters, Recurrence, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { RecurrenceFilters, Recurrence } from '../inferredTypes';
 
 export function useRecurrences(filters: RecurrenceFilters) {
   const { token } = useAuth();

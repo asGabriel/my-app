@@ -8,6 +8,8 @@ import {
     Spin,
     Empty,
     Select,
+    Input,
+    Grid,
 } from 'antd';
 import {
     FilterOutlined,
@@ -41,7 +43,6 @@ interface DebtDisplayItem {
     id: string;
     debtId: string;
     description: string;
-    identification: string;
     category: string;
     dueDate: string;
     totalAmount: string;
@@ -61,10 +62,51 @@ interface DebtCardProps {
 }
 
 function DebtCard({ item, onClick }: DebtCardProps) {
+    const { token } = theme.useToken();
+    const screens = Grid.useBreakpoint();
+    const isMobile = !screens.sm;
     const dueDate = dayjs(item.dueDate);
     const isOverdue = dueDate.isBefore(dayjs(), 'day') && item.status !== DEBT_STATUS.SETTLED;
     const periodAmount = parseFloat(item.periodAmount);
     const remainingAmount = parseFloat(item.remainingAmount);
+
+    const statusTag = (
+        <Tag color={DEBT_STATUS_COLORS[item.status as DebtStatus] ?? 'default'} style={{ margin: 0, fontSize: 11 }}>
+            {DEBT_STATUS_LABELS[item.status as DebtStatus] ?? item.status}
+        </Tag>
+    );
+
+    const copyIdControl = (
+        <span
+            onClick={(e) => e.stopPropagation()}
+            style={{ display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}
+        >
+            <Text
+                type="secondary"
+                copyable={{ text: item.debtId, tooltips: ['Copiar ID', 'Copiado'] }}
+                style={{ fontSize: 10, color: token.colorTextQuaternary }}
+            >
+                ···
+            </Text>
+        </span>
+    );
+
+    const editControl = onClick ? (
+        <span
+            role="presentation"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: 4,
+                margin: -4,
+                color: token.colorPrimary,
+            }}
+            aria-label="Editar"
+        >
+            <EditOutlined style={{ fontSize: 14 }} />
+        </span>
+    ) : null;
 
     return (
         <Card
@@ -75,53 +117,159 @@ function DebtCard({ item, onClick }: DebtCardProps) {
                 borderLeft: `4px solid ${isOverdue ? '#ff4d4f' : item.status === DEBT_STATUS.SETTLED ? '#52c41a' : '#1890ff'}`,
                 cursor: onClick ? 'pointer' : 'default',
             }}
-            styles={{ body: { padding: '10px 12px' } }}
+            styles={{ body: { padding: isMobile ? '12px 14px' : '10px 12px' } }}
         >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 6 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <Space wrap size={4} style={{ marginBottom: 2 }}>
-                            <Text strong style={{ wordBreak: 'break-word', fontSize: 13 }}>{item.description}</Text>
-                            <Tag style={{ margin: 0, fontSize: 11 }}>
-                                {DEBT_CATEGORY_LABELS[item.category as keyof typeof DEBT_CATEGORY_LABELS] || item.category}
-                            </Tag>
-                            {item.isInstallment && item.installmentId && (
-                                <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
-                                    {item.installmentId}/{item.installmentCount}
-                                </Tag>
-                            )}
-                            {item.expenseType && (
-                                <Tag color={item.expenseType === 'FIXED' ? 'purple' : 'cyan'} style={{ margin: 0, fontSize: 11 }}>
-                                    {EXPENSE_TYPE_LABELS[item.expenseType as keyof typeof EXPENSE_TYPE_LABELS] || item.expenseType}
-                                </Tag>
-                            )}
-                            {onClick && (
-                                <EditOutlined style={{ color: '#1890ff', fontSize: 12 }} />
-                            )}
-                        </Space>
-                        <Text type="secondary" style={{ fontSize: 11 }}>{item.identification}</Text>
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: isMobile ? 10 : 8,
+                }}
+            >
+                {/* Mobile: título em linha inteira; ações (copiar / status / editar) na linha de baixo */}
+                {isMobile ? (
+                    <>
+                        <Text
+                            strong
+                            style={{
+                                display: 'block',
+                                width: '100%',
+                                fontSize: 14,
+                                lineHeight: 1.5,
+                                overflowWrap: 'break-word',
+                                wordWrap: 'break-word',
+                            }}
+                        >
+                            {item.description}
+                        </Text>
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: 8,
+                                flexWrap: 'nowrap',
+                            }}
+                        >
+                            {copyIdControl}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                                {statusTag}
+                                {editControl}
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: 10,
+                        }}
+                    >
+                        <div
+                            style={{
+                                flex: 1,
+                                minWidth: 0,
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 6,
+                            }}
+                        >
+                            <Text
+                                strong
+                                style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    fontSize: 13,
+                                    lineHeight: 1.45,
+                                    wordBreak: 'break-word',
+                                }}
+                            >
+                                {item.description}
+                            </Text>
+                            {copyIdControl}
+                        </div>
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                flexShrink: 0,
+                            }}
+                        >
+                            {statusTag}
+                            {editControl}
+                        </div>
                     </div>
-                    <Tag color={DEBT_STATUS_COLORS[item.status as DebtStatus] ?? 'default'} style={{ margin: 0, fontSize: 11 }}>
-                        {DEBT_STATUS_LABELS[item.status as DebtStatus] ?? item.status}
+                )}
+
+                {/* Tags em linha própria */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                    <Tag style={{ margin: 0, fontSize: 11 }}>
+                        {DEBT_CATEGORY_LABELS[item.category as keyof typeof DEBT_CATEGORY_LABELS] || item.category}
                     </Tag>
+                    {item.isInstallment && item.installmentId && (
+                        <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
+                            {item.installmentId}/{item.installmentCount}
+                        </Tag>
+                    )}
+                    {item.expenseType && (
+                        <Tag color={item.expenseType === 'FIXED' ? 'purple' : 'cyan'} style={{ margin: 0, fontSize: 11 }}>
+                            {EXPENSE_TYPE_LABELS[item.expenseType as keyof typeof EXPENSE_TYPE_LABELS] || item.expenseType}
+                        </Tag>
+                    )}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                    <Space size={4}>
-                        <CalendarOutlined style={{ fontSize: 12, color: isOverdue ? '#ff4d4f' : undefined }} />
-                        <Text type={isOverdue ? 'danger' : 'secondary'} style={{ fontSize: 12 }}>
-                            {dueDate.format('DD/MM')}
+                {/* Data e valores */}
+                <div
+                    style={{
+                        display: 'flex',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        justifyContent: 'space-between',
+                        alignItems: isMobile ? 'stretch' : 'center',
+                        gap: isMobile ? 10 : 8,
+                        paddingTop: isMobile ? 8 : 4,
+                        borderTop: `1px solid ${token.colorBorderSecondary}`,
+                    }}
+                >
+                    <Space size={6}>
+                        <CalendarOutlined
+                            style={{
+                                fontSize: 14,
+                                color: isOverdue ? token.colorError : token.colorTextSecondary,
+                            }}
+                        />
+                        <Text
+                            type={isOverdue ? 'danger' : 'secondary'}
+                            style={{ fontSize: 13, fontWeight: isMobile ? 500 : undefined }}
+                        >
+                            {isMobile ? `Venc. ${dueDate.format('DD/MM/YYYY')}` : dueDate.format('DD/MM')}
                         </Text>
                     </Space>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: isMobile ? 12 : 16,
+                            justifyContent: isMobile ? 'space-between' : 'flex-end',
+                            alignItems: 'baseline',
+                        }}
+                    >
                         <span>
-                            <Text type="secondary" style={{ fontSize: 10 }}>Valor </Text>
-                            <Text strong style={{ fontSize: 14 }}>{formatCurrency(periodAmount)}</Text>
+                            <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>
+                                Valor
+                            </Text>
+                            <Text strong style={{ fontSize: 15 }}>{formatCurrency(periodAmount)}</Text>
                         </span>
                         {remainingAmount > 0 && (
-                            <span>
-                                <Text type="secondary" style={{ fontSize: 10 }}>Restante </Text>
-                                <Text type="danger" strong style={{ fontSize: 14 }}>{formatCurrency(remainingAmount)}</Text>
+                            <span style={{ textAlign: isMobile ? 'right' : 'left' }}>
+                                <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>
+                                    Restante
+                                </Text>
+                                <Text type="danger" strong style={{ fontSize: 15 }}>
+                                    {formatCurrency(remainingAmount)}
+                                </Text>
                             </span>
                         )}
                     </div>
@@ -144,6 +292,7 @@ export function DebtList() {
     const { token } = theme.useToken();
     const [filters, setFilters] = useState<FilterBarValues>(getDefaultFilters);
     const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+    const [descriptionSearch, setDescriptionSearch] = useState('');
     const [quickFilter, setQuickFilter] = useState<QuickFilterKey>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
@@ -207,7 +356,6 @@ export function DebtList() {
                 id: `${debt.id}-${inst.installmentId}`,
                 debtId: debt.id,
                 description: debt.description,
-                identification: debt.identification,
                 category: debt.category,
                 dueDate: inst.dueDate,
                 totalAmount: debt.totalAmount,
@@ -231,7 +379,6 @@ export function DebtList() {
                 id: debt.id,
                 debtId: debt.id,
                 description: debt.description,
-                identification: debt.identification,
                 category: debt.category,
                 dueDate: debt.dueDate,
                 totalAmount: debt.totalAmount,
@@ -250,6 +397,12 @@ export function DebtList() {
 
     const filteredDisplayItems = useMemo(() => {
         let result = displayItems;
+        const q = descriptionSearch.trim().toLowerCase();
+        if (q) {
+            result = result.filter(item =>
+                item.description.toLowerCase().includes(q)
+            );
+        }
         if (categoryFilter.length > 0) {
             const set = new Set(categoryFilter);
             result = result.filter(item => set.has(item.category || 'UNKNOWN'));
@@ -271,7 +424,7 @@ export function DebtList() {
             return result.filter(item => item.isInstallment);
         }
         return result;
-    }, [displayItems, quickFilter, categoryFilter]);
+    }, [displayItems, quickFilter, categoryFilter, descriptionSearch]);
 
     const itemsByTab = useMemo(() => {
         const map = new Map<TabKey, DebtDisplayItem[]>();
@@ -331,10 +484,7 @@ export function DebtList() {
                     <div style={{ display: 'flex', alignItems: 'center', minHeight: 32 }}>
                         <FilterBar value={filters} onChange={setFilters} />
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 32 }}>
-                        <Text type="secondary" style={{ fontSize: 14, margin: 0, lineHeight: '32px' }}>
-                            Categoria:
-                        </Text>
+                    <div style={{ display: 'flex', alignItems: 'center', minHeight: 32, flex: '1 1 220px', minWidth: 0 }}>
                         <Select
                             mode="multiple"
                             placeholder="Todas as categorias"
@@ -342,8 +492,17 @@ export function DebtList() {
                             options={DEBT_CATEGORY_OPTIONS}
                             value={categoryFilter}
                             onChange={setCategoryFilter}
-                            style={{ minWidth: 220 }}
+                            style={{ width: '100%', minWidth: 0 }}
                             maxTagCount="responsive"
+                        />
+                    </div>
+                    <div style={{ flex: '1 1 200px', minWidth: 0, maxWidth: 400 }}>
+                        <Input.Search
+                            allowClear
+                            placeholder="Buscar por descrição"
+                            value={descriptionSearch}
+                            onChange={(e) => setDescriptionSearch(e.target.value)}
+                            style={{ width: '100%' }}
                         />
                     </div>
                 </div>

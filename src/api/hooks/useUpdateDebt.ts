@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { UpdateDebtRequest, Debt, schemas } from '../generated';
+import { schemas } from '../generated';
+import type { UpdateDebtRequest, Debt } from '../inferredTypes';
 
 interface UpdateDebtParams {
   debtId: string;
