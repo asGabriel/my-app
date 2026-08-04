@@ -269,6 +269,95 @@ const UpdateFinancialInstrumentRequest = z
     configuration: InstrumentConfiguration.optional(),
   })
   .passthrough();
+const Gender = z.enum(["male", "female"]);
+const CreatePlayerRequest = z
+  .object({ name: z.string(), gender: Gender })
+  .passthrough();
+const Player = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string(),
+    gender: Gender,
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
+  })
+  .passthrough();
+const UpdatePlayerRequest = z
+  .object({ name: z.string().nullable(), gender: Gender })
+  .partial()
+  .passthrough();
+const GameMode = z.enum(["male", "female", "mixed"]);
+const SessionSettings = z
+  .object({
+    playersPerTeam: z.number().int(),
+    setsToWin: z.number().int(),
+    pointsPerSet: z.number().int(),
+  })
+  .passthrough();
+const CreateSessionRequest = z
+  .object({
+    date: z.string(),
+    availableCourts: z.number().int(),
+    gameMode: GameMode,
+    settings: SessionSettings.optional(),
+  })
+  .passthrough();
+const Session = z
+  .object({
+    id: z.string().uuid(),
+    date: z.string(),
+    settings: SessionSettings,
+    availableCourts: z.number().int(),
+    gameMode: GameMode,
+    playerIds: z.array(z.string().uuid()),
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
+  })
+  .passthrough();
+const UpdateSessionRequest = z
+  .object({
+    date: z.string().nullable(),
+    availableCourts: z.number().int().nullable(),
+    gameMode: GameMode,
+    settings: SessionSettings,
+    playerIds: z.array(z.string().uuid()).nullable(),
+  })
+  .partial()
+  .passthrough();
+const CreateTeamRequest = z
+  .object({
+    sessionId: z.string().uuid(),
+    playerIds: z.array(z.string().uuid()),
+  })
+  .passthrough();
+const Team = z
+  .object({
+    id: z.string().uuid(),
+    sessionId: z.string().uuid(),
+    playerIds: z.array(z.string().uuid()),
+    createdAt: z.string(),
+  })
+  .passthrough();
+const CreateMatchRequest = z
+  .object({
+    sessionId: z.string().uuid(),
+    court: z.number().int(),
+    teamAId: z.string().uuid(),
+    teamBId: z.string().uuid(),
+    winnerTeamId: z.string().uuid(),
+  })
+  .passthrough();
+const Match = z
+  .object({
+    id: z.string().uuid(),
+    sessionId: z.string().uuid(),
+    court: z.number().int(),
+    teamAId: z.string().uuid(),
+    teamBId: z.string().uuid(),
+    winnerTeamId: z.string().uuid(),
+    playedAt: z.string(),
+  })
+  .passthrough();
 
 export const schemas = {
   LoginRequest,
@@ -300,6 +389,19 @@ export const schemas = {
   FinancialInstrument,
   CreateFinancialInstrumentRequest,
   UpdateFinancialInstrumentRequest,
+  Gender,
+  CreatePlayerRequest,
+  Player,
+  UpdatePlayerRequest,
+  GameMode,
+  SessionSettings,
+  CreateSessionRequest,
+  Session,
+  UpdateSessionRequest,
+  CreateTeamRequest,
+  Team,
+  CreateMatchRequest,
+  Match,
 };
 
 const endpoints = makeApi([
@@ -565,6 +667,170 @@ const endpoints = makeApi([
       },
     ],
     response: z.array(Payment),
+  },
+  {
+    method: "post",
+    path: "/matchmaking/matches/",
+    alias: "createMatch",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateMatchRequest,
+      },
+    ],
+    response: Match,
+  },
+  {
+    method: "get",
+    path: "/matchmaking/matches/:sessionId",
+    alias: "listMatches",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.array(Match),
+  },
+  {
+    method: "post",
+    path: "/matchmaking/players/",
+    alias: "createPlayer",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreatePlayerRequest,
+      },
+    ],
+    response: Player,
+  },
+  {
+    method: "get",
+    path: "/matchmaking/players/",
+    alias: "listPlayers",
+    requestFormat: "json",
+    response: z.array(Player),
+  },
+  {
+    method: "patch",
+    path: "/matchmaking/players/:playerId",
+    alias: "updatePlayer",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdatePlayerRequest,
+      },
+      {
+        name: "playerId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Player,
+  },
+  {
+    method: "post",
+    path: "/matchmaking/sessions/",
+    alias: "createSession",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateSessionRequest,
+      },
+    ],
+    response: Session,
+  },
+  {
+    method: "get",
+    path: "/matchmaking/sessions/",
+    alias: "listSessions",
+    requestFormat: "json",
+    response: z.array(Session),
+  },
+  {
+    method: "get",
+    path: "/matchmaking/sessions/:sessionId",
+    alias: "getSession",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Session,
+  },
+  {
+    method: "patch",
+    path: "/matchmaking/sessions/:sessionId",
+    alias: "updateSession",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateSessionRequest,
+      },
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Session,
+  },
+  {
+    method: "post",
+    path: "/matchmaking/teams/",
+    alias: "createTeam",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateTeamRequest,
+      },
+    ],
+    response: Team,
+  },
+  {
+    method: "get",
+    path: "/matchmaking/teams/:sessionId",
+    alias: "listTeams",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.array(Team),
+  },
+  {
+    method: "post",
+    path: "/matchmaking/teams/:sessionId/draw",
+    alias: "drawTeams",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.array(Team),
   },
 ]);
 

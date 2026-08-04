@@ -1,6 +1,7 @@
 const API_BASE = '/api';
 const FINANCE_PATH = `${API_BASE}/financeManager`;
 const AUTH_PATH = `${API_BASE}/auth`;
+const MATCHMAKING_PATH = `${API_BASE}/matchmaking`;
 
 interface RequestOptions extends RequestInit {
   token?: string;
@@ -59,4 +60,11 @@ export async function authRequest<T>(
   options: RequestOptions = {}
 ): Promise<T> {
   return request<T>(`${AUTH_PATH}${endpoint}`, options);
+}
+
+export async function matchmakingRequest<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  return request<T>(`${MATCHMAKING_PATH}${endpoint}`, options);
 }
