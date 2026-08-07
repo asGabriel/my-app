@@ -7,10 +7,10 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     build: {
-      outDir: "dist-volleyball",
+      outDir: "dist-matchmaking",
       emptyOutDir: true,
       rollupOptions: {
-        input: "volleyball.html",
+        input: "matchmaking.html",
       },
     },
     server: {

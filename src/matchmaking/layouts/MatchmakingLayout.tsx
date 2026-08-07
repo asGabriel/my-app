@@ -11,7 +11,7 @@ function activeTabKey(pathname: string) {
   return '/';
 }
 
-export function VolleyballLayout() {
+export function MatchmakingLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const activeKey = activeTabKey(location.pathname);
