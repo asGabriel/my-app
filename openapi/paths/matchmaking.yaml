@@ -1,0 +1,250 @@
+players:
+  post:
+    operationId: createPlayer
+    summary: Cria um novo jogador
+    tags:
+      - Matchmaking
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/matchmaking.yaml#/CreatePlayerRequest"
+    responses:
+      "201":
+        description: Jogador criado com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Player"
+  get:
+    operationId: listPlayers
+    summary: Lista todos os jogadores
+    tags:
+      - Matchmaking
+    responses:
+      "200":
+        description: Lista de jogadores
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/matchmaking.yaml#/Player"
+
+updatePlayer:
+  patch:
+    operationId: updatePlayer
+    summary: Atualiza um jogador existente
+    tags:
+      - Matchmaking
+    parameters:
+      - name: playerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID do jogador a ser atualizado
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/matchmaking.yaml#/UpdatePlayerRequest"
+    responses:
+      "200":
+        description: Jogador atualizado com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Player"
+
+sessions:
+  post:
+    operationId: createSession
+    summary: Cria um novo dia de jogo
+    tags:
+      - Matchmaking
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/matchmaking.yaml#/CreateSessionRequest"
+    responses:
+      "201":
+        description: Sessão criada com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Session"
+  get:
+    operationId: listSessions
+    summary: Lista todos os dias de jogo
+    tags:
+      - Matchmaking
+    responses:
+      "200":
+        description: Lista de sessões
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/matchmaking.yaml#/Session"
+
+session:
+  get:
+    operationId: getSession
+    summary: Busca um dia de jogo pelo id
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Sessão encontrada
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Session"
+  patch:
+    operationId: updateSession
+    summary: Atualiza um dia de jogo existente
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/matchmaking.yaml#/UpdateSessionRequest"
+    responses:
+      "200":
+        description: Sessão atualizada com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Session"
+
+teams:
+  post:
+    operationId: createTeam
+    summary: Cria manualmente uma dupla/time
+    tags:
+      - Matchmaking
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/matchmaking.yaml#/CreateTeamRequest"
+    responses:
+      "201":
+        description: Time criado com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Team"
+
+teamsBySession:
+  get:
+    operationId: listTeams
+    summary: Lista os times de uma sessão
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Lista de times
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/matchmaking.yaml#/Team"
+
+drawTeams:
+  post:
+    operationId: drawTeams
+    summary: Sorteia os times iniciais de uma sessão (uma única vez)
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "201":
+        description: Times sorteados com sucesso
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/matchmaking.yaml#/Team"
+
+matches:
+  post:
+    operationId: createMatch
+    summary: Registra o resultado de uma partida
+    tags:
+      - Matchmaking
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/matchmaking.yaml#/CreateMatchRequest"
+    responses:
+      "201":
+        description: Partida registrada com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Match"
+
+matchesBySession:
+  get:
+    operationId: listMatches
+    summary: Lista as partidas registradas de uma sessão
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Lista de partidas
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/matchmaking.yaml#/Match"

@@ -45,6 +45,24 @@ paths:
     $ref: "./paths/financial_instrument.yaml#/list"
   /financeManager/financialInstrument:
     $ref: "./paths/financial_instrument.yaml#/createOrUpdate"
+  /matchmaking/players/:
+    $ref: "./paths/matchmaking.yaml#/players"
+  /matchmaking/players/{playerId}:
+    $ref: "./paths/matchmaking.yaml#/updatePlayer"
+  /matchmaking/sessions/:
+    $ref: "./paths/matchmaking.yaml#/sessions"
+  /matchmaking/sessions/{sessionId}:
+    $ref: "./paths/matchmaking.yaml#/session"
+  /matchmaking/teams/:
+    $ref: "./paths/matchmaking.yaml#/teams"
+  /matchmaking/teams/{sessionId}:
+    $ref: "./paths/matchmaking.yaml#/teamsBySession"
+  /matchmaking/teams/{sessionId}/draw:
+    $ref: "./paths/matchmaking.yaml#/drawTeams"
+  /matchmaking/matches/:
+    $ref: "./paths/matchmaking.yaml#/matches"
+  /matchmaking/matches/{sessionId}:
+    $ref: "./paths/matchmaking.yaml#/matchesBySession"
 
 components:
   schemas:
@@ -106,6 +124,32 @@ components:
       $ref: "./schemas/debt.yaml#/Recurrence"
     UpdateRecurrenceRequest:
       $ref: "./schemas/debt.yaml#/UpdateRecurrenceRequest"
+    Gender:
+      $ref: "./schemas/matchmaking.yaml#/Gender"
+    GameMode:
+      $ref: "./schemas/matchmaking.yaml#/GameMode"
+    Player:
+      $ref: "./schemas/matchmaking.yaml#/Player"
+    CreatePlayerRequest:
+      $ref: "./schemas/matchmaking.yaml#/CreatePlayerRequest"
+    UpdatePlayerRequest:
+      $ref: "./schemas/matchmaking.yaml#/UpdatePlayerRequest"
+    SessionSettings:
+      $ref: "./schemas/matchmaking.yaml#/SessionSettings"
+    Session:
+      $ref: "./schemas/matchmaking.yaml#/Session"
+    CreateSessionRequest:
+      $ref: "./schemas/matchmaking.yaml#/CreateSessionRequest"
+    UpdateSessionRequest:
+      $ref: "./schemas/matchmaking.yaml#/UpdateSessionRequest"
+    Team:
+      $ref: "./schemas/matchmaking.yaml#/Team"
+    CreateTeamRequest:
+      $ref: "./schemas/matchmaking.yaml#/CreateTeamRequest"
+    Match:
+      $ref: "./schemas/matchmaking.yaml#/Match"
+    CreateMatchRequest:
+      $ref: "./schemas/matchmaking.yaml#/CreateMatchRequest"
   securitySchemes:
     bearerAuth:
       type: http

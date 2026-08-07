@@ -1,0 +1,243 @@
+Gender:
+  type: string
+  enum:
+    - male
+    - female
+
+GameMode:
+  type: string
+  enum:
+    - male
+    - female
+    - mixed
+
+Player:
+  type: object
+  required:
+    - id
+    - name
+    - gender
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    gender:
+      $ref: "#/Gender"
+    createdAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339)"
+
+CreatePlayerRequest:
+  type: object
+  required:
+    - name
+    - gender
+  properties:
+    name:
+      type: string
+    gender:
+      $ref: "#/Gender"
+
+UpdatePlayerRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      nullable: true
+    gender:
+      $ref: "#/Gender"
+      nullable: true
+
+SessionSettings:
+  type: object
+  required:
+    - playersPerTeam
+    - setsToWin
+    - pointsPerSet
+  properties:
+    playersPerTeam:
+      type: integer
+      description: "Jogadores por time (padrão 2)"
+    setsToWin:
+      type: integer
+      description: "Sets necessários para vencer a partida (padrão 2)"
+    pointsPerSet:
+      type: integer
+      description: "Pontos por set (padrão 21)"
+
+Session:
+  type: object
+  required:
+    - id
+    - date
+    - settings
+    - availableCourts
+    - gameMode
+    - playerIds
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    date:
+      type: string
+      description: "Data do dia de jogo (YYYY-MM-DD)"
+    settings:
+      $ref: "#/SessionSettings"
+    availableCourts:
+      type: integer
+    gameMode:
+      $ref: "#/GameMode"
+    playerIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+    createdAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339)"
+
+CreateSessionRequest:
+  type: object
+  required:
+    - date
+    - availableCourts
+    - gameMode
+  properties:
+    date:
+      type: string
+      description: "Data do dia de jogo (YYYY-MM-DD)"
+    availableCourts:
+      type: integer
+    gameMode:
+      $ref: "#/GameMode"
+    settings:
+      $ref: "#/SessionSettings"
+      nullable: true
+
+UpdateSessionRequest:
+  type: object
+  properties:
+    date:
+      type: string
+      nullable: true
+    availableCourts:
+      type: integer
+      nullable: true
+    gameMode:
+      $ref: "#/GameMode"
+      nullable: true
+    settings:
+      $ref: "#/SessionSettings"
+      nullable: true
+    playerIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      nullable: true
+
+Team:
+  type: object
+  required:
+    - id
+    - sessionId
+    - playerIds
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    sessionId:
+      type: string
+      format: uuid
+    playerIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+    createdAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+
+CreateTeamRequest:
+  type: object
+  required:
+    - sessionId
+    - playerIds
+  properties:
+    sessionId:
+      type: string
+      format: uuid
+    playerIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+
+Match:
+  type: object
+  required:
+    - id
+    - sessionId
+    - court
+    - teamAId
+    - teamBId
+    - winnerTeamId
+    - playedAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    sessionId:
+      type: string
+      format: uuid
+    court:
+      type: integer
+    teamAId:
+      type: string
+      format: uuid
+    teamBId:
+      type: string
+      format: uuid
+    winnerTeamId:
+      type: string
+      format: uuid
+    playedAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+
+CreateMatchRequest:
+  type: object
+  required:
+    - sessionId
+    - court
+    - teamAId
+    - teamBId
+    - winnerTeamId
+  properties:
+    sessionId:
+      type: string
+      format: uuid
+    court:
+      type: integer
+    teamAId:
+      type: string
+      format: uuid
+    teamBId:
+      type: string
+      format: uuid
+    winnerTeamId:
+      type: string
+      format: uuid
