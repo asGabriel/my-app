@@ -2,9 +2,9 @@ import { ConfigProvider, App as AntApp } from 'antd';
 import { QueryClientProvider } from '@tanstack/react-query';
 import ptBR from 'antd/locale/pt_BR';
 import { queryClient } from '../services/queryClient';
-import { VolleyballRouter } from './routes';
+import { MatchmakingRouter } from './routes';
 
-export function VolleyballApp() {
+export function MatchmakingApp() {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider
@@ -17,7 +17,7 @@ export function VolleyballApp() {
         }}
       >
         <AntApp>
-          <VolleyballRouter />
+          <MatchmakingRouter />
         </AntApp>
       </ConfigProvider>
     </QueryClientProvider>
