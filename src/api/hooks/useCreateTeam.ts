@@ -8,7 +8,7 @@ export function useCreateTeam() {
 
   return useMutation({
     mutationFn: async (data: CreateTeamRequest) => {
-      const response = await matchmakingRequest<Team>('/teams/', {
+      const response = await matchmakingRequest<Team>('/teams', {
         method: 'POST',
         body: JSON.stringify(data),
       });

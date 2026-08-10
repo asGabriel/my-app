@@ -8,7 +8,7 @@ export function useCreatePlayer() {
 
   return useMutation({
     mutationFn: async (data: CreatePlayerRequest) => {
-      const response = await matchmakingRequest<Player>('/players/', {
+      const response = await matchmakingRequest<Player>('/players', {
         method: 'POST',
         body: JSON.stringify(data),
       });
