@@ -330,11 +330,14 @@ const CreateTeamRequest = z
     playerIds: z.array(z.string().uuid()),
   })
   .passthrough();
+const TeamStatus = z.enum(["waiting", "holding", "disbanded"]);
 const Team = z
   .object({
     id: z.string().uuid(),
     sessionId: z.string().uuid(),
     playerIds: z.array(z.string().uuid()),
+    status: TeamStatus,
+    consecutiveWins: z.number().int(),
     createdAt: z.string(),
   })
   .passthrough();
@@ -344,7 +347,6 @@ const CreateMatchRequest = z
     court: z.number().int(),
     teamAId: z.string().uuid(),
     teamBId: z.string().uuid(),
-    winnerTeamId: z.string().uuid(),
   })
   .passthrough();
 const Match = z
@@ -354,9 +356,13 @@ const Match = z
     court: z.number().int(),
     teamAId: z.string().uuid(),
     teamBId: z.string().uuid(),
-    winnerTeamId: z.string().uuid(),
-    playedAt: z.string(),
+    winnerTeamId: z.string().uuid().nullable(),
+    startedAt: z.string(),
+    playedAt: z.string().nullable(),
   })
+  .passthrough();
+const ReportMatchResultRequest = z
+  .object({ winnerTeamId: z.string().uuid() })
   .passthrough();
 
 export const schemas = {
@@ -399,9 +405,11 @@ export const schemas = {
   Session,
   UpdateSessionRequest,
   CreateTeamRequest,
+  TeamStatus,
   Team,
   CreateMatchRequest,
   Match,
+  ReportMatchResultRequest,
 };
 
 const endpoints = makeApi([
@@ -672,12 +680,33 @@ const endpoints = makeApi([
     method: "post",
     path: "/matchmaking/matches/",
     alias: "createMatch",
+    description: `Só serve para ocupar uma quadra pela primeira vez; partidas seguintes naquela quadra são criadas automaticamente ao reportar o resultado da anterior (ver &#x60;reportMatchResult&#x60;).`,
     requestFormat: "json",
     parameters: [
       {
         name: "body",
         type: "Body",
         schema: CreateMatchRequest,
+      },
+    ],
+    response: Match,
+  },
+  {
+    method: "post",
+    path: "/matchmaking/matches/:matchId/result",
+    alias: "reportMatchResult",
+    description: `Encerra a partida com o vencedor informado e aplica a rotação da fila (perdedor sempre sai, vencedor segura a quadra até o limite de vitórias seguidas); se a fila já tiver duplas completas o suficiente, a próxima partida daquela quadra é criada automaticamente.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ winnerTeamId: z.string().uuid() }).passthrough(),
+      },
+      {
+        name: "matchId",
+        type: "Path",
+        schema: z.string().uuid(),
       },
     ],
     response: Match,

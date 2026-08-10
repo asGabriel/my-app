@@ -11,6 +11,13 @@ GameMode:
     - female
     - mixed
 
+TeamStatus:
+  type: string
+  enum:
+    - waiting
+    - holding
+    - disbanded
+
 Player:
   type: object
   required:
@@ -154,6 +161,8 @@ Team:
     - id
     - sessionId
     - playerIds
+    - status
+    - consecutiveWins
     - createdAt
   properties:
     id:
@@ -167,6 +176,10 @@ Team:
       items:
         type: string
         format: uuid
+    status:
+      $ref: "#/TeamStatus"
+    consecutiveWins:
+      type: integer
     createdAt:
       type: string
       description: "DateTime string (RFC3339)"
@@ -195,6 +208,7 @@ Match:
     - teamAId
     - teamBId
     - winnerTeamId
+    - startedAt
     - playedAt
   properties:
     id:
@@ -214,9 +228,15 @@ Match:
     winnerTeamId:
       type: string
       format: uuid
-    playedAt:
+      nullable: true
+      description: "Null enquanto a partida está em andamento"
+    startedAt:
       type: string
       description: "DateTime string (RFC3339)"
+    playedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339); null enquanto a partida está em andamento"
 
 CreateMatchRequest:
   type: object
@@ -225,7 +245,6 @@ CreateMatchRequest:
     - court
     - teamAId
     - teamBId
-    - winnerTeamId
   properties:
     sessionId:
       type: string
@@ -238,6 +257,12 @@ CreateMatchRequest:
     teamBId:
       type: string
       format: uuid
+
+ReportMatchResultRequest:
+  type: object
+  required:
+    - winnerTeamId
+  properties:
     winnerTeamId:
       type: string
       format: uuid
