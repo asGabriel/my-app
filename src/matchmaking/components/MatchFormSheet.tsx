@@ -16,7 +16,6 @@ interface MatchFormValues {
   court: number;
   teamAId: string;
   teamBId: string;
-  winnerTeamId: string;
 }
 
 export function MatchFormSheet({
@@ -30,7 +29,6 @@ export function MatchFormSheet({
   const [form] = Form.useForm<MatchFormValues>();
   const createMatch = useCreateMatch();
   const teamAId = Form.useWatch('teamAId', form);
-  const teamBId = Form.useWatch('teamBId', form);
 
   useEffect(() => {
     if (open) {
@@ -40,13 +38,6 @@ export function MatchFormSheet({
   }, [open, form]);
 
   const teamOptions = teams.map((team) => ({ label: teamLabel(team), value: team.id }));
-  const winnerOptions = [teamAId, teamBId]
-    .filter((id): id is string => !!id)
-    .map((id) => {
-      const team = teams.find((t) => t.id === id);
-      return team ? { label: teamLabel(team), value: team.id } : null;
-    })
-    .filter((option): option is { label: string; value: string } => !!option);
 
   const handleSubmit = async () => {
     try {
@@ -57,7 +48,6 @@ export function MatchFormSheet({
         court: values.court,
         teamAId: values.teamAId,
         teamBId: values.teamBId,
-        winnerTeamId: values.winnerTeamId,
       });
 
       onClose();
@@ -70,11 +60,11 @@ export function MatchFormSheet({
 
   return (
     <BottomSheet
-      title="Registrar Partida"
+      title="Iniciar Partida"
       open={open}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText="Registrar"
+      submitText="Iniciar"
       loading={createMatch.isPending}
     >
       <Form form={form} layout="vertical" size="large">
@@ -114,14 +104,6 @@ export function MatchFormSheet({
             options={teamOptions.filter((option) => option.value !== teamAId)}
             placeholder="Selecione o time B"
           />
-        </Form.Item>
-
-        <Form.Item
-          name="winnerTeamId"
-          label="Time vencedor"
-          rules={[{ required: true, message: 'Selecione o time vencedor' }]}
-        >
-          <Select options={winnerOptions} placeholder="Selecione o vencedor" />
         </Form.Item>
       </Form>
     </BottomSheet>

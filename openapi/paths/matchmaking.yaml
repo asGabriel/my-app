@@ -209,7 +209,11 @@ drawTeams:
 matches:
   post:
     operationId: createMatch
-    summary: Registra o resultado de uma partida
+    summary: Inicia uma partida em uma quadra
+    description: >-
+      Só serve para ocupar uma quadra pela primeira vez; partidas seguintes
+      naquela quadra são criadas automaticamente ao reportar o resultado da
+      anterior (ver `reportMatchResult`).
     tags:
       - Matchmaking
     requestBody:
@@ -220,7 +224,7 @@ matches:
             $ref: "../schemas/matchmaking.yaml#/CreateMatchRequest"
     responses:
       "201":
-        description: Partida registrada com sucesso
+        description: Partida iniciada com sucesso (sem resultado ainda)
         content:
           application/json:
             schema:
@@ -248,3 +252,35 @@ matchesBySession:
               type: array
               items:
                 $ref: "../schemas/matchmaking.yaml#/Match"
+
+matchResult:
+  post:
+    operationId: reportMatchResult
+    summary: Reporta o resultado de uma partida em andamento
+    description: >-
+      Encerra a partida com o vencedor informado e aplica a rotação da fila
+      (perdedor sempre sai, vencedor segura a quadra até o limite de vitórias
+      seguidas); se a fila já tiver duplas completas o suficiente, a próxima
+      partida daquela quadra é criada automaticamente.
+    tags:
+      - Matchmaking
+    parameters:
+      - name: matchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/matchmaking.yaml#/ReportMatchResultRequest"
+    responses:
+      "200":
+        description: Resultado registrado com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Match"

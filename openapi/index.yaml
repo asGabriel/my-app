@@ -63,6 +63,8 @@ paths:
     $ref: "./paths/matchmaking.yaml#/matches"
   /matchmaking/matches/{sessionId}:
     $ref: "./paths/matchmaking.yaml#/matchesBySession"
+  /matchmaking/matches/{matchId}/result:
+    $ref: "./paths/matchmaking.yaml#/matchResult"
 
 components:
   schemas:
@@ -128,6 +130,8 @@ components:
       $ref: "./schemas/matchmaking.yaml#/Gender"
     GameMode:
       $ref: "./schemas/matchmaking.yaml#/GameMode"
+    TeamStatus:
+      $ref: "./schemas/matchmaking.yaml#/TeamStatus"
     Player:
       $ref: "./schemas/matchmaking.yaml#/Player"
     CreatePlayerRequest:
@@ -150,6 +154,8 @@ components:
       $ref: "./schemas/matchmaking.yaml#/Match"
     CreateMatchRequest:
       $ref: "./schemas/matchmaking.yaml#/CreateMatchRequest"
+    ReportMatchResultRequest:
+      $ref: "./schemas/matchmaking.yaml#/ReportMatchResultRequest"
   securitySchemes:
     bearerAuth:
       type: http

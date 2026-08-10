@@ -26,3 +26,4 @@ export * from './hooks/useCreateTeam';
 export * from './hooks/useDrawTeams';
 export * from './hooks/useMatches';
 export * from './hooks/useCreateMatch';
+export * from './hooks/useReportMatchResult';
