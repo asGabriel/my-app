@@ -8,7 +8,7 @@ export function useCreateSession() {
 
   return useMutation({
     mutationFn: async (data: CreateSessionRequest) => {
-      const response = await matchmakingRequest<Session>('/sessions/', {
+      const response = await matchmakingRequest<Session>('/sessions', {
         method: 'POST',
         body: JSON.stringify(data),
       });

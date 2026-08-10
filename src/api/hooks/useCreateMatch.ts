@@ -8,7 +8,7 @@ export function useCreateMatch() {
 
   return useMutation({
     mutationFn: async (data: CreateMatchRequest) => {
-      const response = await matchmakingRequest<Match>('/matches/', {
+      const response = await matchmakingRequest<Match>('/matches', {
         method: 'POST',
         body: JSON.stringify(data),
       });

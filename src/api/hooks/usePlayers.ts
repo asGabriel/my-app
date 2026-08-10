@@ -7,7 +7,7 @@ export function usePlayers(enabled = true) {
   return useQuery({
     queryKey: ['matchmaking', 'players'],
     queryFn: async () => {
-      const data = await matchmakingRequest<Player[]>('/players/', {
+      const data = await matchmakingRequest<Player[]>('/players', {
         method: 'GET',
       });
 

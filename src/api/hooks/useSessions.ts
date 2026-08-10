@@ -7,7 +7,7 @@ export function useSessions(enabled = true) {
   return useQuery({
     queryKey: ['matchmaking', 'sessions'],
     queryFn: async () => {
-      const data = await matchmakingRequest<Session[]>('/sessions/', {
+      const data = await matchmakingRequest<Session[]>('/sessions', {
         method: 'GET',
       });
 
