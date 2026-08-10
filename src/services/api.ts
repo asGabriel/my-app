@@ -1,6 +1,4 @@
-const API_BASE = import.meta.env.PROD
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api';
+const API_BASE = '/api';
 const FINANCE_PATH = `${API_BASE}/financeManager`;
 const AUTH_PATH = `${API_BASE}/auth`;
 const MATCHMAKING_PATH = `${API_BASE}/matchmaking`;
