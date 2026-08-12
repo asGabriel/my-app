@@ -11,6 +11,11 @@ GameMode:
     - female
     - mixed
 
+ShuffleType:
+  type: string
+  enum:
+    - kingAndQueen
+
 TeamStatus:
   type: string
   enum:
@@ -87,6 +92,7 @@ Session:
     - settings
     - availableCourts
     - gameMode
+    - shuffleType
     - playerIds
     - createdAt
   properties:
@@ -102,6 +108,8 @@ Session:
       type: integer
     gameMode:
       $ref: "#/GameMode"
+    shuffleType:
+      $ref: "#/ShuffleType"
     playerIds:
       type: array
       items:
@@ -121,6 +129,7 @@ CreateSessionRequest:
     - date
     - availableCourts
     - gameMode
+    - shuffleType
   properties:
     date:
       type: string
@@ -129,6 +138,8 @@ CreateSessionRequest:
       type: integer
     gameMode:
       $ref: "#/GameMode"
+    shuffleType:
+      $ref: "#/ShuffleType"
     settings:
       $ref: "#/SessionSettings"
       nullable: true
@@ -144,6 +155,9 @@ UpdateSessionRequest:
       nullable: true
     gameMode:
       $ref: "#/GameMode"
+      nullable: true
+    shuffleType:
+      $ref: "#/ShuffleType"
       nullable: true
     settings:
       $ref: "#/SessionSettings"

@@ -287,6 +287,7 @@ const UpdatePlayerRequest = z
   .partial()
   .passthrough();
 const GameMode = z.enum(["male", "female", "mixed"]);
+const shuffleType = z.literal("kingAndQueen");
 const SessionSettings = z
   .object({
     playersPerTeam: z.number().int(),
@@ -299,6 +300,7 @@ const CreateSessionRequest = z
     date: z.string(),
     availableCourts: z.number().int(),
     gameMode: GameMode,
+    shuffleType: shuffleType,
     settings: SessionSettings.optional(),
   })
   .passthrough();
@@ -309,6 +311,7 @@ const Session = z
     settings: SessionSettings,
     availableCourts: z.number().int(),
     gameMode: GameMode,
+    shuffleType: z.literal("kingAndQueen"),
     playerIds: z.array(z.string().uuid()),
     createdAt: z.string(),
     updatedAt: z.string().nullish(),
@@ -319,6 +322,7 @@ const UpdateSessionRequest = z
     date: z.string().nullable(),
     availableCourts: z.number().int().nullable(),
     gameMode: GameMode,
+    shuffleType: shuffleType,
     settings: SessionSettings,
     playerIds: z.array(z.string().uuid()).nullable(),
   })
@@ -400,6 +404,7 @@ export const schemas = {
   Player,
   UpdatePlayerRequest,
   GameMode,
+  shuffleType,
   SessionSettings,
   CreateSessionRequest,
   Session,
