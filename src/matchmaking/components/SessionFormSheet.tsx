@@ -49,6 +49,7 @@ export function SessionFormSheet({ open, onClose, onError }: SessionFormSheetPro
         date: values.date.format('YYYY-MM-DD'),
         availableCourts: values.availableCourts,
         gameMode: values.gameMode,
+        shuffleType: 'kingAndQueen',
         settings: {
           playersPerTeam: values.playersPerTeam,
           setsToWin: values.setsToWin,
