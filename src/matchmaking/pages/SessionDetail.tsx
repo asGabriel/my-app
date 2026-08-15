@@ -1,7 +1,13 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Typography, Tag, Select, Button, App, Empty, Spin, Popconfirm } from 'antd';
-import { ArrowLeftOutlined, ThunderboltOutlined, PlusOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import {
+  ArrowLeftOutlined,
+  ThunderboltOutlined,
+  PlusOutlined,
+  PlayCircleOutlined,
+  TrophyOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
   useSession,
@@ -11,33 +17,16 @@ import {
   useUpdateSession,
   useDrawTeams,
   useReportMatchResult,
-  type GameMode,
+  schemas,
   type Team,
-  type TeamStatus,
 } from '../../api';
 import { MatchFormSheet } from '../components/MatchFormSheet';
 import { TeamFormSheet } from '../components/TeamFormSheet';
+import { gameModeLabel, teamStatusLabel, teamStatusColor } from '../shared/labels';
+
+const { waiting: WAITING, disbanded: DISBANDED } = schemas.TeamStatus.enum;
 
 const { Title, Text } = Typography;
-
-const gameModeLabel: Record<GameMode, string> = {
-  male: 'Masculino',
-  female: 'Feminino',
-  mixed: 'Misto',
-  open: 'Aberto',
-};
-
-const teamStatusLabel: Record<TeamStatus, string> = {
-  waiting: 'Na fila',
-  holding: 'Segurando quadra',
-  disbanded: 'Encerrado',
-};
-
-const teamStatusColor: Record<TeamStatus, string> = {
-  waiting: 'blue',
-  holding: 'gold',
-  disbanded: 'default',
-};
 
 function Section({ title, extra, children }: { title: string; extra?: ReactNode; children: ReactNode }) {
   return (
@@ -111,7 +100,7 @@ export function SessionDetail() {
     () =>
       (teams ?? []).filter(
         (team) =>
-          team.status !== 'disbanded' &&
+          team.status !== DISBANDED &&
           team.playerIds.length >= playersPerTeam &&
           !busyTeamIds.has(team.id),
       ),
@@ -121,34 +110,73 @@ export function SessionDetail() {
   const nextInQueue = useMemo(
     () =>
       (teams ?? [])
-        .filter((team) => team.status === 'waiting' && team.playerIds.length >= playersPerTeam)
+        .filter((team) => team.status === WAITING && team.playerIds.length >= playersPerTeam)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     [teams, playersPerTeam],
   );
 
   const incompleteWaiting = useMemo(
-    () => (teams ?? []).filter((team) => team.status === 'waiting' && team.playerIds.length < playersPerTeam),
+    () => (teams ?? []).filter((team) => team.status === WAITING && team.playerIds.length < playersPerTeam),
     [teams, playersPerTeam],
   );
 
   const availablePlayersForTeam = useMemo(() => {
     if (!session) return [];
-    const assigned = new Set((teams ?? []).flatMap((team) => team.playerIds));
+    const assigned = new Set(
+      (teams ?? []).filter((team) => team.status !== DISBANDED).flatMap((team) => team.playerIds),
+    );
     return session.playerIds
       .filter((id) => !assigned.has(id))
       .map((id) => ({ id, label: playerNameById.get(id) ?? id }));
   }, [session, teams, playerNameById]);
 
-  const sortedMatches = useMemo(() => {
-    if (!matches) return [];
-    return [...matches].sort((a, b) => {
-      const aInProgress = a.winnerTeamId == null;
-      const bInProgress = b.winnerTeamId == null;
-      if (aInProgress !== bInProgress) return aInProgress ? -1 : 1;
-      if (aInProgress) return b.startedAt.localeCompare(a.startedAt);
-      return (b.playedAt ?? '').localeCompare(a.playedAt ?? '');
+  const inProgressMatches = useMemo(
+    () =>
+      (matches ?? [])
+        .filter((match) => match.winnerTeamId == null)
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
+    [matches],
+  );
+
+  const matchHistory = useMemo(
+    () =>
+      (matches ?? [])
+        .filter((match) => match.winnerTeamId != null)
+        .sort((a, b) => (b.playedAt ?? '').localeCompare(a.playedAt ?? '')),
+    [matches],
+  );
+
+  const playerStandings = useMemo(() => {
+    const record = new Map<string, { wins: number; losses: number }>();
+    session?.playerIds.forEach((playerId) => record.set(playerId, { wins: 0, losses: 0 }));
+
+    const teamPlayerIds = new Map<string, string[]>();
+    teams?.forEach((team) => teamPlayerIds.set(team.id, team.playerIds));
+
+    matches?.forEach((match) => {
+      if (match.winnerTeamId == null) return;
+
+      const loserTeamId = match.winnerTeamId === match.teamAId ? match.teamBId : match.teamAId;
+
+      teamPlayerIds.get(match.winnerTeamId)?.forEach((playerId) => {
+        const entry = record.get(playerId) ?? { wins: 0, losses: 0 };
+        entry.wins += 1;
+        record.set(playerId, entry);
+      });
+
+      teamPlayerIds.get(loserTeamId)?.forEach((playerId) => {
+        const entry = record.get(playerId) ?? { wins: 0, losses: 0 };
+        entry.losses += 1;
+        record.set(playerId, entry);
+      });
     });
-  }, [matches]);
+
+    return Array.from(record, ([playerId, stats]) => ({ playerId, ...stats })).sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (a.losses !== b.losses) return a.losses - b.losses;
+      return (playerNameById.get(a.playerId) ?? '').localeCompare(playerNameById.get(b.playerId) ?? '');
+    });
+  }, [session, teams, matches, playerNameById]);
 
   if (isLoadingSession) {
     return (
@@ -362,27 +390,21 @@ export function SessionDetail() {
         )}
       </Section>
 
-      <Section title="Partidas">
+      <Section title="Partidas em andamento">
         {isLoadingMatches && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
             <Spin />
           </div>
         )}
 
-        {!isLoadingMatches && !matches?.length && (
-          <Text type="secondary">Nenhuma partida registrada ainda.</Text>
+        {!isLoadingMatches && !inProgressMatches.length && (
+          <Text type="secondary">Nenhuma partida em andamento.</Text>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-          {sortedMatches.map((match) => {
+          {inProgressMatches.map((match) => {
             const teamA = teams?.find((t) => t.id === match.teamAId);
             const teamB = teams?.find((t) => t.id === match.teamBId);
-            const inProgress = match.winnerTeamId == null;
-            const winnerLabel = !inProgress
-              ? match.winnerTeamId === match.teamAId
-                ? teamA && teamLabel(teamA)
-                : teamB && teamLabel(teamB)
-              : null;
             const teamALabel = teamA ? teamLabel(teamA) : match.teamAId;
             const teamBLabel = teamB ? teamLabel(teamB) : match.teamBId;
 
@@ -392,39 +414,33 @@ export function SessionDetail() {
                   <Text style={{ display: 'block' }}>
                     Quadra {match.court}: {teamALabel} vs {teamBLabel}
                   </Text>
-                  {inProgress && <Tag color="processing">Em andamento</Tag>}
+                  <Tag color="processing">Em andamento</Tag>
                 </div>
 
-                {inProgress ? (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                    <Popconfirm
-                      title="Confirmar vencedor"
-                      description={`${teamALabel} venceu essa partida?`}
-                      okText="Confirmar"
-                      cancelText="Cancelar"
-                      onConfirm={() => handleReportResult(match.id, match.teamAId)}
-                    >
-                      <Button size="small" loading={reportMatchResult.isPending}>
-                        {teamALabel} venceu
-                      </Button>
-                    </Popconfirm>
-                    <Popconfirm
-                      title="Confirmar vencedor"
-                      description={`${teamBLabel} venceu essa partida?`}
-                      okText="Confirmar"
-                      cancelText="Cancelar"
-                      onConfirm={() => handleReportResult(match.id, match.teamBId)}
-                    >
-                      <Button size="small" loading={reportMatchResult.isPending}>
-                        {teamBLabel} venceu
-                      </Button>
-                    </Popconfirm>
-                  </div>
-                ) : (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Vencedor: {winnerLabel ?? match.winnerTeamId}
-                  </Text>
-                )}
+                <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                  <Popconfirm
+                    title="Confirmar vencedor"
+                    description={`${teamALabel} venceu essa partida?`}
+                    okText="Confirmar"
+                    cancelText="Cancelar"
+                    onConfirm={() => handleReportResult(match.id, match.teamAId)}
+                  >
+                    <Button size="small" loading={reportMatchResult.isPending}>
+                      {teamALabel} venceu
+                    </Button>
+                  </Popconfirm>
+                  <Popconfirm
+                    title="Confirmar vencedor"
+                    description={`${teamBLabel} venceu essa partida?`}
+                    okText="Confirmar"
+                    cancelText="Cancelar"
+                    onConfirm={() => handleReportResult(match.id, match.teamBId)}
+                  >
+                    <Button size="small" loading={reportMatchResult.isPending}>
+                      {teamBLabel} venceu
+                    </Button>
+                  </Popconfirm>
+                </div>
               </div>
             );
           })}
@@ -438,6 +454,78 @@ export function SessionDetail() {
         >
           Iniciar Partida
         </Button>
+      </Section>
+
+      <Section title="Histórico de partidas">
+        {isLoadingMatches && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+            <Spin />
+          </div>
+        )}
+
+        {!isLoadingMatches && !matchHistory.length && (
+          <Text type="secondary">Nenhuma partida finalizada ainda.</Text>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {matchHistory.map((match) => {
+            const teamA = teams?.find((t) => t.id === match.teamAId);
+            const teamB = teams?.find((t) => t.id === match.teamBId);
+            const teamALabel = teamA ? teamLabel(teamA) : match.teamAId;
+            const teamBLabel = teamB ? teamLabel(teamB) : match.teamBId;
+            const winnerLabel =
+              match.winnerTeamId === match.teamAId ? teamALabel : teamBLabel;
+
+            return (
+              <div key={match.id} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Quadra {match.court} · {match.playedAt ? dayjs(match.playedAt).format('HH:mm') : ''}
+                  </Text>
+                </div>
+                <Text style={{ display: 'block', marginTop: 2 }}>
+                  {teamALabel} vs {teamBLabel}
+                </Text>
+                <Text strong style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#389e0d', marginTop: 4 }}>
+                  <TrophyOutlined /> {winnerLabel}
+                </Text>
+              </div>
+            );
+          })}
+        </div>
+      </Section>
+
+      <Section title="Ranking">
+        {!playerStandings.length && <Text type="secondary">Nenhum jogador confirmado ainda.</Text>}
+
+        {!!playerStandings.length && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {playerStandings.map((standing, index) => (
+              <div
+                key={standing.playerId}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: '#fafafa',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                }}
+              >
+                <Text strong style={{ width: 28 }}>
+                  {index + 1}º
+                </Text>
+                <Text style={{ flex: 1 }}>{playerNameById.get(standing.playerId) ?? standing.playerId}</Text>
+                <Tag color="green" style={{ marginRight: 0 }}>
+                  {standing.wins}V
+                </Tag>
+                <Tag color="red" style={{ marginRight: 0 }}>
+                  {standing.losses}D
+                </Tag>
+              </div>
+            ))}
+          </div>
+        )}
       </Section>
 
       {sessionId && (
@@ -457,6 +545,7 @@ export function SessionDetail() {
           sessionId={sessionId}
           playersPerTeam={session.settings.playersPerTeam}
           availablePlayers={availablePlayersForTeam}
+          playerNameById={playerNameById}
           onClose={() => setTeamSheetOpen(false)}
           onError={(error) => message.error(error)}
         />

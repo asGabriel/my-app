@@ -1,13 +1,25 @@
 import { useEffect } from 'react';
-import { Form, Select } from 'antd';
+import { Alert, Form, Select } from 'antd';
 import { useCreateTeam } from '../../api';
 import { BottomSheet } from './BottomSheet';
+
+const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+/** Swaps a raw player UUID in a backend error message for the player's name, when known. */
+function humanizeError(message: string, playerNameById: Map<string, string>): string {
+  const match = message.match(UUID_PATTERN);
+  if (!match) return message;
+
+  const name = playerNameById.get(match[0]);
+  return name ? message.replace(match[0], name) : message;
+}
 
 interface TeamFormSheetProps {
   open: boolean;
   sessionId: string;
   playersPerTeam: number;
   availablePlayers: { id: string; label: string }[];
+  playerNameById: Map<string, string>;
   onClose: () => void;
   onError: (message: string) => void;
 }
@@ -21,6 +33,7 @@ export function TeamFormSheet({
   sessionId,
   playersPerTeam,
   availablePlayers,
+  playerNameById,
   onClose,
   onError,
 }: TeamFormSheetProps) {
@@ -42,7 +55,7 @@ export function TeamFormSheet({
       onClose();
     } catch (error) {
       if (error instanceof Error) {
-        onError(error.message);
+        onError(humanizeError(error.message, playerNameById));
       }
     }
   };
@@ -56,6 +69,13 @@ export function TeamFormSheet({
       submitText="Criar"
       loading={createTeam.isPending}
     >
+      <Alert
+        type="info"
+        showIcon
+        message="Entrada manual"
+        description="Essa dupla entra direto na fila da sessão, ignorando as restrições de gênero e de duplas inéditas do modo de sorteio — use pra corrigir a fila manualmente em caso de imprevisto."
+        style={{ marginBottom: 16 }}
+      />
       <Form form={form} layout="vertical" size="large">
         <Form.Item
           name="playerIds"

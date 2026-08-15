@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Form, Input, Select } from 'antd';
 import { useCreatePlayer, useUpdatePlayer, type Player, type Gender } from '../../api';
 import { BottomSheet } from './BottomSheet';
+import { genderOptions } from '../shared/labels';
 
 interface PlayerFormSheetProps {
   open: boolean;
@@ -74,12 +75,7 @@ export function PlayerFormSheet({ open, player, onClose, onError }: PlayerFormSh
           label="Gênero"
           rules={[{ required: true, message: 'Selecione o gênero' }]}
         >
-          <Select
-            options={[
-              { label: 'Masculino', value: 'male' },
-              { label: 'Feminino', value: 'female' },
-            ]}
-          />
+          <Select options={genderOptions} />
         </Form.Item>
       </Form>
     </BottomSheet>
