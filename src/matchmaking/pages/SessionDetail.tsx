@@ -12,6 +12,7 @@ import {
   UserOutlined,
   EditOutlined,
   HistoryOutlined,
+  ApartmentOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -317,118 +318,6 @@ export function SessionDetail() {
             ),
             children: (
               <>
-                <Section
-                  title="Times"
-                  extra={
-                    <Button
-                      size="small"
-                      icon={<PlusOutlined />}
-                      onClick={() => setTeamSheetOpen(true)}
-                      disabled={!availablePlayersForTeam.length}
-                    >
-                      Nova Dupla
-                    </Button>
-                  }
-                >
-                  {isLoadingTeams && (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
-                      <Spin />
-                    </div>
-                  )}
-
-                  {!isLoadingTeams && !activeTeams.length && (
-                    <Text type="secondary">Nenhum time ativo no momento.</Text>
-                  )}
-
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 8,
-                      marginBottom: activeTeams.length ? 12 : 0,
-                    }}
-                  >
-                    {activeTeams.map((team) => {
-                      const complete = isTeamComplete(team);
-                      return (
-                        <div
-                          key={team.id}
-                          style={{
-                            background: '#fafafa',
-                            borderRadius: 8,
-                            padding: '8px 12px',
-                          }}
-                        >
-                          <div
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
-                          >
-                            <Text>{teamLabel(team)}</Text>
-                            <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
-                              {teamStatusLabel[team.status]}
-                            </Tag>
-                          </div>
-                          {(!complete || team.consecutiveWins > 0) && (
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {!complete && 'Aguardando parceiro'}
-                              {!complete && team.consecutiveWins > 0 && ' · '}
-                              {team.consecutiveWins > 0 &&
-                                `${team.consecutiveWins} vitória${team.consecutiveWins > 1 ? 's' : ''} seguida${team.consecutiveWins > 1 ? 's' : ''}`}
-                            </Text>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {!teams?.length && (
-                    <Button
-                      block
-                      icon={<ThunderboltOutlined />}
-                      loading={drawTeams.isPending}
-                      onClick={handleDrawTeams}
-                      disabled={session.playerIds.length < session.settings.playersPerTeam}
-                    >
-                      Sortear Times
-                    </Button>
-                  )}
-                </Section>
-
-                <Section title="Próximas duplas">
-                  {!nextInQueue.length && !incompleteWaiting.length && (
-                    <Text type="secondary">Fila vazia.</Text>
-                  )}
-
-                  {!!nextInQueue.length && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {nextInQueue.map((team, index) => (
-                        <div
-                          key={team.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            background: '#fafafa',
-                            borderRadius: 8,
-                            padding: '8px 12px',
-                          }}
-                        >
-                          <Text strong>{index + 1}º</Text>
-                          <Text>{teamLabel(team)}</Text>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {!!incompleteWaiting.length && (
-                    <Text
-                      type="secondary"
-                      style={{ display: 'block', marginTop: nextInQueue.length ? 8 : 0, fontSize: 12 }}
-                    >
-                      Aguardando parceiro: {incompleteWaiting.map(teamLabel).join(', ')}
-                    </Text>
-                  )}
-                </Section>
-
                 <Section title="Partidas em andamento">
                   {isLoadingMatches && (
                     <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
@@ -517,6 +406,42 @@ export function SessionDetail() {
                   </Button>
                 </Section>
 
+                <Section title="Próximas duplas">
+                  {!nextInQueue.length && !incompleteWaiting.length && (
+                    <Text type="secondary">Fila vazia.</Text>
+                  )}
+
+                  {!!nextInQueue.length && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {nextInQueue.map((team, index) => (
+                        <div
+                          key={team.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            background: '#fafafa',
+                            borderRadius: 8,
+                            padding: '8px 12px',
+                          }}
+                        >
+                          <Text strong>{index + 1}º</Text>
+                          <Text>{teamLabel(team)}</Text>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!!incompleteWaiting.length && (
+                    <Text
+                      type="secondary"
+                      style={{ display: 'block', marginTop: nextInQueue.length ? 8 : 0, fontSize: 12 }}
+                    >
+                      Aguardando parceiro: {incompleteWaiting.map(teamLabel).join(', ')}
+                    </Text>
+                  )}
+                </Section>
+
                 <Section title="Histórico de partidas">
                   {isLoadingMatches && (
                     <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
@@ -588,6 +513,119 @@ export function SessionDetail() {
             ),
           },
           {
+            key: 'times',
+            label: (
+              <span>
+                <ApartmentOutlined /> Times ({activeTeams.length})
+              </span>
+            ),
+            children: (
+              <div>
+                <Button
+                  block
+                  icon={<PlusOutlined />}
+                  onClick={() => setTeamSheetOpen(true)}
+                  disabled={!availablePlayersForTeam.length}
+                  style={{ marginBottom: 16 }}
+                >
+                  Nova Dupla
+                </Button>
+
+                {isLoadingTeams && (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+                    <Spin />
+                  </div>
+                )}
+
+                {!isLoadingTeams && !activeTeams.length && (
+                  <Empty description="Nenhum time ativo no momento." />
+                )}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    marginBottom: activeTeams.length ? 12 : 0,
+                  }}
+                >
+                  {activeTeams.map((team) => {
+                    const complete = isTeamComplete(team);
+                    return (
+                      <div
+                        key={team.id}
+                        style={{
+                          background: '#fafafa',
+                          borderRadius: 8,
+                          padding: '8px 12px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                          <Text>{teamLabel(team)}</Text>
+                          <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
+                            {teamStatusLabel[team.status]}
+                          </Tag>
+                        </div>
+                        {(!complete || team.consecutiveWins > 0) && (
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {!complete && 'Aguardando parceiro'}
+                            {!complete && team.consecutiveWins > 0 && ' · '}
+                            {team.consecutiveWins > 0 &&
+                              `${team.consecutiveWins} vitória${team.consecutiveWins > 1 ? 's' : ''} seguida${team.consecutiveWins > 1 ? 's' : ''}`}
+                          </Text>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {!teams?.length && (
+                  <Button
+                    block
+                    icon={<ThunderboltOutlined />}
+                    loading={drawTeams.isPending}
+                    onClick={handleDrawTeams}
+                    disabled={session.playerIds.length < session.settings.playersPerTeam}
+                  >
+                    Sortear Times
+                  </Button>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: 'disbanded-teams',
+            label: (
+              <span>
+                <HistoryOutlined /> Encerrados ({disbandedTeams.length})
+              </span>
+            ),
+            children: (
+              <div>
+                {!disbandedTeams.length && <Empty description="Nenhum time encerrado ainda." />}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {disbandedTeams.map((team) => (
+                    <div key={team.id} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <Text>{teamLabel(team)}</Text>
+                        <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
+                          {teamStatusLabel[team.status]}
+                        </Tag>
+                      </div>
+                      {team.consecutiveWins > 0 && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {team.consecutiveWins} vitória{team.consecutiveWins > 1 ? 's' : ''} seguida
+                          {team.consecutiveWins > 1 ? 's' : ''}
+                        </Text>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ),
+          },
+          {
             key: 'ranking',
             label: (
               <span>
@@ -633,38 +671,6 @@ export function SessionDetail() {
                     ))}
                   </div>
                 )}
-              </div>
-            ),
-          },
-          {
-            key: 'disbanded-teams',
-            label: (
-              <span>
-                <HistoryOutlined /> Encerrados ({disbandedTeams.length})
-              </span>
-            ),
-            children: (
-              <div>
-                {!disbandedTeams.length && <Empty description="Nenhum time encerrado ainda." />}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {disbandedTeams.map((team) => (
-                    <div key={team.id} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                        <Text>{teamLabel(team)}</Text>
-                        <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
-                          {teamStatusLabel[team.status]}
-                        </Tag>
-                      </div>
-                      {team.consecutiveWins > 0 && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {team.consecutiveWins} vitória{team.consecutiveWins > 1 ? 's' : ''} seguida
-                          {team.consecutiveWins > 1 ? 's' : ''}
-                        </Text>
-                      )}
-                    </div>
-                  ))}
-                </div>
               </div>
             ),
           },
