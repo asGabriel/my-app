@@ -286,8 +286,8 @@ const UpdatePlayerRequest = z
   .object({ name: z.string().nullable(), gender: Gender })
   .partial()
   .passthrough();
-const GameMode = z.enum(["male", "female", "mixed"]);
-const shuffleType = z.literal("kingAndQueen");
+const GameMode = z.enum(["male", "female", "mixed", "open"]);
+const shuffleType = z.enum(["kingAndQueen", "roundRobin"]);
 const SessionSettings = z
   .object({
     playersPerTeam: z.number().int(),
@@ -311,7 +311,7 @@ const Session = z
     settings: SessionSettings,
     availableCourts: z.number().int(),
     gameMode: GameMode,
-    shuffleType: z.literal("kingAndQueen"),
+    shuffleType: z.enum(["kingAndQueen", "roundRobin"]),
     playerIds: z.array(z.string().uuid()),
     createdAt: z.string(),
     updatedAt: z.string().nullish(),

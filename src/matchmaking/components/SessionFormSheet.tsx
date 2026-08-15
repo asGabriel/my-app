@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
 import { Form, DatePicker, InputNumber, Select, Divider } from 'antd';
 import dayjs from 'dayjs';
-import { useCreateSession, type GameMode } from '../../api';
+import { useCreateSession, type GameMode, type ShuffleType } from '../../api';
 import { BottomSheet } from './BottomSheet';
+
+const shuffleTypeForGameMode = (gameMode: GameMode): ShuffleType =>
+  gameMode === 'open' ? 'roundRobin' : 'kingAndQueen';
 
 interface SessionFormSheetProps {
   open: boolean;
@@ -49,7 +52,7 @@ export function SessionFormSheet({ open, onClose, onError }: SessionFormSheetPro
         date: values.date.format('YYYY-MM-DD'),
         availableCourts: values.availableCourts,
         gameMode: values.gameMode,
-        shuffleType: 'kingAndQueen',
+        shuffleType: shuffleTypeForGameMode(values.gameMode),
         settings: {
           playersPerTeam: values.playersPerTeam,
           setsToWin: values.setsToWin,
@@ -95,12 +98,14 @@ export function SessionFormSheet({ open, onClose, onError }: SessionFormSheetPro
           name="gameMode"
           label="Modo de jogo"
           rules={[{ required: true, message: 'Selecione o modo de jogo' }]}
+          extra="No modo aberto, a fila prioriza formar duplas inéditas conforme os jogos terminam, sem considerar gênero"
         >
           <Select
             options={[
               { label: 'Masculino', value: 'male' },
               { label: 'Feminino', value: 'female' },
               { label: 'Misto', value: 'mixed' },
+              { label: 'Aberto (sem gênero, todos com todos)', value: 'open' },
             ]}
           />
         </Form.Item>

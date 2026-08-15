@@ -24,6 +24,7 @@ const gameModeLabel: Record<GameMode, string> = {
   male: 'Masculino',
   female: 'Feminino',
   mixed: 'Misto',
+  open: 'Aberto',
 };
 
 const teamStatusLabel: Record<TeamStatus, string> = {
