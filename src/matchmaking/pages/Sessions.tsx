@@ -3,25 +3,12 @@ import { Typography, Tag, App, Spin, Empty } from 'antd';
 import { TeamOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
 import dayjs from 'dayjs';
-import { useSessions, type Session, type GameMode } from '../../api';
+import { useSessions, type Session } from '../../api';
 import { SessionFormSheet } from '../components/SessionFormSheet';
 import { Fab } from '../components/Fab';
+import { gameModeLabel, gameModeColor } from '../shared/labels';
 
 const { Title, Text } = Typography;
-
-const gameModeLabel: Record<GameMode, string> = {
-  male: 'Masculino',
-  female: 'Feminino',
-  mixed: 'Misto',
-  open: 'Aberto',
-};
-
-const gameModeColor: Record<GameMode, string> = {
-  male: 'blue',
-  female: 'magenta',
-  mixed: 'purple',
-  open: 'green',
-};
 
 function sortByDateDesc(sessions: Session[]) {
   return [...sessions].sort((a, b) => b.date.localeCompare(a.date));

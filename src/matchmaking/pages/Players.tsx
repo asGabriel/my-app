@@ -4,13 +4,9 @@ import { UserOutlined } from '@ant-design/icons';
 import { usePlayers, type Player } from '../../api';
 import { PlayerFormSheet } from '../components/PlayerFormSheet';
 import { Fab } from '../components/Fab';
+import { genderLabel } from '../shared/labels';
 
 const { Title, Text } = Typography;
-
-const genderLabel: Record<Player['gender'], string> = {
-  male: 'Masculino',
-  female: 'Feminino',
-};
 
 export function Players() {
   const { data: players, isLoading } = usePlayers();
