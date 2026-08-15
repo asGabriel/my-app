@@ -195,7 +195,11 @@ export function SessionDetail() {
       });
     });
 
-    return Array.from(record, ([playerId, stats]) => ({ playerId, ...stats })).sort((a, b) => {
+    return Array.from(record, ([playerId, stats]) => ({
+      playerId,
+      ...stats,
+      games: stats.wins + stats.losses,
+    })).sort((a, b) => {
       if (b.wins !== a.wins) return b.wins - a.wins;
       if (a.losses !== b.losses) return a.losses - b.losses;
       return (playerNameById.get(a.playerId) ?? '').localeCompare(playerNameById.get(b.playerId) ?? '');
@@ -525,40 +529,56 @@ export function SessionDetail() {
                     })}
                   </div>
                 </Section>
-
-                <Section title="Ranking">
-                  {!playerStandings.length && <Text type="secondary">Nenhum jogador confirmado ainda.</Text>}
-
-                  {!!playerStandings.length && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {playerStandings.map((standing, index) => (
-                        <div
-                          key={standing.playerId}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            background: '#fafafa',
-                            borderRadius: 8,
-                            padding: '8px 12px',
-                          }}
-                        >
-                          <Text strong style={{ width: 28 }}>
-                            {index + 1}º
-                          </Text>
-                          <Text style={{ flex: 1 }}>{playerNameById.get(standing.playerId) ?? standing.playerId}</Text>
-                          <Tag color="green" style={{ marginRight: 0 }}>
-                            {standing.wins}V
-                          </Tag>
-                          <Tag color="red" style={{ marginRight: 0 }}>
-                            {standing.losses}D
-                          </Tag>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Section>
               </>
+            ),
+          },
+          {
+            key: 'ranking',
+            label: (
+              <span>
+                <TrophyOutlined /> Ranking
+              </span>
+            ),
+            children: (
+              <div>
+                {!playerStandings.length && <Empty description="Nenhum jogador confirmado ainda." />}
+
+                {!!playerStandings.length && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {playerStandings.map((standing, index) => (
+                      <div
+                        key={standing.playerId}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          background: '#fafafa',
+                          borderRadius: 8,
+                          padding: '8px 12px',
+                        }}
+                      >
+                        <Text strong style={{ width: 28 }}>
+                          {index + 1}º
+                        </Text>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={{ display: 'block' }}>
+                            {playerNameById.get(standing.playerId) ?? standing.playerId}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {standing.games} jogo{standing.games !== 1 ? 's' : ''}
+                          </Text>
+                        </div>
+                        <Tag color="green" style={{ marginRight: 0 }}>
+                          {standing.wins}V
+                        </Tag>
+                        <Tag color="red" style={{ marginRight: 0 }}>
+                          {standing.losses}D
+                        </Tag>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             ),
           },
           {
