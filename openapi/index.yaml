@@ -55,6 +55,8 @@ paths:
     $ref: "./paths/matchmaking.yaml#/session"
   /matchmaking/teams/:
     $ref: "./paths/matchmaking.yaml#/teams"
+  /matchmaking/teams/priority:
+    $ref: "./paths/matchmaking.yaml#/priorityTeam"
   /matchmaking/teams/{sessionId}:
     $ref: "./paths/matchmaking.yaml#/teamsBySession"
   /matchmaking/teams/{sessionId}/draw:

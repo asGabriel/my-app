@@ -342,6 +342,7 @@ const Team = z
     playerIds: z.array(z.string().uuid()),
     status: TeamStatus,
     consecutiveWins: z.number().int(),
+    priority: z.boolean(),
     createdAt: z.string(),
   })
   .passthrough();
@@ -865,6 +866,21 @@ const endpoints = makeApi([
       },
     ],
     response: z.array(Team),
+  },
+  {
+    method: "post",
+    path: "/matchmaking/teams/priority",
+    alias: "createPriorityTeam",
+    description: `Diferente de createTeam, aceita puxar um jogador que já está em outra dupla Waiting não ocupada em partida — a dupla de origem é desfeita e o parceiro que sobra volta pra fila normalmente.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateTeamRequest,
+      },
+    ],
+    response: Team,
   },
 ]);
 

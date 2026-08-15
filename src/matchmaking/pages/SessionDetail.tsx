@@ -13,6 +13,7 @@ import {
   EditOutlined,
   HistoryOutlined,
   ApartmentOutlined,
+  PushpinOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -32,7 +33,7 @@ import { TeamFormSheet } from '../components/TeamFormSheet';
 import { RosterSheet } from '../components/RosterSheet';
 import { gameModeLabel, genderLabel, teamStatusLabel, teamStatusColor } from '../shared/labels';
 
-const { waiting: WAITING, disbanded: DISBANDED } = schemas.TeamStatus.enum;
+const { waiting: WAITING, disbanded: DISBANDED, holding: HOLDING } = schemas.TeamStatus.enum;
 
 const { Title, Text } = Typography;
 
@@ -82,6 +83,7 @@ export function SessionDetail() {
   const [rosterSelection, setRosterSelection] = useState<string[]>([]);
   const [matchSheetOpen, setMatchSheetOpen] = useState(false);
   const [teamSheetOpen, setTeamSheetOpen] = useState(false);
+  const [priorityTeamSheetOpen, setPriorityTeamSheetOpen] = useState(false);
 
   const playerNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -155,6 +157,18 @@ export function SessionDetail() {
       .filter((id) => !assigned.has(id))
       .map((id) => ({ id, label: playerNameById.get(id) ?? id }));
   }, [session, teams, playerNameById]);
+
+  const pullablePlayersForPriorityTeam = useMemo(() => {
+    if (!session) return [];
+    const unavailable = new Set(
+      (teams ?? [])
+        .filter((team) => team.status === HOLDING || busyTeamIds.has(team.id))
+        .flatMap((team) => team.playerIds),
+    );
+    return session.playerIds
+      .filter((id) => !unavailable.has(id))
+      .map((id) => ({ id, label: playerNameById.get(id) ?? id }));
+  }, [session, teams, busyTeamIds, playerNameById]);
 
   const inProgressMatches = useMemo(
     () =>
@@ -648,15 +662,24 @@ export function SessionDetail() {
             ),
             children: (
               <div>
-                <Button
-                  block
-                  icon={<PlusOutlined />}
-                  onClick={() => setTeamSheetOpen(true)}
-                  disabled={!availablePlayersForTeam.length}
-                  style={{ marginBottom: 16 }}
-                >
-                  Nova Dupla
-                </Button>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  <Button
+                    block
+                    icon={<PlusOutlined />}
+                    onClick={() => setTeamSheetOpen(true)}
+                    disabled={!availablePlayersForTeam.length}
+                  >
+                    Nova Dupla
+                  </Button>
+                  <Button
+                    block
+                    icon={<PushpinOutlined />}
+                    onClick={() => setPriorityTeamSheetOpen(true)}
+                    disabled={!pullablePlayersForPriorityTeam.length}
+                  >
+                    Próximo Manual
+                  </Button>
+                </div>
 
                 {isLoadingTeams && (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
@@ -777,6 +800,19 @@ export function SessionDetail() {
           availablePlayers={availablePlayersForTeam}
           playerNameById={playerNameById}
           onClose={() => setTeamSheetOpen(false)}
+          onError={(error) => message.error(error)}
+        />
+      )}
+
+      {sessionId && (
+        <TeamFormSheet
+          open={priorityTeamSheetOpen}
+          sessionId={sessionId}
+          playersPerTeam={session.settings.playersPerTeam}
+          availablePlayers={pullablePlayersForPriorityTeam}
+          playerNameById={playerNameById}
+          priority
+          onClose={() => setPriorityTeamSheetOpen(false)}
           onError={(error) => message.error(error)}
         />
       )}

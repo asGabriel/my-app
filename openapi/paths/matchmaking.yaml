@@ -160,6 +160,30 @@ teams:
             schema:
               $ref: "../schemas/matchmaking.yaml#/Team"
 
+priorityTeam:
+  post:
+    operationId: createPriorityTeam
+    summary: Marca manualmente uma dupla como próxima a jogar, pulando a fila normal
+    description: >-
+      Diferente de createTeam, aceita puxar um jogador que já está em outra
+      dupla Waiting não ocupada em partida — a dupla de origem é desfeita e
+      o parceiro que sobra volta pra fila normalmente.
+    tags:
+      - Matchmaking
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/matchmaking.yaml#/CreateTeamRequest"
+    responses:
+      "201":
+        description: Dupla prioritária criada com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Team"
+
 teamsBySession:
   get:
     operationId: listTeams
