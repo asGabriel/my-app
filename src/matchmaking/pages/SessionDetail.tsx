@@ -1,12 +1,19 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Typography, Tag, Select, Button, App, Empty, Spin, Popconfirm } from 'antd';
+import { Typography, Tag, Tabs, Button, App, Empty, Spin, Popconfirm } from 'antd';
 import {
   ArrowLeftOutlined,
   ThunderboltOutlined,
   PlusOutlined,
   PlayCircleOutlined,
   TrophyOutlined,
+  AppstoreOutlined,
+  TeamOutlined,
+  UserOutlined,
+  EditOutlined,
+  HistoryOutlined,
+  ApartmentOutlined,
+  PushpinOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -19,12 +26,14 @@ import {
   useReportMatchResult,
   schemas,
   type Team,
+  type Player,
 } from '../../api';
 import { MatchFormSheet } from '../components/MatchFormSheet';
 import { TeamFormSheet } from '../components/TeamFormSheet';
-import { gameModeLabel, teamStatusLabel, teamStatusColor } from '../shared/labels';
+import { RosterSheet } from '../components/RosterSheet';
+import { gameModeLabel, genderLabel, teamStatusLabel, teamStatusColor } from '../shared/labels';
 
-const { waiting: WAITING, disbanded: DISBANDED } = schemas.TeamStatus.enum;
+const { waiting: WAITING, disbanded: DISBANDED, holding: HOLDING } = schemas.TeamStatus.enum;
 
 const { Title, Text } = Typography;
 
@@ -69,13 +78,22 @@ export function SessionDetail() {
   const drawTeams = useDrawTeams();
   const reportMatchResult = useReportMatchResult();
 
-  const [rosterDraft, setRosterDraft] = useState<string[] | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [rosterSheetOpen, setRosterSheetOpen] = useState(false);
+  const [rosterSelection, setRosterSelection] = useState<string[]>([]);
   const [matchSheetOpen, setMatchSheetOpen] = useState(false);
   const [teamSheetOpen, setTeamSheetOpen] = useState(false);
+  const [priorityTeamSheetOpen, setPriorityTeamSheetOpen] = useState(false);
 
   const playerNameById = useMemo(() => {
     const map = new Map<string, string>();
     players?.forEach((player) => map.set(player.id, player.name));
+    return map;
+  }, [players]);
+
+  const playerById = useMemo(() => {
+    const map = new Map<string, Player>();
+    players?.forEach((player) => map.set(player.id, player));
     return map;
   }, [players]);
 
@@ -120,6 +138,16 @@ export function SessionDetail() {
     [teams, playersPerTeam],
   );
 
+  const activeTeams = useMemo(() => (teams ?? []).filter((team) => team.status !== DISBANDED), [teams]);
+
+  const disbandedTeams = useMemo(
+    () =>
+      (teams ?? [])
+        .filter((team) => team.status === DISBANDED)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [teams],
+  );
+
   const availablePlayersForTeam = useMemo(() => {
     if (!session) return [];
     const assigned = new Set(
@@ -130,6 +158,18 @@ export function SessionDetail() {
       .map((id) => ({ id, label: playerNameById.get(id) ?? id }));
   }, [session, teams, playerNameById]);
 
+  const pullablePlayersForPriorityTeam = useMemo(() => {
+    if (!session) return [];
+    const unavailable = new Set(
+      (teams ?? [])
+        .filter((team) => team.status === HOLDING || busyTeamIds.has(team.id))
+        .flatMap((team) => team.playerIds),
+    );
+    return session.playerIds
+      .filter((id) => !unavailable.has(id))
+      .map((id) => ({ id, label: playerNameById.get(id) ?? id }));
+  }, [session, teams, busyTeamIds, playerNameById]);
+
   const inProgressMatches = useMemo(
     () =>
       (matches ?? [])
@@ -137,6 +177,17 @@ export function SessionDetail() {
         .sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
     [matches],
   );
+
+  const nextFreeCourt = useMemo(() => {
+    const busyCourts = new Set(inProgressMatches.map((match) => match.court));
+    const availableCourts = session?.availableCourts ?? 0;
+
+    for (let court = 1; court <= availableCourts; court += 1) {
+      if (!busyCourts.has(court)) return court;
+    }
+
+    return 1;
+  }, [session, inProgressMatches]);
 
   const matchHistory = useMemo(
     () =>
@@ -171,7 +222,11 @@ export function SessionDetail() {
       });
     });
 
-    return Array.from(record, ([playerId, stats]) => ({ playerId, ...stats })).sort((a, b) => {
+    return Array.from(record, ([playerId, stats]) => ({
+      playerId,
+      ...stats,
+      games: stats.wins + stats.losses,
+    })).sort((a, b) => {
       if (b.wins !== a.wins) return b.wins - a.wins;
       if (a.losses !== b.losses) return a.losses - b.losses;
       return (playerNameById.get(a.playerId) ?? '').localeCompare(playerNameById.get(b.playerId) ?? '');
@@ -190,19 +245,23 @@ export function SessionDetail() {
     return <Empty description="Sessão não encontrada" />;
   }
 
-  const roster = rosterDraft ?? session.playerIds;
-  const rosterChanged =
-    rosterDraft !== null &&
-    (rosterDraft.length !== session.playerIds.length ||
-      rosterDraft.some((id) => !session.playerIds.includes(id)));
+  const confirmedPlayers = session.playerIds
+    .map((id) => playerById.get(id))
+    .filter((player): player is NonNullable<typeof player> => player != null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const openRosterSheet = () => {
+    setRosterSelection(session.playerIds);
+    setRosterSheetOpen(true);
+  };
 
   const handleSaveRoster = async () => {
-    if (!sessionId || rosterDraft === null) return;
+    if (!sessionId) return;
 
     try {
-      await updateSession.mutateAsync({ sessionId, data: { playerIds: rosterDraft } });
+      await updateSession.mutateAsync({ sessionId, data: { playerIds: rosterSelection } });
       message.success('Jogadores da sessão atualizados!');
-      setRosterDraft(null);
+      setRosterSheetOpen(false);
     } catch (error) {
       if (error instanceof Error) message.error(error.message);
     }
@@ -262,271 +321,462 @@ export function SessionDetail() {
         <Tag>{session.settings.pointsPerSet} pts/set</Tag>
       </div>
 
-      <Section
-        title="Jogadores confirmados"
-        extra={
-          rosterChanged && (
-            <Button type="primary" size="small" loading={updateSession.isPending} onClick={handleSaveRoster}>
-              Salvar
-            </Button>
-          )
-        }
-      >
-        <Select
-          mode="multiple"
-          style={{ width: '100%' }}
-          loading={isLoadingPlayers}
-          placeholder="Selecione os jogadores confirmados"
-          value={roster}
-          onChange={(value) => setRosterDraft(value)}
-          optionFilterProp="label"
-          options={players?.map((player) => ({
-            label: `${player.name} (${player.gender === 'male' ? 'M' : 'F'})`,
-            value: player.id,
-          }))}
-        />
-      </Section>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'overview',
+            label: (
+              <span>
+                <AppstoreOutlined /> Visão geral
+              </span>
+            ),
+            children: (
+              <>
+                <Section title="Partidas em andamento">
+                  {isLoadingMatches && (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+                      <Spin />
+                    </div>
+                  )}
 
-      <Section
-        title="Times"
-        extra={
-          <Button
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={() => setTeamSheetOpen(true)}
-            disabled={!availablePlayersForTeam.length}
-          >
-            Nova Dupla
-          </Button>
-        }
-      >
-        {isLoadingTeams && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
-            <Spin />
-          </div>
-        )}
+                  {!isLoadingMatches && !inProgressMatches.length && (
+                    <Text type="secondary">Nenhuma partida em andamento.</Text>
+                  )}
 
-        {!isLoadingTeams && !teams?.length && (
-          <Text type="secondary">Nenhum time formado ainda.</Text>
-        )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                    {inProgressMatches.map((match) => {
+                      const teamA = teams?.find((t) => t.id === match.teamAId);
+                      const teamB = teams?.find((t) => t.id === match.teamBId);
+                      const teamALabel = teamA ? teamLabel(teamA) : match.teamAId;
+                      const teamBLabel = teamB ? teamLabel(teamB) : match.teamBId;
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: teams?.length ? 12 : 0 }}>
-          {teams?.map((team) => {
-            const complete = isTeamComplete(team);
-            return (
-              <div
-                key={team.id}
-                style={{
-                  background: '#fafafa',
-                  borderRadius: 8,
-                  padding: '8px 12px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <Text>{teamLabel(team)}</Text>
-                  <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
-                    {teamStatusLabel[team.status]}
-                  </Tag>
-                </div>
-                {(!complete || team.consecutiveWins > 0) && (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {!complete && 'Aguardando parceiro'}
-                    {!complete && team.consecutiveWins > 0 && ' · '}
-                    {team.consecutiveWins > 0 &&
-                      `${team.consecutiveWins} vitória${team.consecutiveWins > 1 ? 's' : ''} seguida${team.consecutiveWins > 1 ? 's' : ''}`}
-                  </Text>
+                      return (
+                        <div key={match.id} style={{ background: '#fafafa', borderRadius: 10, padding: 12 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: 10,
+                            }}
+                          >
+                            <Text strong style={{ fontSize: 13 }}>
+                              Quadra {match.court}
+                            </Text>
+                            <Tag color="processing" style={{ marginRight: 0 }}>
+                              Em andamento
+                            </Tag>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <Text strong style={{ flex: 1 }}>
+                              {teamALabel}
+                            </Text>
+                            <Popconfirm
+                              title="Confirmar vencedor"
+                              description={`${teamALabel} venceu essa partida?`}
+                              okText="Confirmar"
+                              cancelText="Cancelar"
+                              onConfirm={() => handleReportResult(match.id, match.teamAId)}
+                            >
+                              <Button size="small" loading={reportMatchResult.isPending}>
+                                Venceu
+                              </Button>
+                            </Popconfirm>
+                          </div>
+
+                          <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12, margin: '6px 0' }}>
+                            vs
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <Text strong style={{ flex: 1 }}>
+                              {teamBLabel}
+                            </Text>
+                            <Popconfirm
+                              title="Confirmar vencedor"
+                              description={`${teamBLabel} venceu essa partida?`}
+                              okText="Confirmar"
+                              cancelText="Cancelar"
+                              onConfirm={() => handleReportResult(match.id, match.teamBId)}
+                            >
+                              <Button size="small" loading={reportMatchResult.isPending}>
+                                Venceu
+                              </Button>
+                            </Popconfirm>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    block
+                    icon={<PlayCircleOutlined />}
+                    onClick={() => setMatchSheetOpen(true)}
+                    disabled={startableTeams.length < 2}
+                  >
+                    Abrir Quadra
+                  </Button>
+
+                  {startableTeams.length < 2 && (
+                    <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 8 }}>
+                      {!activeTeams.length
+                        ? 'Nenhum time formado ainda. '
+                        : 'Menos de dois times disponíveis para abrir uma quadra. '}
+                      <a onClick={() => setActiveTab('times')} style={{ color: '#fa8c16', fontWeight: 600 }}>
+                        Ir para a aba Times
+                      </a>
+                    </Text>
+                  )}
+                </Section>
+
+                <Section title="Próximas duplas">
+                  {!nextInQueue.length && !incompleteWaiting.length && (
+                    <Text type="secondary">Fila vazia.</Text>
+                  )}
+
+                  {!!nextInQueue.length && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {nextInQueue.map((team, index) => (
+                        <div
+                          key={team.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            background: '#fafafa',
+                            borderRadius: 8,
+                            padding: '8px 12px',
+                          }}
+                        >
+                          <Text strong>{index + 1}º</Text>
+                          <Text>{teamLabel(team)}</Text>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!!incompleteWaiting.length && (
+                    <Text
+                      type="secondary"
+                      style={{ display: 'block', marginTop: nextInQueue.length ? 8 : 0, fontSize: 12 }}
+                    >
+                      Aguardando parceiro: {incompleteWaiting.map(teamLabel).join(', ')}
+                    </Text>
+                  )}
+                </Section>
+
+                <Section title="Histórico de partidas">
+                  {isLoadingMatches && (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+                      <Spin />
+                    </div>
+                  )}
+
+                  {!isLoadingMatches && !matchHistory.length && (
+                    <Text type="secondary">Nenhuma partida finalizada ainda.</Text>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {matchHistory.map((match) => {
+                      const teamA = teams?.find((t) => t.id === match.teamAId);
+                      const teamB = teams?.find((t) => t.id === match.teamBId);
+                      const teamALabel = teamA ? teamLabel(teamA) : match.teamAId;
+                      const teamBLabel = teamB ? teamLabel(teamB) : match.teamBId;
+                      const teamAWon = match.winnerTeamId === match.teamAId;
+
+                      return (
+                        <div key={match.id} style={{ background: '#fafafa', borderRadius: 10, padding: 12 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: 10,
+                            }}
+                          >
+                            <Text strong style={{ fontSize: 13 }}>
+                              Quadra {match.court}
+                            </Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {match.playedAt ? dayjs(match.playedAt).format('HH:mm') : ''}
+                            </Text>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span
+                              style={{ width: 16, display: 'flex', justifyContent: 'center', color: '#389e0d' }}
+                            >
+                              {teamAWon && <TrophyOutlined />}
+                            </span>
+                            <Text strong={teamAWon} style={{ flex: 1, color: teamAWon ? '#389e0d' : '#8c8c8c' }}>
+                              {teamALabel}
+                            </Text>
+                          </div>
+
+                          <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12, margin: '4px 0' }}>
+                            vs
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span
+                              style={{ width: 16, display: 'flex', justifyContent: 'center', color: '#389e0d' }}
+                            >
+                              {!teamAWon && <TrophyOutlined />}
+                            </span>
+                            <Text strong={!teamAWon} style={{ flex: 1, color: !teamAWon ? '#389e0d' : '#8c8c8c' }}>
+                              {teamBLabel}
+                            </Text>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Section>
+              </>
+            ),
+          },
+          {
+            key: 'ranking',
+            label: (
+              <span>
+                <TrophyOutlined /> Ranking
+              </span>
+            ),
+            children: (
+              <div>
+                {!playerStandings.length && <Empty description="Nenhum jogador confirmado ainda." />}
+
+                {!!playerStandings.length && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {playerStandings.map((standing, index) => (
+                      <div
+                        key={standing.playerId}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          background: '#fafafa',
+                          borderRadius: 8,
+                          padding: '8px 12px',
+                        }}
+                      >
+                        <Text strong style={{ width: 28 }}>
+                          {index + 1}º
+                        </Text>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={{ display: 'block' }}>
+                            {playerNameById.get(standing.playerId) ?? standing.playerId}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {standing.games} jogo{standing.games !== 1 ? 's' : ''}
+                          </Text>
+                        </div>
+                        <Tag color="green" style={{ marginRight: 0 }}>
+                          {standing.wins}V
+                        </Tag>
+                        <Tag color="red" style={{ marginRight: 0 }}>
+                          {standing.losses}D
+                        </Tag>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            );
-          })}
-        </div>
+            ),
+          },
+          {
+            key: 'players',
+            label: (
+              <span>
+                <TeamOutlined /> Jogadores ({confirmedPlayers.length})
+              </span>
+            ),
+            children: (
+              <div>
+                <Button
+                  block
+                  icon={<EditOutlined />}
+                  loading={isLoadingPlayers}
+                  onClick={openRosterSheet}
+                  style={{ marginBottom: 16 }}
+                >
+                  Editar jogadores confirmados
+                </Button>
 
-        {!teams?.length && (
-          <Button
-            block
-            icon={<ThunderboltOutlined />}
-            loading={drawTeams.isPending}
-            onClick={handleDrawTeams}
-            disabled={session.playerIds.length < session.settings.playersPerTeam}
-          >
-            Sortear Times
-          </Button>
-        )}
-      </Section>
+                {!confirmedPlayers.length && <Empty description="Nenhum jogador confirmado ainda." />}
 
-      <Section title="Próximas duplas">
-        {!nextInQueue.length && !incompleteWaiting.length && (
-          <Text type="secondary">Fila vazia.</Text>
-        )}
-
-        {!!nextInQueue.length && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {nextInQueue.map((team, index) => (
-              <div
-                key={team.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: '#fafafa',
-                  borderRadius: 8,
-                  padding: '8px 12px',
-                }}
-              >
-                <Text strong>{index + 1}º</Text>
-                <Text>{teamLabel(team)}</Text>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!!incompleteWaiting.length && (
-          <Text
-            type="secondary"
-            style={{ display: 'block', marginTop: nextInQueue.length ? 8 : 0, fontSize: 12 }}
-          >
-            Aguardando parceiro: {incompleteWaiting.map(teamLabel).join(', ')}
-          </Text>
-        )}
-      </Section>
-
-      <Section title="Partidas em andamento">
-        {isLoadingMatches && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
-            <Spin />
-          </div>
-        )}
-
-        {!isLoadingMatches && !inProgressMatches.length && (
-          <Text type="secondary">Nenhuma partida em andamento.</Text>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-          {inProgressMatches.map((match) => {
-            const teamA = teams?.find((t) => t.id === match.teamAId);
-            const teamB = teams?.find((t) => t.id === match.teamBId);
-            const teamALabel = teamA ? teamLabel(teamA) : match.teamAId;
-            const teamBLabel = teamB ? teamLabel(teamB) : match.teamBId;
-
-            return (
-              <div key={match.id} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ display: 'block' }}>
-                    Quadra {match.court}: {teamALabel} vs {teamBLabel}
-                  </Text>
-                  <Tag color="processing">Em andamento</Tag>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {confirmedPlayers.map((player) => (
+                    <div
+                      key={player.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        background: '#fff',
+                        borderRadius: 12,
+                        padding: '14px 16px',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          background: player.gender === 'male' ? '#e6f4ff' : '#fff0f6',
+                          color: player.gender === 'male' ? '#1677ff' : '#eb2f96',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 18,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <UserOutlined />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <Text strong style={{ display: 'block' }}>
+                          {player.name}
+                        </Text>
+                      </div>
+                      <Tag color={player.gender === 'male' ? 'blue' : 'magenta'} style={{ marginRight: 0 }}>
+                        {genderLabel[player.gender]}
+                      </Tag>
+                    </div>
+                  ))}
                 </div>
-
-                <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                  <Popconfirm
-                    title="Confirmar vencedor"
-                    description={`${teamALabel} venceu essa partida?`}
-                    okText="Confirmar"
-                    cancelText="Cancelar"
-                    onConfirm={() => handleReportResult(match.id, match.teamAId)}
+              </div>
+            ),
+          },
+          {
+            key: 'times',
+            label: (
+              <span>
+                <ApartmentOutlined /> Times ({activeTeams.length})
+              </span>
+            ),
+            children: (
+              <div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  <Button
+                    block
+                    icon={<PlusOutlined />}
+                    onClick={() => setTeamSheetOpen(true)}
+                    disabled={!availablePlayersForTeam.length}
                   >
-                    <Button size="small" loading={reportMatchResult.isPending}>
-                      {teamALabel} venceu
-                    </Button>
-                  </Popconfirm>
-                  <Popconfirm
-                    title="Confirmar vencedor"
-                    description={`${teamBLabel} venceu essa partida?`}
-                    okText="Confirmar"
-                    cancelText="Cancelar"
-                    onConfirm={() => handleReportResult(match.id, match.teamBId)}
+                    Nova Dupla
+                  </Button>
+                  <Button
+                    block
+                    icon={<PushpinOutlined />}
+                    onClick={() => setPriorityTeamSheetOpen(true)}
+                    disabled={!pullablePlayersForPriorityTeam.length}
                   >
-                    <Button size="small" loading={reportMatchResult.isPending}>
-                      {teamBLabel} venceu
-                    </Button>
-                  </Popconfirm>
+                    Próximo Manual
+                  </Button>
+                </div>
+
+                {isLoadingTeams && (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+                    <Spin />
+                  </div>
+                )}
+
+                {!isLoadingTeams && !activeTeams.length && (
+                  <Empty description="Nenhum time ativo no momento." />
+                )}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    marginBottom: activeTeams.length ? 12 : 0,
+                  }}
+                >
+                  {activeTeams.map((team) => {
+                    const complete = isTeamComplete(team);
+                    return (
+                      <div
+                        key={team.id}
+                        style={{
+                          background: '#fafafa',
+                          borderRadius: 8,
+                          padding: '8px 12px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                          <Text>{teamLabel(team)}</Text>
+                          <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
+                            {teamStatusLabel[team.status]}
+                          </Tag>
+                        </div>
+                        {(!complete || team.consecutiveWins > 0) && (
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {!complete && 'Aguardando parceiro'}
+                            {!complete && team.consecutiveWins > 0 && ' · '}
+                            {team.consecutiveWins > 0 &&
+                              `${team.consecutiveWins} vitória${team.consecutiveWins > 1 ? 's' : ''} seguida${team.consecutiveWins > 1 ? 's' : ''}`}
+                          </Text>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {!teams?.length && (
+                  <Button
+                    block
+                    icon={<ThunderboltOutlined />}
+                    loading={drawTeams.isPending}
+                    onClick={handleDrawTeams}
+                    disabled={session.playerIds.length < session.settings.playersPerTeam}
+                  >
+                    Sortear Times
+                  </Button>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: 'disbanded-teams',
+            label: (
+              <span>
+                <HistoryOutlined /> Encerrados ({disbandedTeams.length})
+              </span>
+            ),
+            children: (
+              <div>
+                {!disbandedTeams.length && <Empty description="Nenhum time encerrado ainda." />}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {disbandedTeams.map((team) => (
+                    <div key={team.id} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <Text>{teamLabel(team)}</Text>
+                        <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
+                          {teamStatusLabel[team.status]}
+                        </Tag>
+                      </div>
+                      {team.consecutiveWins > 0 && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {team.consecutiveWins} vitória{team.consecutiveWins > 1 ? 's' : ''} seguida
+                          {team.consecutiveWins > 1 ? 's' : ''}
+                        </Text>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        <Button
-          block
-          icon={<PlayCircleOutlined />}
-          onClick={() => setMatchSheetOpen(true)}
-          disabled={startableTeams.length < 2}
-        >
-          Iniciar Partida
-        </Button>
-      </Section>
-
-      <Section title="Histórico de partidas">
-        {isLoadingMatches && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
-            <Spin />
-          </div>
-        )}
-
-        {!isLoadingMatches && !matchHistory.length && (
-          <Text type="secondary">Nenhuma partida finalizada ainda.</Text>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {matchHistory.map((match) => {
-            const teamA = teams?.find((t) => t.id === match.teamAId);
-            const teamB = teams?.find((t) => t.id === match.teamBId);
-            const teamALabel = teamA ? teamLabel(teamA) : match.teamAId;
-            const teamBLabel = teamB ? teamLabel(teamB) : match.teamBId;
-            const winnerLabel =
-              match.winnerTeamId === match.teamAId ? teamALabel : teamBLabel;
-
-            return (
-              <div key={match.id} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Quadra {match.court} · {match.playedAt ? dayjs(match.playedAt).format('HH:mm') : ''}
-                  </Text>
-                </div>
-                <Text style={{ display: 'block', marginTop: 2 }}>
-                  {teamALabel} vs {teamBLabel}
-                </Text>
-                <Text strong style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#389e0d', marginTop: 4 }}>
-                  <TrophyOutlined /> {winnerLabel}
-                </Text>
-              </div>
-            );
-          })}
-        </div>
-      </Section>
-
-      <Section title="Ranking">
-        {!playerStandings.length && <Text type="secondary">Nenhum jogador confirmado ainda.</Text>}
-
-        {!!playerStandings.length && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {playerStandings.map((standing, index) => (
-              <div
-                key={standing.playerId}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: '#fafafa',
-                  borderRadius: 8,
-                  padding: '8px 12px',
-                }}
-              >
-                <Text strong style={{ width: 28 }}>
-                  {index + 1}º
-                </Text>
-                <Text style={{ flex: 1 }}>{playerNameById.get(standing.playerId) ?? standing.playerId}</Text>
-                <Tag color="green" style={{ marginRight: 0 }}>
-                  {standing.wins}V
-                </Tag>
-                <Tag color="red" style={{ marginRight: 0 }}>
-                  {standing.losses}D
-                </Tag>
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
+            ),
+          },
+        ]}
+      />
 
       {sessionId && (
         <MatchFormSheet
@@ -534,6 +784,9 @@ export function SessionDetail() {
           sessionId={sessionId}
           teams={startableTeams}
           teamLabel={teamLabel}
+          defaultCourt={nextFreeCourt}
+          defaultTeamAId={nextInQueue[0]?.id}
+          defaultTeamBId={nextInQueue[1]?.id}
           onClose={() => setMatchSheetOpen(false)}
           onError={(error) => message.error(error)}
         />
@@ -550,6 +803,30 @@ export function SessionDetail() {
           onError={(error) => message.error(error)}
         />
       )}
+
+      {sessionId && (
+        <TeamFormSheet
+          open={priorityTeamSheetOpen}
+          sessionId={sessionId}
+          playersPerTeam={session.settings.playersPerTeam}
+          availablePlayers={pullablePlayersForPriorityTeam}
+          playerNameById={playerNameById}
+          priority
+          onClose={() => setPriorityTeamSheetOpen(false)}
+          onError={(error) => message.error(error)}
+        />
+      )}
+
+      <RosterSheet
+        open={rosterSheetOpen}
+        players={players}
+        loading={isLoadingPlayers}
+        saving={updateSession.isPending}
+        selectedIds={rosterSelection}
+        onChange={setRosterSelection}
+        onClose={() => setRosterSheetOpen(false)}
+        onSubmit={handleSaveRoster}
+      />
     </div>
   );
 }

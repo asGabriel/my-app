@@ -179,6 +179,7 @@ Team:
     - playerIds
     - status
     - consecutiveWins
+    - priority
     - createdAt
   properties:
     id:
@@ -196,6 +197,9 @@ Team:
       $ref: "#/TeamStatus"
     consecutiveWins:
       type: integer
+    priority:
+      type: boolean
+      description: "Time marcado para jogar em seguida (entrada manual de próximo), ignorando a ordem normal da fila"
     createdAt:
       type: string
       description: "DateTime string (RFC3339)"
