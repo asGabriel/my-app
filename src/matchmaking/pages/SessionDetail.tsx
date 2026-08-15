@@ -437,17 +437,27 @@ export function SessionDetail() {
                       const teamBLabel = teamB ? teamLabel(teamB) : match.teamBId;
 
                       return (
-                        <div key={match.id} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px' }}>
+                        <div key={match.id} style={{ background: '#fafafa', borderRadius: 10, padding: 12 }}>
                           <div
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: 10,
+                            }}
                           >
-                            <Text style={{ display: 'block' }}>
-                              Quadra {match.court}: {teamALabel} vs {teamBLabel}
+                            <Text strong style={{ fontSize: 13 }}>
+                              Quadra {match.court}
                             </Text>
-                            <Tag color="processing">Em andamento</Tag>
+                            <Tag color="processing" style={{ marginRight: 0 }}>
+                              Em andamento
+                            </Tag>
                           </div>
 
-                          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <Text strong style={{ flex: 1 }}>
+                              {teamALabel}
+                            </Text>
                             <Popconfirm
                               title="Confirmar vencedor"
                               description={`${teamALabel} venceu essa partida?`}
@@ -456,9 +466,19 @@ export function SessionDetail() {
                               onConfirm={() => handleReportResult(match.id, match.teamAId)}
                             >
                               <Button size="small" loading={reportMatchResult.isPending}>
-                                {teamALabel} venceu
+                                Venceu
                               </Button>
                             </Popconfirm>
+                          </div>
+
+                          <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12, margin: '6px 0' }}>
+                            vs
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <Text strong style={{ flex: 1 }}>
+                              {teamBLabel}
+                            </Text>
                             <Popconfirm
                               title="Confirmar vencedor"
                               description={`${teamBLabel} venceu essa partida?`}
@@ -467,7 +487,7 @@ export function SessionDetail() {
                               onConfirm={() => handleReportResult(match.id, match.teamBId)}
                             >
                               <Button size="small" loading={reportMatchResult.isPending}>
-                                {teamBLabel} venceu
+                                Venceu
                               </Button>
                             </Popconfirm>
                           </div>
