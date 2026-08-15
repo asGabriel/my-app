@@ -13,12 +13,14 @@ const gameModeLabel: Record<GameMode, string> = {
   male: 'Masculino',
   female: 'Feminino',
   mixed: 'Misto',
+  open: 'Aberto',
 };
 
 const gameModeColor: Record<GameMode, string> = {
   male: 'blue',
   female: 'magenta',
   mixed: 'purple',
+  open: 'green',
 };
 
 function sortByDateDesc(sessions: Session[]) {

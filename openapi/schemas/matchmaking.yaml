@@ -10,11 +10,13 @@ GameMode:
     - male
     - female
     - mixed
+    - open
 
 ShuffleType:
   type: string
   enum:
     - kingAndQueen
+    - roundRobin
 
 TeamStatus:
   type: string
