@@ -11,6 +11,7 @@ import {
   TeamOutlined,
   UserOutlined,
   EditOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -131,6 +132,16 @@ export function SessionDetail() {
   const incompleteWaiting = useMemo(
     () => (teams ?? []).filter((team) => team.status === WAITING && team.playerIds.length < playersPerTeam),
     [teams, playersPerTeam],
+  );
+
+  const activeTeams = useMemo(() => (teams ?? []).filter((team) => team.status !== DISBANDED), [teams]);
+
+  const disbandedTeams = useMemo(
+    () =>
+      (teams ?? [])
+        .filter((team) => team.status === DISBANDED)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [teams],
   );
 
   const availablePlayersForTeam = useMemo(() => {
@@ -310,14 +321,19 @@ export function SessionDetail() {
                     </div>
                   )}
 
-                  {!isLoadingTeams && !teams?.length && (
-                    <Text type="secondary">Nenhum time formado ainda.</Text>
+                  {!isLoadingTeams && !activeTeams.length && (
+                    <Text type="secondary">Nenhum time ativo no momento.</Text>
                   )}
 
                   <div
-                    style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: teams?.length ? 12 : 0 }}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      marginBottom: activeTeams.length ? 12 : 0,
+                    }}
                   >
-                    {teams?.map((team) => {
+                    {activeTeams.map((team) => {
                       const complete = isTeamComplete(team);
                       return (
                         <div
@@ -543,6 +559,38 @@ export function SessionDetail() {
                   )}
                 </Section>
               </>
+            ),
+          },
+          {
+            key: 'disbanded-teams',
+            label: (
+              <span>
+                <HistoryOutlined /> Encerrados ({disbandedTeams.length})
+              </span>
+            ),
+            children: (
+              <div>
+                {!disbandedTeams.length && <Empty description="Nenhum time encerrado ainda." />}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {disbandedTeams.map((team) => (
+                    <div key={team.id} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <Text>{teamLabel(team)}</Text>
+                        <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
+                          {teamStatusLabel[team.status]}
+                        </Tag>
+                      </div>
+                      {team.consecutiveWins > 0 && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {team.consecutiveWins} vitória{team.consecutiveWins > 1 ? 's' : ''} seguida
+                          {team.consecutiveWins > 1 ? 's' : ''}
+                        </Text>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             ),
           },
           {
