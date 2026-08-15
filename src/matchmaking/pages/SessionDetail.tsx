@@ -162,6 +162,17 @@ export function SessionDetail() {
     [matches],
   );
 
+  const nextFreeCourt = useMemo(() => {
+    const busyCourts = new Set(inProgressMatches.map((match) => match.court));
+    const availableCourts = session?.availableCourts ?? 0;
+
+    for (let court = 1; court <= availableCourts; court += 1) {
+      if (!busyCourts.has(court)) return court;
+    }
+
+    return 1;
+  }, [session, inProgressMatches]);
+
   const matchHistory = useMemo(
     () =>
       (matches ?? [])
@@ -502,7 +513,7 @@ export function SessionDetail() {
                     onClick={() => setMatchSheetOpen(true)}
                     disabled={startableTeams.length < 2}
                   >
-                    Iniciar Partida
+                    Abrir Quadra
                   </Button>
                 </Section>
 
@@ -731,6 +742,9 @@ export function SessionDetail() {
           sessionId={sessionId}
           teams={startableTeams}
           teamLabel={teamLabel}
+          defaultCourt={nextFreeCourt}
+          defaultTeamAId={nextInQueue[0]?.id}
+          defaultTeamBId={nextInQueue[1]?.id}
           onClose={() => setMatchSheetOpen(false)}
           onError={(error) => message.error(error)}
         />

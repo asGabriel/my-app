@@ -8,6 +8,9 @@ interface MatchFormSheetProps {
   sessionId: string;
   teams: Team[];
   teamLabel: (team: Team) => string;
+  defaultCourt?: number;
+  defaultTeamAId?: string;
+  defaultTeamBId?: string;
   onClose: () => void;
   onError: (message: string) => void;
 }
@@ -23,6 +26,9 @@ export function MatchFormSheet({
   sessionId,
   teams,
   teamLabel,
+  defaultCourt,
+  defaultTeamAId,
+  defaultTeamBId,
   onClose,
   onError,
 }: MatchFormSheetProps) {
@@ -33,8 +39,16 @@ export function MatchFormSheet({
   useEffect(() => {
     if (open) {
       form.resetFields();
-      form.setFieldsValue({ court: 1 });
+      form.setFieldsValue({
+        court: defaultCourt ?? 1,
+        teamAId: defaultTeamAId,
+        teamBId: defaultTeamBId,
+      });
     }
+    // Defaults are captured only at the moment the sheet opens; re-running
+    // this on every defaultCourt/defaultTeamAId/defaultTeamBId change would
+    // reset fields the user is actively editing as the queue shifts underneath.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, form]);
 
   const teamOptions = teams.map((team) => ({ label: teamLabel(team), value: team.id }));
@@ -60,11 +74,11 @@ export function MatchFormSheet({
 
   return (
     <BottomSheet
-      title="Iniciar Partida"
+      title="Abrir Quadra"
       open={open}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText="Iniciar"
+      submitText="Abrir"
       loading={createMatch.isPending}
     >
       <Form form={form} layout="vertical" size="large">
