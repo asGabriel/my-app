@@ -77,6 +77,7 @@ export function SessionDetail() {
   const drawTeams = useDrawTeams();
   const reportMatchResult = useReportMatchResult();
 
+  const [activeTab, setActiveTab] = useState('overview');
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false);
   const [rosterSelection, setRosterSelection] = useState<string[]>([]);
   const [matchSheetOpen, setMatchSheetOpen] = useState(false);
@@ -307,7 +308,8 @@ export function SessionDetail() {
       </div>
 
       <Tabs
-        defaultActiveKey="overview"
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
           {
             key: 'overview',
@@ -404,6 +406,17 @@ export function SessionDetail() {
                   >
                     Abrir Quadra
                   </Button>
+
+                  {startableTeams.length < 2 && (
+                    <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 8 }}>
+                      {!activeTeams.length
+                        ? 'Nenhum time formado ainda. '
+                        : 'Menos de dois times disponíveis para abrir uma quadra. '}
+                      <a onClick={() => setActiveTab('times')} style={{ color: '#fa8c16', fontWeight: 600 }}>
+                        Ir para a aba Times
+                      </a>
+                    </Text>
+                  )}
                 </Section>
 
                 <Section title="Próximas duplas">
