@@ -523,27 +523,51 @@ export function SessionDetail() {
                       const teamB = teams?.find((t) => t.id === match.teamBId);
                       const teamALabel = teamA ? teamLabel(teamA) : match.teamAId;
                       const teamBLabel = teamB ? teamLabel(teamB) : match.teamBId;
-                      const winnerLabel =
-                        match.winnerTeamId === match.teamAId ? teamALabel : teamBLabel;
+                      const teamAWon = match.winnerTeamId === match.teamAId;
 
                       return (
-                        <div key={match.id} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 12px' }}>
+                        <div key={match.id} style={{ background: '#fafafa', borderRadius: 10, padding: 12 }}>
                           <div
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: 10,
+                            }}
                           >
+                            <Text strong style={{ fontSize: 13 }}>
+                              Quadra {match.court}
+                            </Text>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                              Quadra {match.court} · {match.playedAt ? dayjs(match.playedAt).format('HH:mm') : ''}
+                              {match.playedAt ? dayjs(match.playedAt).format('HH:mm') : ''}
                             </Text>
                           </div>
-                          <Text style={{ display: 'block', marginTop: 2 }}>
-                            {teamALabel} vs {teamBLabel}
-                          </Text>
-                          <Text
-                            strong
-                            style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#389e0d', marginTop: 4 }}
-                          >
-                            <TrophyOutlined /> {winnerLabel}
-                          </Text>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span
+                              style={{ width: 16, display: 'flex', justifyContent: 'center', color: '#389e0d' }}
+                            >
+                              {teamAWon && <TrophyOutlined />}
+                            </span>
+                            <Text strong={teamAWon} style={{ flex: 1, color: teamAWon ? '#389e0d' : '#8c8c8c' }}>
+                              {teamALabel}
+                            </Text>
+                          </div>
+
+                          <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12, margin: '4px 0' }}>
+                            vs
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span
+                              style={{ width: 16, display: 'flex', justifyContent: 'center', color: '#389e0d' }}
+                            >
+                              {!teamAWon && <TrophyOutlined />}
+                            </span>
+                            <Text strong={!teamAWon} style={{ flex: 1, color: !teamAWon ? '#389e0d' : '#8c8c8c' }}>
+                              {teamBLabel}
+                            </Text>
+                          </div>
                         </div>
                       );
                     })}
