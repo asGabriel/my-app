@@ -23,6 +23,7 @@ TeamStatus:
   enum:
     - waiting
     - holding
+    - playing
     - disbanded
 
 Player:

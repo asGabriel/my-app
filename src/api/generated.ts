@@ -334,7 +334,7 @@ const CreateTeamRequest = z
     playerIds: z.array(z.string().uuid()),
   })
   .passthrough();
-const TeamStatus = z.enum(["waiting", "holding", "disbanded"]);
+const TeamStatus = z.enum(["waiting", "holding", "playing", "disbanded"]);
 const Team = z
   .object({
     id: z.string().uuid(),

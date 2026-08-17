@@ -33,7 +33,12 @@ import { TeamFormSheet } from '../components/TeamFormSheet';
 import { RosterSheet } from '../components/RosterSheet';
 import { gameModeLabel, genderLabel, teamStatusLabel, teamStatusColor } from '../shared/labels';
 
-const { waiting: WAITING, disbanded: DISBANDED, holding: HOLDING } = schemas.TeamStatus.enum;
+const {
+  waiting: WAITING,
+  disbanded: DISBANDED,
+  holding: HOLDING,
+  playing: PLAYING,
+} = schemas.TeamStatus.enum;
 
 const { Title, Text } = Typography;
 
@@ -103,26 +108,19 @@ export function SessionDetail() {
   const playersPerTeam = session?.settings.playersPerTeam ?? Infinity;
   const isTeamComplete = (team: Team) => team.playerIds.length >= playersPerTeam;
 
-  const busyTeamIds = useMemo(() => {
-    const ids = new Set<string>();
-    matches?.forEach((match) => {
-      if (match.winnerTeamId == null) {
-        ids.add(match.teamAId);
-        ids.add(match.teamBId);
-      }
-    });
-    return ids;
-  }, [matches]);
-
+  // `status` alone is authoritative for whether a team currently has an
+  // open match: the backend's `PLAYING` status is DB-derived from the
+  // matches table itself (see the matchmaking module's CLAUDE.md), so there
+  // is no need to cross-reference `matches` here.
   const startableTeams = useMemo(
     () =>
       (teams ?? []).filter(
         (team) =>
           team.status !== DISBANDED &&
-          team.playerIds.length >= playersPerTeam &&
-          !busyTeamIds.has(team.id),
+          team.status !== PLAYING &&
+          team.playerIds.length >= playersPerTeam,
       ),
-    [teams, busyTeamIds, playersPerTeam],
+    [teams, playersPerTeam],
   );
 
   const nextInQueue = useMemo(
@@ -162,13 +160,13 @@ export function SessionDetail() {
     if (!session) return [];
     const unavailable = new Set(
       (teams ?? [])
-        .filter((team) => team.status === HOLDING || busyTeamIds.has(team.id))
+        .filter((team) => team.status === HOLDING || team.status === PLAYING)
         .flatMap((team) => team.playerIds),
     );
     return session.playerIds
       .filter((id) => !unavailable.has(id))
       .map((id) => ({ id, label: playerNameById.get(id) ?? id }));
-  }, [session, teams, busyTeamIds, playerNameById]);
+  }, [session, teams, playerNameById]);
 
   const inProgressMatches = useMemo(
     () =>
