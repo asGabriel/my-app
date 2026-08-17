@@ -19,11 +19,10 @@ interface SessionFormValues {
   availableCourts: number;
   gameMode: GameMode;
   playersPerTeam: number;
+  setsToWin: number;
+  pointsPerSet: number;
 }
 
-// setsToWin/pointsPerSet aren't surfaced in the form: `Match` has no score
-// fields today, so the backend just stores whatever is sent without using
-// it anywhere. Sent as fixed defaults until that's implemented.
 const DEFAULT_SETTINGS = {
   playersPerTeam: 2,
   setsToWin: 2,
@@ -41,7 +40,7 @@ export function SessionFormSheet({ open, onClose, onError }: SessionFormSheetPro
         date: dayjs(),
         availableCourts: 1,
         gameMode: 'mixed',
-        playersPerTeam: DEFAULT_SETTINGS.playersPerTeam,
+        ...DEFAULT_SETTINGS,
       });
     }
   }, [open, form]);
@@ -58,8 +57,8 @@ export function SessionFormSheet({ open, onClose, onError }: SessionFormSheetPro
         shuffleType: shuffleTypeForGameMode(values.gameMode),
         settings: {
           playersPerTeam: values.playersPerTeam,
-          setsToWin: DEFAULT_SETTINGS.setsToWin,
-          pointsPerSet: DEFAULT_SETTINGS.pointsPerSet,
+          setsToWin: values.setsToWin,
+          pointsPerSet: values.pointsPerSet,
         },
       });
 
@@ -136,6 +135,22 @@ export function SessionFormSheet({ open, onClose, onError }: SessionFormSheetPro
               },
             }),
           ]}
+        >
+          <InputNumber min={1} style={{ width: '100%' }} />
+        </Form.Item>
+
+        <Form.Item
+          name="setsToWin"
+          label="Sets para vencer"
+          rules={[{ required: true, message: 'Informe os sets para vencer' }]}
+        >
+          <InputNumber min={1} style={{ width: '100%' }} />
+        </Form.Item>
+
+        <Form.Item
+          name="pointsPerSet"
+          label="Pontos por set"
+          rules={[{ required: true, message: 'Informe os pontos por set' }]}
         >
           <InputNumber min={1} style={{ width: '100%' }} />
         </Form.Item>
