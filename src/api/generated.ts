@@ -298,6 +298,7 @@ const SessionSettings = z
 const CreateSessionRequest = z
   .object({
     date: z.string(),
+    description: z.string().nullish(),
     availableCourts: z.number().int(),
     gameMode: GameMode,
     shuffleType: shuffleType,
@@ -308,6 +309,7 @@ const Session = z
   .object({
     id: z.string().uuid(),
     date: z.string(),
+    description: z.string().nullish(),
     settings: SessionSettings,
     availableCourts: z.number().int(),
     gameMode: GameMode,
@@ -320,6 +322,7 @@ const Session = z
 const UpdateSessionRequest = z
   .object({
     date: z.string().nullable(),
+    description: z.string().nullable(),
     availableCourts: z.number().int().nullable(),
     gameMode: GameMode,
     shuffleType: shuffleType,

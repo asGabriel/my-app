@@ -55,9 +55,16 @@ export function Sessions() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text strong style={{ fontSize: 16 }}>
-                {dayjs(session.date).format('DD/MM/YYYY')}
-              </Text>
+              <div>
+                <Text strong style={{ fontSize: 16, display: 'block' }}>
+                  {session.description || dayjs(session.date).format('DD/MM/YYYY')}
+                </Text>
+                {session.description && (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {dayjs(session.date).format('DD/MM/YYYY')}
+                  </Text>
+                )}
+              </div>
               <Tag color={gameModeColor[session.gameMode]} style={{ marginRight: 0 }}>
                 {gameModeLabel[session.gameMode]}
               </Tag>
