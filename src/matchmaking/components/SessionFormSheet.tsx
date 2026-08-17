@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Form, DatePicker, InputNumber, Select, Divider } from 'antd';
+import { Form, DatePicker, Input, InputNumber, Select, Divider } from 'antd';
 import dayjs from 'dayjs';
 import { useCreateSession, type GameMode, type ShuffleType } from '../../api';
 import { BottomSheet } from './BottomSheet';
@@ -15,6 +15,7 @@ interface SessionFormSheetProps {
 
 interface SessionFormValues {
   date: dayjs.Dayjs;
+  description?: string;
   availableCourts: number;
   gameMode: GameMode;
   playersPerTeam: number;
@@ -50,6 +51,7 @@ export function SessionFormSheet({ open, onClose, onError }: SessionFormSheetPro
 
       await createSession.mutateAsync({
         date: values.date.format('YYYY-MM-DD'),
+        description: values.description?.trim() || undefined,
         availableCourts: values.availableCourts,
         gameMode: values.gameMode,
         shuffleType: shuffleTypeForGameMode(values.gameMode),
@@ -84,6 +86,10 @@ export function SessionFormSheet({ open, onClose, onError }: SessionFormSheetPro
           rules={[{ required: true, message: 'Informe a data da sessão' }]}
         >
           <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+        </Form.Item>
+
+        <Form.Item name="description" label="Descrição" extra="Opcional, só para identificar a sessão">
+          <Input placeholder="Ex: Torneio de sexta" maxLength={100} />
         </Form.Item>
 
         <Form.Item

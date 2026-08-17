@@ -105,6 +105,10 @@ Session:
     date:
       type: string
       description: "Data do dia de jogo (YYYY-MM-DD)"
+    description:
+      type: string
+      nullable: true
+      description: "Título opcional para identificar a sessão"
     settings:
       $ref: "#/SessionSettings"
     availableCourts:
@@ -137,6 +141,10 @@ CreateSessionRequest:
     date:
       type: string
       description: "Data do dia de jogo (YYYY-MM-DD)"
+    description:
+      type: string
+      nullable: true
+      description: "Título opcional para identificar a sessão"
     availableCourts:
       type: integer
     gameMode:
@@ -153,6 +161,10 @@ UpdateSessionRequest:
     date:
       type: string
       nullable: true
+    description:
+      type: string
+      nullable: true
+      description: "Título opcional para identificar a sessão"
     availableCourts:
       type: integer
       nullable: true

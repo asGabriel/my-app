@@ -306,9 +306,16 @@ export function SessionDetail() {
       </button>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <Title level={4} style={{ margin: 0 }}>
-          {dayjs(session.date).format('DD/MM/YYYY')}
-        </Title>
+        <div>
+          <Title level={4} style={{ margin: 0 }}>
+            {session.description || dayjs(session.date).format('DD/MM/YYYY')}
+          </Title>
+          {session.description && (
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              {dayjs(session.date).format('DD/MM/YYYY')}
+            </Text>
+          )}
+        </div>
         <Tag color="purple">{gameModeLabel[session.gameMode]}</Tag>
       </div>
 
