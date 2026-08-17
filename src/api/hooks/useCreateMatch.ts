@@ -17,6 +17,10 @@ export function useCreateMatch() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['matchmaking', 'matches', variables.sessionId] });
+      // Opening a match flips both teams to PLAYING via a DB trigger, so the
+      // teams query must be refetched too — otherwise the queue derived from
+      // stale team data keeps offering the same teams for the next match.
+      queryClient.invalidateQueries({ queryKey: ['matchmaking', 'teams', variables.sessionId] });
     },
   });
 }
