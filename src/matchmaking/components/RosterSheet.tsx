@@ -61,6 +61,20 @@ export function RosterSheet({
     onChange(Array.from(next));
   };
 
+  const allFilteredSelected =
+    filteredPlayers.length > 0 && filteredPlayers.every((player) => selected.has(player.id));
+  const someFilteredSelected = filteredPlayers.some((player) => selected.has(player.id));
+
+  const toggleSelectAll = () => {
+    const next = new Set(selected);
+    if (allFilteredSelected) {
+      filteredPlayers.forEach((player) => next.delete(player.id));
+    } else {
+      filteredPlayers.forEach((player) => next.add(player.id));
+    }
+    onChange(Array.from(next));
+  };
+
   const handleCreatePlayer = async () => {
     const name = newName.trim();
     if (!name) return;
@@ -147,6 +161,27 @@ export function RosterSheet({
       )}
 
       {!loading && !filteredPlayers.length && <Empty description="Nenhum jogador encontrado" />}
+
+      {!loading && filteredPlayers.length > 0 && (
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '4px 8px 10px',
+            cursor: 'pointer',
+          }}
+        >
+          <Checkbox
+            checked={allFilteredSelected}
+            indeterminate={!allFilteredSelected && someFilteredSelected}
+            onChange={toggleSelectAll}
+          />
+          <span style={{ flex: 1, fontWeight: 500 }}>
+            {allFilteredSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+          </span>
+        </label>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '50vh', overflowY: 'auto' }}>
         {filteredPlayers.map((player) => (
