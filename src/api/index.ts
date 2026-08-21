@@ -23,6 +23,7 @@ export * from './hooks/useCreateSession';
 export * from './hooks/useUpdateSession';
 export * from './hooks/useTeams';
 export * from './hooks/useCreateTeam';
+export * from './hooks/useUpdateTeam';
 export * from './hooks/useCreatePriorityTeam';
 export * from './hooks/useDrawTeams';
 export * from './hooks/useMatches';

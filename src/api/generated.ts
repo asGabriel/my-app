@@ -349,6 +349,9 @@ const Team = z
     createdAt: z.string(),
   })
   .passthrough();
+const UpdateTeamRequest = z
+  .object({ playerIds: z.array(z.string().uuid()) })
+  .passthrough();
 const CreateMatchRequest = z
   .object({
     sessionId: z.string().uuid(),
@@ -416,6 +419,7 @@ export const schemas = {
   CreateTeamRequest,
   TeamStatus,
   Team,
+  UpdateTeamRequest,
   CreateMatchRequest,
   Match,
   ReportMatchResultRequest,
@@ -869,6 +873,26 @@ const endpoints = makeApi([
       },
     ],
     response: z.array(Team),
+  },
+  {
+    method: "patch",
+    path: "/matchmaking/teams/:teamId/players",
+    alias: "updateTeam",
+    description: `Só pode ser aplicado a um time Waiting. Se um jogador escolhido já estiver em outra dupla Waiting não ocupada em partida, essa dupla de origem é desfeita e o parceiro que sobra — junto com quem saiu do time editado — volta pra fila normalmente.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateTeamRequest,
+      },
+      {
+        name: "teamId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Team,
   },
   {
     method: "post",

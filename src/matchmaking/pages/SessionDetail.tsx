@@ -89,6 +89,7 @@ export function SessionDetail() {
   const [matchSheetOpen, setMatchSheetOpen] = useState(false);
   const [teamSheetOpen, setTeamSheetOpen] = useState(false);
   const [priorityTeamSheetOpen, setPriorityTeamSheetOpen] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
   const playerNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -156,7 +157,7 @@ export function SessionDetail() {
       .map((id) => ({ id, label: playerNameById.get(id) ?? id }));
   }, [session, teams, playerNameById]);
 
-  const pullablePlayersForPriorityTeam = useMemo(() => {
+  const pullablePlayers = useMemo(() => {
     if (!session) return [];
     const unavailable = new Set(
       (teams ?? [])
@@ -680,7 +681,7 @@ export function SessionDetail() {
                     block
                     icon={<PushpinOutlined />}
                     onClick={() => setPriorityTeamSheetOpen(true)}
-                    disabled={!pullablePlayersForPriorityTeam.length}
+                    disabled={!pullablePlayers.length}
                   >
                     Próximo Manual
                   </Button>
@@ -717,9 +718,18 @@ export function SessionDetail() {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                           <Text>{teamLabel(team)}</Text>
-                          <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
-                            {teamStatusLabel[team.status]}
-                          </Tag>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
+                              {teamStatusLabel[team.status]}
+                            </Tag>
+                            {team.status === WAITING && (
+                              <Button
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={() => setEditingTeam(team)}
+                              />
+                            )}
+                          </div>
                         </div>
                         {(!complete || team.consecutiveWins > 0) && (
                           <Text type="secondary" style={{ fontSize: 12 }}>
@@ -814,10 +824,23 @@ export function SessionDetail() {
           open={priorityTeamSheetOpen}
           sessionId={sessionId}
           playersPerTeam={session.settings.playersPerTeam}
-          availablePlayers={pullablePlayersForPriorityTeam}
+          availablePlayers={pullablePlayers}
           playerNameById={playerNameById}
           priority
           onClose={() => setPriorityTeamSheetOpen(false)}
+          onError={(error) => message.error(error)}
+        />
+      )}
+
+      {sessionId && editingTeam && (
+        <TeamFormSheet
+          open={!!editingTeam}
+          sessionId={sessionId}
+          playersPerTeam={session.settings.playersPerTeam}
+          availablePlayers={pullablePlayers}
+          playerNameById={playerNameById}
+          team={editingTeam}
+          onClose={() => setEditingTeam(null)}
           onError={(error) => message.error(error)}
         />
       )}

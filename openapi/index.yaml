@@ -61,6 +61,8 @@ paths:
     $ref: "./paths/matchmaking.yaml#/teamsBySession"
   /matchmaking/teams/{sessionId}/draw:
     $ref: "./paths/matchmaking.yaml#/drawTeams"
+  /matchmaking/teams/{teamId}/players:
+    $ref: "./paths/matchmaking.yaml#/updateTeam"
   /matchmaking/matches/:
     $ref: "./paths/matchmaking.yaml#/matches"
   /matchmaking/matches/{sessionId}:
@@ -152,6 +154,8 @@ components:
       $ref: "./schemas/matchmaking.yaml#/Team"
     CreateTeamRequest:
       $ref: "./schemas/matchmaking.yaml#/CreateTeamRequest"
+    UpdateTeamRequest:
+      $ref: "./schemas/matchmaking.yaml#/UpdateTeamRequest"
     Match:
       $ref: "./schemas/matchmaking.yaml#/Match"
     CreateMatchRequest:

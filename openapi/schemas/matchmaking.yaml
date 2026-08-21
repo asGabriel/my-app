@@ -232,6 +232,17 @@ CreateTeamRequest:
         type: string
         format: uuid
 
+UpdateTeamRequest:
+  type: object
+  required:
+    - playerIds
+  properties:
+    playerIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+
 Match:
   type: object
   required:

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Alert, Form, Select } from 'antd';
-import { useCreateTeam, useCreatePriorityTeam } from '../../api';
+import { useCreateTeam, useCreatePriorityTeam, useUpdateTeam, type Team } from '../../api';
 import { BottomSheet } from './BottomSheet';
 
 const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
@@ -22,8 +22,13 @@ interface TeamFormSheetProps {
   playerNameById: Map<string, string>;
   /** When true, submits via the priority-queue path (jumps this pairing to
    * the front of the line, allowed to pull a player out of another waiting
-   * team) instead of a plain manual team. */
+   * team) instead of a plain manual team. Ignored when `team` is set. */
   priority?: boolean;
+  /** When set, edits this existing (Waiting) team's roster instead of
+   * creating a new team — pulling in a player already in another waiting
+   * team swaps them: that team is broken up and whoever this edit itself
+   * dropped fills the vacancy. */
+  team?: Team;
   onClose: () => void;
   onError: (message: string) => void;
 }
@@ -39,25 +44,34 @@ export function TeamFormSheet({
   availablePlayers,
   playerNameById,
   priority = false,
+  team,
   onClose,
   onError,
 }: TeamFormSheetProps) {
   const [form] = Form.useForm<TeamFormValues>();
   const createTeam = useCreateTeam();
   const createPriorityTeam = useCreatePriorityTeam();
-  const mutation = priority ? createPriorityTeam : createTeam;
+  const updateTeam = useUpdateTeam();
+  const mutation = team ? updateTeam : priority ? createPriorityTeam : createTeam;
 
   useEffect(() => {
     if (open) {
-      form.resetFields();
+      form.setFieldsValue({ playerIds: team?.playerIds ?? [] });
     }
-  }, [open, form]);
+  }, [open, team, form]);
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
 
-      await mutation.mutateAsync({ sessionId, playerIds: values.playerIds });
+      if (team) {
+        await updateTeam.mutateAsync({ teamId: team.id, sessionId, playerIds: values.playerIds });
+      } else {
+        await (priority ? createPriorityTeam : createTeam).mutateAsync({
+          sessionId,
+          playerIds: values.playerIds,
+        });
+      }
 
       onClose();
     } catch (error) {
@@ -69,14 +83,22 @@ export function TeamFormSheet({
 
   return (
     <BottomSheet
-      title={priority ? 'Próximo Manual' : 'Nova Dupla'}
+      title={team ? 'Editar Dupla' : priority ? 'Próximo Manual' : 'Nova Dupla'}
       open={open}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText={priority ? 'Definir' : 'Criar'}
+      submitText={team ? 'Salvar' : priority ? 'Definir' : 'Criar'}
       loading={mutation.isPending}
     >
-      {priority ? (
+      {team ? (
+        <Alert
+          type="warning"
+          showIcon
+          message="Editando dupla em espera"
+          description="Se escolher alguém que já está em outra dupla esperando, essa dupla de origem é desfeita e o parceiro que sobrar — junto com quem sair dessa dupla — volta pra fila normalmente."
+          style={{ marginBottom: 16 }}
+        />
+      ) : priority ? (
         <Alert
           type="warning"
           showIcon

@@ -44,6 +44,7 @@ export type UpdateSessionRequest = z.infer<typeof schemas.UpdateSessionRequest>;
 export type TeamStatus = z.infer<typeof schemas.TeamStatus>;
 export type Team = z.infer<typeof schemas.Team>;
 export type CreateTeamRequest = z.infer<typeof schemas.CreateTeamRequest>;
+export type UpdateTeamRequest = z.infer<typeof schemas.UpdateTeamRequest>;
 export type Match = z.infer<typeof schemas.Match>;
 export type CreateMatchRequest = z.infer<typeof schemas.CreateMatchRequest>;
 export type ReportMatchResultRequest = z.infer<typeof schemas.ReportMatchResultRequest>;
