@@ -207,6 +207,39 @@ teamsBySession:
               items:
                 $ref: "../schemas/matchmaking.yaml#/Team"
 
+updateTeam:
+  patch:
+    operationId: updateTeam
+    summary: Atualiza a composição (jogadores) de um time existente
+    description: >-
+      Só pode ser aplicado a um time Waiting. Se um jogador escolhido já
+      estiver em outra dupla Waiting não ocupada em partida, essa dupla de
+      origem é desfeita e o parceiro que sobra — junto com quem saiu do
+      time editado — volta pra fila normalmente.
+    tags:
+      - Matchmaking
+    parameters:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID do time a ser atualizado
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/matchmaking.yaml#/UpdateTeamRequest"
+    responses:
+      "200":
+        description: Time atualizado com sucesso
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Team"
+
 drawTeams:
   post:
     operationId: drawTeams
