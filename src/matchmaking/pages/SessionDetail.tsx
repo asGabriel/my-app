@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Typography, Tag, Tabs, Button, App, Empty, Spin, Popconfirm } from 'antd';
+import { Typography, Tag, Tabs, Button, App, Empty, Spin, Modal } from 'antd';
 import {
   ArrowLeftOutlined,
   ThunderboltOutlined,
@@ -14,6 +14,9 @@ import {
   HistoryOutlined,
   ApartmentOutlined,
   PushpinOutlined,
+  CheckCircleOutlined,
+  LogoutOutlined,
+  LoginOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -41,6 +44,18 @@ const {
 } = schemas.TeamStatus.enum;
 
 const { Title, Text } = Typography;
+
+// Mirrors `Team::MAX_CONSECUTIVE_WINS` in the backend matchmaking module: a
+// team is disbanded once it hits this many wins in a row, not just on a
+// loss, so the winner may also leave the court.
+const MAX_CONSECUTIVE_WINS = 2;
+
+type PendingMatchResult = {
+  matchId: string;
+  court: number;
+  winner: { id: string; label: string; consecutiveWins: number };
+  loser: { id: string; label: string };
+};
 
 function Section({ title, extra, children }: { title: string; extra?: ReactNode; children: ReactNode }) {
   return (
@@ -90,6 +105,7 @@ export function SessionDetail() {
   const [teamSheetOpen, setTeamSheetOpen] = useState(false);
   const [priorityTeamSheetOpen, setPriorityTeamSheetOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [pendingResult, setPendingResult] = useState<PendingMatchResult | null>(null);
 
   const playerNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -277,10 +293,16 @@ export function SessionDetail() {
     }
   };
 
-  const handleReportResult = async (matchId: string, winnerTeamId: string) => {
+  const handleConfirmResult = async () => {
+    if (!pendingResult) return;
+
     try {
-      await reportMatchResult.mutateAsync({ matchId, winnerTeamId });
+      await reportMatchResult.mutateAsync({
+        matchId: pendingResult.matchId,
+        winnerTeamId: pendingResult.winner.id,
+      });
       message.success('Resultado registrado!');
+      setPendingResult(null);
     } catch (error) {
       if (error instanceof Error) message.error(error.message);
     }
@@ -380,17 +402,23 @@ export function SessionDetail() {
                             <Text strong style={{ flex: 1 }}>
                               {teamALabel}
                             </Text>
-                            <Popconfirm
-                              title="Confirmar vencedor"
-                              description={`${teamALabel} venceu essa partida?`}
-                              okText="Confirmar"
-                              cancelText="Cancelar"
-                              onConfirm={() => handleReportResult(match.id, match.teamAId)}
+                            <Button
+                              size="small"
+                              onClick={() =>
+                                setPendingResult({
+                                  matchId: match.id,
+                                  court: match.court,
+                                  winner: {
+                                    id: match.teamAId,
+                                    label: teamALabel,
+                                    consecutiveWins: teamA?.consecutiveWins ?? 0,
+                                  },
+                                  loser: { id: match.teamBId, label: teamBLabel },
+                                })
+                              }
                             >
-                              <Button size="small" loading={reportMatchResult.isPending}>
-                                Venceu
-                              </Button>
-                            </Popconfirm>
+                              Venceu
+                            </Button>
                           </div>
 
                           <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12, margin: '6px 0' }}>
@@ -401,17 +429,23 @@ export function SessionDetail() {
                             <Text strong style={{ flex: 1 }}>
                               {teamBLabel}
                             </Text>
-                            <Popconfirm
-                              title="Confirmar vencedor"
-                              description={`${teamBLabel} venceu essa partida?`}
-                              okText="Confirmar"
-                              cancelText="Cancelar"
-                              onConfirm={() => handleReportResult(match.id, match.teamBId)}
+                            <Button
+                              size="small"
+                              onClick={() =>
+                                setPendingResult({
+                                  matchId: match.id,
+                                  court: match.court,
+                                  winner: {
+                                    id: match.teamBId,
+                                    label: teamBLabel,
+                                    consecutiveWins: teamB?.consecutiveWins ?? 0,
+                                  },
+                                  loser: { id: match.teamAId, label: teamALabel },
+                                })
+                              }
                             >
-                              <Button size="small" loading={reportMatchResult.isPending}>
-                                Venceu
-                              </Button>
-                            </Popconfirm>
+                              Venceu
+                            </Button>
                           </div>
                         </div>
                       );
@@ -855,6 +889,105 @@ export function SessionDetail() {
         onClose={() => setRosterSheetOpen(false)}
         onSubmit={handleSaveRoster}
       />
+
+      <Modal
+        open={!!pendingResult}
+        title="Confirmar resultado"
+        centered
+        width={380}
+        onCancel={() => setPendingResult(null)}
+        footer={[
+          <Button key="cancel" onClick={() => setPendingResult(null)} disabled={reportMatchResult.isPending}>
+            Cancelar
+          </Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            icon={<CheckCircleOutlined />}
+            loading={reportMatchResult.isPending}
+            onClick={handleConfirmResult}
+          >
+            Confirmar vitória
+          </Button>,
+        ]}
+      >
+        {pendingResult &&
+          (() => {
+            const winnerStays = pendingResult.winner.consecutiveWins + 1 < MAX_CONSECUTIVE_WINS;
+            const nextChallenger = nextInQueue[0];
+            const incomingPair = nextInQueue.slice(0, 2);
+
+            return (
+              <div>
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                  <TrophyOutlined style={{ fontSize: 32, color: '#faad14' }} />
+                  <Title level={5} style={{ margin: '8px 0 0' }}>
+                    {pendingResult.winner.label} venceu?
+                  </Title>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Quadra {pendingResult.court}
+                  </Text>
+                </div>
+
+                <div
+                  style={{
+                    background: '#fafafa',
+                    borderRadius: 10,
+                    padding: 12,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    {winnerStays ? (
+                      <CheckCircleOutlined style={{ color: '#389e0d', marginTop: 2 }} />
+                    ) : (
+                      <LogoutOutlined style={{ color: '#fa8c16', marginTop: 2 }} />
+                    )}
+                    <Text style={{ fontSize: 13 }}>
+                      <Text strong>{pendingResult.winner.label}</Text>{' '}
+                      {winnerStays
+                        ? `continua na quadra ${pendingResult.court}.`
+                        : 'também sai da quadra — 2 vitórias seguidas, dupla desfeita.'}
+                    </Text>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <LogoutOutlined style={{ color: '#cf1322', marginTop: 2 }} />
+                    <Text style={{ fontSize: 13 }}>
+                      <Text strong>{pendingResult.loser.label}</Text> sai da quadra — dupla desfeita, jogadores
+                      voltam para o sorteio da fila.
+                    </Text>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <LoginOutlined style={{ color: '#1677ff', marginTop: 2 }} />
+                    <Text style={{ fontSize: 13 }}>
+                      {winnerStays &&
+                        (nextChallenger ? (
+                          <>
+                            Próximo desafiante: <Text strong>{teamLabel(nextChallenger)}</Text>.
+                          </>
+                        ) : (
+                          'Aguardando o próximo desafiante completar a dupla.'
+                        ))}
+                      {!winnerStays &&
+                        (incomingPair.length === 2 ? (
+                          <>
+                            Entram na quadra {pendingResult.court}:{' '}
+                            <Text strong>{incomingPair.map(teamLabel).join(' e ')}</Text>.
+                          </>
+                        ) : (
+                          `Quadra ${pendingResult.court} fica livre até novas duplas completarem.`
+                        ))}
+                    </Text>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+      </Modal>
     </div>
   );
 }
