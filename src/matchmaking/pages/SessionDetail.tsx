@@ -75,6 +75,12 @@ function Section({ title, extra, children }: { title: string; extra?: ReactNode;
 
 const card: React.CSSProperties = { background: '#fafafa', borderRadius: 10, padding: 12 };
 const row: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 };
+// A player/team name in a flex row: takes the leftover space, is allowed to
+// shrink to nothing and wrap so it never pushes the trailing buttons/tags
+// off a narrow phone screen.
+const nameText: React.CSSProperties = { flex: 1, minWidth: 0, overflowWrap: 'anywhere' };
+// Trailing action cluster (tags + icon buttons): never shrinks.
+const actions: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 };
 
 export function SessionDetail() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -382,6 +388,8 @@ export function SessionDetail() {
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
+        size="small"
+        tabBarGutter={12}
         items={[
           {
             key: 'overview',
@@ -441,7 +449,7 @@ export function SessionDetail() {
                                   </div>
                                 )}
                                 <div style={row}>
-                                  <Text strong style={{ flex: 1 }}>
+                                  <Text strong style={nameText}>
                                     {teamLabelById(teamId)}
                                   </Text>
                                   <Popconfirm
@@ -451,7 +459,7 @@ export function SessionDetail() {
                                     cancelText="Cancelar"
                                     onConfirm={() => handleReportResult(running.id, teamId)}
                                   >
-                                    <Button size="small" loading={reportMatchResult.isPending}>
+                                    <Button size="small" style={{ flexShrink: 0 }} loading={reportMatchResult.isPending}>
                                       Venceu
                                     </Button>
                                   </Popconfirm>
@@ -484,10 +492,10 @@ export function SessionDetail() {
 
                           {holding && (
                             <div style={{ ...row, marginBottom: 6 }}>
-                              <Tag color="gold" style={{ marginRight: 0 }}>
+                              <Tag color="gold" style={{ marginRight: 0, flexShrink: 0 }}>
                                 Segurando
                               </Tag>
-                              <Text style={{ flex: 1 }}>{teamLabel(holding)}</Text>
+                              <Text style={nameText}>{teamLabel(holding)}</Text>
                             </div>
                           )}
 
@@ -498,20 +506,25 @@ export function SessionDetail() {
                           )}
 
                           {drafts.map((d) => (
-                            <div key={d.id} style={{ ...row, marginBottom: 6 }}>
-                              <Tag color="blue" style={{ marginRight: 0 }}>
+                            <div
+                              key={d.id}
+                              style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}
+                            >
+                              <Tag color="blue" style={{ marginRight: 0, flexShrink: 0 }}>
                                 Rascunho
                               </Tag>
-                              <Text style={{ flex: 1 }}>{teamLabel(d)}</Text>
-                              <Button size="small" icon={<EditOutlined />} onClick={() => setEditingTeam(d)} />
-                              <Popconfirm
-                                title="Descartar rascunho?"
-                                okText="Descartar"
-                                cancelText="Cancelar"
-                                onConfirm={() => handleDiscard(d.id)}
-                              >
-                                <Button size="small" danger icon={<DeleteOutlined />} loading={discardDraft.isPending} />
-                              </Popconfirm>
+                              <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(d)}</Text>
+                              <div style={actions}>
+                                <Button size="small" icon={<EditOutlined />} onClick={() => setEditingTeam(d)} />
+                                <Popconfirm
+                                  title="Descartar rascunho?"
+                                  okText="Descartar"
+                                  cancelText="Cancelar"
+                                  onConfirm={() => handleDiscard(d.id)}
+                                >
+                                  <Button size="small" danger icon={<DeleteOutlined />} loading={discardDraft.isPending} />
+                                </Popconfirm>
+                              </div>
                             </div>
                           ))}
 
@@ -532,20 +545,21 @@ export function SessionDetail() {
                     })}
                   </div>
 
-                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
                     {!hasMatches && (
                       <Button
                         block
+                        type="primary"
                         icon={<OrderedListOutlined />}
                         loading={seedQueue.isPending}
                         onClick={handleSeed}
                         disabled={(queue?.length ?? 0) < session.settings.playersPerTeam}
                       >
-                        Formar abertura
+                        Sortear duplas de abertura
                       </Button>
                     )}
                     <Button block icon={<PlayCircleOutlined />} onClick={() => setMatchSheetOpen(true)}>
-                      Abrir quadra manual
+                      Abrir quadra manualmente
                     </Button>
                   </div>
                 </Section>
@@ -554,22 +568,27 @@ export function SessionDetail() {
                   <Section title="Rascunhos sem quadra">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {looseDrafts.map((d) => (
-                        <div key={d.id} style={{ ...card, ...row }}>
-                          <Text style={{ flex: 1 }}>{teamLabel(d)}</Text>
-                          <Button size="small" icon={<EditOutlined />} onClick={() => setEditingTeam(d)} />
-                          <Popconfirm
-                            title="Descartar rascunho?"
-                            okText="Descartar"
-                            cancelText="Cancelar"
-                            onConfirm={() => handleDiscard(d.id)}
-                          >
-                            <Button size="small" danger icon={<DeleteOutlined />} />
-                          </Popconfirm>
+                        <div
+                          key={d.id}
+                          style={{ ...card, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}
+                        >
+                          <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(d)}</Text>
+                          <div style={actions}>
+                            <Button size="small" icon={<EditOutlined />} onClick={() => setEditingTeam(d)} />
+                            <Popconfirm
+                              title="Descartar rascunho?"
+                              okText="Descartar"
+                              cancelText="Cancelar"
+                              onConfirm={() => handleDiscard(d.id)}
+                            >
+                              <Button size="small" danger icon={<DeleteOutlined />} />
+                            </Popconfirm>
+                          </div>
                         </div>
                       ))}
                     </div>
                     <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
-                      Use “Abrir quadra manual” pra colocar em jogo.
+                      Use “Abrir quadra manualmente” pra colocar em jogo.
                     </Text>
                   </Section>
                 )}
@@ -614,10 +633,12 @@ export function SessionDetail() {
                                 </div>
                               )}
                               <div style={{ ...row, gap: 6 }}>
-                                <span style={{ width: 16, display: 'flex', justifyContent: 'center', color: '#389e0d' }}>
+                                <span
+                                  style={{ width: 16, flexShrink: 0, display: 'flex', justifyContent: 'center', color: '#389e0d' }}
+                                >
                                   {won && <TrophyOutlined />}
                                 </span>
-                                <Text strong={won} style={{ flex: 1, color: won ? '#389e0d' : '#8c8c8c' }}>
+                                <Text strong={won} style={{ ...nameText, color: won ? '#389e0d' : '#8c8c8c' }}>
                                   {teamLabelById(id)}
                                 </Text>
                               </div>
@@ -654,11 +675,11 @@ export function SessionDetail() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {orderedQueue.map((entry, index) => (
                     <div key={entry.id} style={{ ...card, ...row }}>
-                      <Text strong style={{ width: 24 }}>
+                      <Text strong style={{ width: 24, flexShrink: 0 }}>
                         {index + 1}º
                       </Text>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={{ display: 'block' }}>{entry.name}</Text>
+                        <Text style={{ display: 'block', overflowWrap: 'anywhere' }}>{entry.name}</Text>
                         <Text type="secondary" style={{ fontSize: 12 }}>
                           {entry.gamesPlayed} jogo{entry.gamesPlayed === 1 ? '' : 's'}
                         </Text>
@@ -786,15 +807,28 @@ export function SessionDetail() {
             ),
             children: (
               <div>
-                <Button
-                  block
-                  icon={<PlusOutlined />}
-                  onClick={() => setTeamSheetOpen(true)}
-                  disabled={!availablePlayersForTeam.length}
-                  style={{ marginBottom: 16 }}
-                >
-                  Nova dupla (manual)
-                </Button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                  {!hasMatches && (
+                    <Button
+                      block
+                      type="primary"
+                      icon={<OrderedListOutlined />}
+                      loading={seedQueue.isPending}
+                      onClick={handleSeed}
+                      disabled={(queue?.length ?? 0) < session.settings.playersPerTeam}
+                    >
+                      Sortear duplas de abertura
+                    </Button>
+                  )}
+                  <Button
+                    block
+                    icon={<PlusOutlined />}
+                    onClick={() => setTeamSheetOpen(true)}
+                    disabled={!availablePlayersForTeam.length}
+                  >
+                    Nova dupla (manual)
+                  </Button>
+                </div>
 
                 {isLoadingTeams && (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
@@ -802,15 +836,15 @@ export function SessionDetail() {
                   </div>
                 )}
                 {!isLoadingTeams && !activeTeams.length && (
-                  <Empty description="Nenhum time ativo. Forme a abertura ou reporte um resultado." />
+                  <Empty description="Nenhum time ativo. Sorteie a abertura ou reporte um resultado." />
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {activeTeams.map((team) => (
                     <div key={team.id} style={{ ...card }}>
-                      <div style={{ ...row, justifyContent: 'space-between' }}>
-                        <Text>{teamLabel(team)}</Text>
-                        <div style={row}>
+                      <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                        <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(team)}</Text>
+                        <div style={actions}>
                           {team.court != null && <Tag style={{ marginRight: 0 }}>Q{team.court}</Tag>}
                           <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
                             {teamStatusLabel[team.status]}
@@ -847,9 +881,9 @@ export function SessionDetail() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {disbandedTeams.map((team) => (
                     <div key={team.id} style={{ ...card }}>
-                      <div style={{ ...row, justifyContent: 'space-between' }}>
-                        <Text>{teamLabel(team)}</Text>
-                        <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
+                      <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                        <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(team)}</Text>
+                        <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0, flexShrink: 0 }}>
                           {teamStatusLabel[team.status]}
                         </Tag>
                       </div>
