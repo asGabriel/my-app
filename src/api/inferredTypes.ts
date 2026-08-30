@@ -36,7 +36,6 @@ export type Player = z.infer<typeof schemas.Player>;
 export type CreatePlayerRequest = z.infer<typeof schemas.CreatePlayerRequest>;
 export type UpdatePlayerRequest = z.infer<typeof schemas.UpdatePlayerRequest>;
 export type GameMode = z.infer<typeof schemas.GameMode>;
-export type ShuffleType = z.infer<typeof schemas.shuffleType>;
 export type SessionSettings = z.infer<typeof schemas.SessionSettings>;
 export type Session = z.infer<typeof schemas.Session>;
 export type CreateSessionRequest = z.infer<typeof schemas.CreateSessionRequest>;
