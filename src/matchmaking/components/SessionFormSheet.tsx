@@ -1,11 +1,8 @@
 import { useEffect } from 'react';
 import { Form, DatePicker, Input, InputNumber, Select, Divider } from 'antd';
 import dayjs from 'dayjs';
-import { useCreateSession, type GameMode, type ShuffleType } from '../../api';
+import { useCreateSession, type GameMode } from '../../api';
 import { BottomSheet } from './BottomSheet';
-
-const shuffleTypeForGameMode = (gameMode: GameMode): ShuffleType =>
-  gameMode === 'open' ? 'roundRobin' : 'kingAndQueen';
 
 interface SessionFormSheetProps {
   open: boolean;
@@ -54,7 +51,6 @@ export function SessionFormSheet({ open, onClose, onError }: SessionFormSheetPro
         description: values.description?.trim() || undefined,
         availableCourts: values.availableCourts,
         gameMode: values.gameMode,
-        shuffleType: shuffleTypeForGameMode(values.gameMode),
         settings: {
           playersPerTeam: values.playersPerTeam,
           setsToWin: values.setsToWin,
