@@ -3,12 +3,13 @@ import { matchmakingRequest } from '../../services/api';
 import { schemas } from '../generated';
 import type { Team } from '../inferredTypes';
 
-export function useDrawTeams() {
+/** Forms the opening `Draft` teams for a session with no matches yet. */
+export function useSeedQueue() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (sessionId: string) => {
-      const response = await matchmakingRequest<Team[]>(`/teams/${sessionId}/draw`, {
+      const response = await matchmakingRequest<Team[]>(`/sessions/${sessionId}/queue/seed`, {
         method: 'POST',
       });
 
@@ -16,6 +17,7 @@ export function useDrawTeams() {
     },
     onSuccess: (_data, sessionId) => {
       queryClient.invalidateQueries({ queryKey: ['matchmaking', 'teams', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['matchmaking', 'queue', sessionId] });
     },
   });
 }

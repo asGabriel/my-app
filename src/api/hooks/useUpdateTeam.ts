@@ -23,6 +23,8 @@ export function useUpdateTeam() {
     },
     onSuccess: (_data, { sessionId }) => {
       queryClient.invalidateQueries({ queryKey: ['matchmaking', 'teams', sessionId] });
+      // Editing a draft roster moves players between the draft and the queue.
+      queryClient.invalidateQueries({ queryKey: ['matchmaking', 'queue', sessionId] });
     },
   });
 }

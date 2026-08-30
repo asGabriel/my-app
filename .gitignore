@@ -26,3 +26,7 @@ dist-ssr
 /node_modules
 
 .env
+
+# Claude Code local state
+.claude/agent-memory/
+.claude/worktrees/

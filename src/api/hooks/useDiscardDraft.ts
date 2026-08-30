@@ -1,23 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { matchmakingRequest } from '../../services/api';
-import { schemas } from '../generated';
-import type { CreateTeamRequest, Team } from '../inferredTypes';
 
-export function useCreateTeam() {
+/** Discards a `Draft` that was never started — its players return to the queue. */
+export function useDiscardDraft() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateTeamRequest) => {
-      const response = await matchmakingRequest<Team>('/teams', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-
-      return schemas.Team.parse(response);
+    mutationFn: async ({ teamId }: { teamId: string; sessionId: string }) => {
+      await matchmakingRequest<void>(`/teams/${teamId}`, { method: 'DELETE' });
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['matchmaking', 'teams', variables.sessionId] });
-      // The chosen players leave the session queue.
       queryClient.invalidateQueries({ queryKey: ['matchmaking', 'queue', variables.sessionId] });
     },
   });
