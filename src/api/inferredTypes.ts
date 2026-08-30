@@ -47,3 +47,7 @@ export type UpdateTeamRequest = z.infer<typeof schemas.UpdateTeamRequest>;
 export type Match = z.infer<typeof schemas.Match>;
 export type CreateMatchRequest = z.infer<typeof schemas.CreateMatchRequest>;
 export type ReportMatchResultRequest = z.infer<typeof schemas.ReportMatchResultRequest>;
+export type ReportMatchResultResponse = z.infer<typeof schemas.ReportMatchResultResponse>;
+export type QueueEntry = z.infer<typeof schemas.QueueEntry>;
+export type CourtSuggestion = z.infer<typeof schemas.CourtSuggestion>;
+export type SetPinRequest = z.infer<typeof schemas.SetPinRequest>;

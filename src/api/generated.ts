@@ -327,13 +327,18 @@ const UpdateSessionRequest = z
   })
   .partial()
   .passthrough();
-const CreateTeamRequest = z
+const QueueEntry = z
   .object({
+    id: z.string().uuid(),
     sessionId: z.string().uuid(),
-    playerIds: z.array(z.string().uuid()),
+    playerId: z.string().uuid(),
+    gamesPlayed: z.number().int(),
+    enqueuedAt: z.string(),
+    pinned: z.boolean(),
+    pinnedAt: z.string().nullable(),
   })
   .passthrough();
-const TeamStatus = z.enum(["waiting", "holding", "playing", "disbanded"]);
+const TeamStatus = z.enum(["draft", "holding", "playing", "disbanded"]);
 const Team = z
   .object({
     id: z.string().uuid(),
@@ -341,8 +346,23 @@ const Team = z
     playerIds: z.array(z.string().uuid()),
     status: TeamStatus,
     consecutiveWins: z.number().int(),
-    priority: z.boolean(),
+    court: z.number().int().nullable(),
     createdAt: z.string(),
+  })
+  .passthrough();
+const CourtSuggestion = z
+  .object({
+    court: z.number().int(),
+    holdingTeamId: z.string().uuid().nullable(),
+    draftTeamIds: z.array(z.string().uuid()),
+    missingChallenger: z.boolean(),
+  })
+  .passthrough();
+const SetPinRequest = z.object({ pinned: z.boolean() }).passthrough();
+const CreateTeamRequest = z
+  .object({
+    sessionId: z.string().uuid(),
+    playerIds: z.array(z.string().uuid()),
   })
   .passthrough();
 const UpdateTeamRequest = z
@@ -370,6 +390,9 @@ const Match = z
   .passthrough();
 const ReportMatchResultRequest = z
   .object({ winnerTeamId: z.string().uuid() })
+  .passthrough();
+const ReportMatchResultResponse = z
+  .object({ match: Match, courts: z.array(CourtSuggestion) })
   .passthrough();
 
 export const schemas = {
@@ -411,13 +434,17 @@ export const schemas = {
   CreateSessionRequest,
   Session,
   UpdateSessionRequest,
-  CreateTeamRequest,
+  QueueEntry,
   TeamStatus,
   Team,
+  CourtSuggestion,
+  SetPinRequest,
+  CreateTeamRequest,
   UpdateTeamRequest,
   CreateMatchRequest,
   Match,
   ReportMatchResultRequest,
+  ReportMatchResultResponse,
 };
 
 const endpoints = makeApi([
@@ -703,7 +730,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/matchmaking/matches/:matchId/result",
     alias: "reportMatchResult",
-    description: `Encerra a partida com o vencedor informado e aplica a rotação da fila (perdedor sempre sai, vencedor segura a quadra até o limite de vitórias seguidas); se a fila já tiver duplas completas o suficiente, a próxima partida daquela quadra é criada automaticamente.`,
+    description: `Encerra a partida com o vencedor informado e aplica ao modelo de fila: o perdedor volta pra fila (games +1), o vencedor segura a quadra até o limite de vitórias seguidas, e cada quadra ociosa recebe um Draft desafiante sugerido da fila. NÃO inicia a próxima partida — a resposta traz as sugestões pro operador confirmar via createMatch.`,
     requestFormat: "json",
     parameters: [
       {
@@ -717,7 +744,7 @@ const endpoints = makeApi([
         schema: z.string().uuid(),
       },
     ],
-    response: Match,
+    response: ReportMatchResultResponse,
   },
   {
     method: "get",
@@ -828,6 +855,74 @@ const endpoints = makeApi([
     response: Session,
   },
   {
+    method: "get",
+    path: "/matchmaking/sessions/:sessionId/queue",
+    alias: "getSessionQueue",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.array(QueueEntry),
+  },
+  {
+    method: "patch",
+    path: "/matchmaking/sessions/:sessionId/queue/:playerId",
+    alias: "setQueuePin",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ pinned: z.boolean() }).passthrough(),
+      },
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+      {
+        name: "playerId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: QueueEntry,
+  },
+  {
+    method: "post",
+    path: "/matchmaking/sessions/:sessionId/queue/fill",
+    alias: "fillIdleCourts",
+    description: `Roda a mesma varredura de &quot;preencher quadras ociosas&quot; do reportar resultado, mas sob demanda — pra quando as quadras estão ociosas com missingChallenger e não há partida em andamento pra disparar isso (ex.: jogadores chegaram atrasados e foram confirmados agora).`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.array(CourtSuggestion),
+  },
+  {
+    method: "post",
+    path: "/matchmaking/sessions/:sessionId/queue/seed",
+    alias: "seedQueue",
+    description: `Distribui os jogadores da fila em até 2 x quadras times Draft, pro operador confirmar. Só funciona enquanto a sessão não tiver nenhuma partida. Substitui o antigo sorteio de times.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.array(Team),
+  },
+  {
     method: "post",
     path: "/matchmaking/teams/",
     alias: "createTeam",
@@ -856,24 +951,25 @@ const endpoints = makeApi([
     response: z.array(Team),
   },
   {
-    method: "post",
-    path: "/matchmaking/teams/:sessionId/draw",
-    alias: "drawTeams",
+    method: "delete",
+    path: "/matchmaking/teams/:teamId",
+    alias: "discardDraft",
+    description: `Só se aplica a um time com status Draft. Os jogadores voltam pra fila da sessão.`,
     requestFormat: "json",
     parameters: [
       {
-        name: "sessionId",
+        name: "teamId",
         type: "Path",
         schema: z.string().uuid(),
       },
     ],
-    response: z.array(Team),
+    response: z.void(),
   },
   {
     method: "patch",
     path: "/matchmaking/teams/:teamId/players",
     alias: "updateTeam",
-    description: `Só pode ser aplicado a um time Waiting. Se um jogador escolhido já estiver em outra dupla Waiting não ocupada em partida, essa dupla de origem é desfeita e o parceiro que sobra — junto com quem saiu do time editado — volta pra fila normalmente.`,
+    description: `Só pode ser aplicado a um time Draft. Quem entra no roster sai da fila da sessão (ou, se estiver em outro Draft, esse Draft é desfeito); quem sai do roster volta pra fila.`,
     requestFormat: "json",
     parameters: [
       {
@@ -885,21 +981,6 @@ const endpoints = makeApi([
         name: "teamId",
         type: "Path",
         schema: z.string().uuid(),
-      },
-    ],
-    response: Team,
-  },
-  {
-    method: "post",
-    path: "/matchmaking/teams/priority",
-    alias: "createPriorityTeam",
-    description: `Diferente de createTeam, aceita puxar um jogador que já está em outra dupla Waiting não ocupada em partida — a dupla de origem é desfeita e o parceiro que sobra volta pra fila normalmente.`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: CreateTeamRequest,
       },
     ],
     response: Team,

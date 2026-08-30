@@ -160,29 +160,25 @@ teams:
             schema:
               $ref: "../schemas/matchmaking.yaml#/Team"
 
-priorityTeam:
-  post:
-    operationId: createPriorityTeam
-    summary: Marca manualmente uma dupla como próxima a jogar, pulando a fila normal
+deleteTeam:
+  delete:
+    operationId: discardDraft
+    summary: Descarta um Draft que nunca foi iniciado
     description: >-
-      Diferente de createTeam, aceita puxar um jogador que já está em outra
-      dupla Waiting não ocupada em partida — a dupla de origem é desfeita e
-      o parceiro que sobra volta pra fila normalmente.
+      Só se aplica a um time com status Draft. Os jogadores voltam pra fila
+      da sessão.
     tags:
       - Matchmaking
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "../schemas/matchmaking.yaml#/CreateTeamRequest"
+    parameters:
+      - name: teamId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
     responses:
-      "201":
-        description: Dupla prioritária criada com sucesso
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/matchmaking.yaml#/Team"
+      "204":
+        description: Draft descartado
 
 teamsBySession:
   get:
@@ -210,12 +206,11 @@ teamsBySession:
 updateTeam:
   patch:
     operationId: updateTeam
-    summary: Atualiza a composição (jogadores) de um time existente
+    summary: Atualiza a composição (jogadores) de um Draft antes de iniciar
     description: >-
-      Só pode ser aplicado a um time Waiting. Se um jogador escolhido já
-      estiver em outra dupla Waiting não ocupada em partida, essa dupla de
-      origem é desfeita e o parceiro que sobra — junto com quem saiu do
-      time editado — volta pra fila normalmente.
+      Só pode ser aplicado a um time Draft. Quem entra no roster sai da fila
+      da sessão (ou, se estiver em outro Draft, esse Draft é desfeito); quem
+      sai do roster volta pra fila.
     tags:
       - Matchmaking
     parameters:
@@ -240,10 +235,10 @@ updateTeam:
             schema:
               $ref: "../schemas/matchmaking.yaml#/Team"
 
-drawTeams:
-  post:
-    operationId: drawTeams
-    summary: Sorteia os times iniciais de uma sessão (uma única vez)
+sessionQueue:
+  get:
+    operationId: getSessionQueue
+    summary: Lista a fila de espera da sessão (jogadores individuais, já ordenada)
     tags:
       - Matchmaking
     parameters:
@@ -254,14 +249,102 @@ drawTeams:
           type: string
           format: uuid
     responses:
-      "201":
-        description: Times sorteados com sucesso
+      "200":
+        description: Fila da sessão, na ordem de quem entra primeiro
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/matchmaking.yaml#/QueueEntry"
+
+seedQueue:
+  post:
+    operationId: seedQueue
+    summary: Forma os Drafts de abertura da sessão
+    description: >-
+      Distribui os jogadores da fila em até 2 x quadras times Draft, pro
+      operador confirmar. Só funciona enquanto a sessão não tiver nenhuma
+      partida. Substitui o antigo sorteio de times.
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Drafts de abertura criados
         content:
           application/json:
             schema:
               type: array
               items:
                 $ref: "../schemas/matchmaking.yaml#/Team"
+
+fillCourts:
+  post:
+    operationId: fillIdleCourts
+    summary: Refaz o preenchimento das quadras ociosas sem um resultado pra reagir
+    description: >-
+      Roda a mesma varredura de "preencher quadras ociosas" do reportar
+      resultado, mas sob demanda — pra quando as quadras estão ociosas com
+      missingChallenger e não há partida em andamento pra disparar isso
+      (ex.: jogadores chegaram atrasados e foram confirmados agora).
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Sugestões por quadra
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/matchmaking.yaml#/CourtSuggestion"
+
+pinQueuePlayer:
+  patch:
+    operationId: setQueuePin
+    summary: Fixa / desafixa um jogador no topo da fila
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: playerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/matchmaking.yaml#/SetPinRequest"
+    responses:
+      "200":
+        description: Entrada da fila atualizada
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/QueueEntry"
 
 matches:
   post:
@@ -315,10 +398,11 @@ matchResult:
     operationId: reportMatchResult
     summary: Reporta o resultado de uma partida em andamento
     description: >-
-      Encerra a partida com o vencedor informado e aplica a rotação da fila
-      (perdedor sempre sai, vencedor segura a quadra até o limite de vitórias
-      seguidas); se a fila já tiver duplas completas o suficiente, a próxima
-      partida daquela quadra é criada automaticamente.
+      Encerra a partida com o vencedor informado e aplica ao modelo de fila:
+      o perdedor volta pra fila (games +1), o vencedor segura a quadra até o
+      limite de vitórias seguidas, e cada quadra ociosa recebe um Draft
+      desafiante sugerido da fila. NÃO inicia a próxima partida — a resposta
+      traz as sugestões pro operador confirmar via createMatch.
     tags:
       - Matchmaking
     parameters:
@@ -336,8 +420,8 @@ matchResult:
             $ref: "../schemas/matchmaking.yaml#/ReportMatchResultRequest"
     responses:
       "200":
-        description: Resultado registrado com sucesso
+        description: Resultado registrado; sugestões de desafiante por quadra
         content:
           application/json:
             schema:
-              $ref: "../schemas/matchmaking.yaml#/Match"
+              $ref: "../schemas/matchmaking.yaml#/ReportMatchResultResponse"

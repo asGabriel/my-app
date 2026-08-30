@@ -53,14 +53,20 @@ paths:
     $ref: "./paths/matchmaking.yaml#/sessions"
   /matchmaking/sessions/{sessionId}:
     $ref: "./paths/matchmaking.yaml#/session"
+  /matchmaking/sessions/{sessionId}/queue:
+    $ref: "./paths/matchmaking.yaml#/sessionQueue"
+  /matchmaking/sessions/{sessionId}/queue/seed:
+    $ref: "./paths/matchmaking.yaml#/seedQueue"
+  /matchmaking/sessions/{sessionId}/queue/fill:
+    $ref: "./paths/matchmaking.yaml#/fillCourts"
+  /matchmaking/sessions/{sessionId}/queue/{playerId}:
+    $ref: "./paths/matchmaking.yaml#/pinQueuePlayer"
   /matchmaking/teams/:
     $ref: "./paths/matchmaking.yaml#/teams"
-  /matchmaking/teams/priority:
-    $ref: "./paths/matchmaking.yaml#/priorityTeam"
   /matchmaking/teams/{sessionId}:
     $ref: "./paths/matchmaking.yaml#/teamsBySession"
-  /matchmaking/teams/{sessionId}/draw:
-    $ref: "./paths/matchmaking.yaml#/drawTeams"
+  /matchmaking/teams/{teamId}:
+    $ref: "./paths/matchmaking.yaml#/deleteTeam"
   /matchmaking/teams/{teamId}/players:
     $ref: "./paths/matchmaking.yaml#/updateTeam"
   /matchmaking/matches/:
@@ -162,6 +168,14 @@ components:
       $ref: "./schemas/matchmaking.yaml#/CreateMatchRequest"
     ReportMatchResultRequest:
       $ref: "./schemas/matchmaking.yaml#/ReportMatchResultRequest"
+    ReportMatchResultResponse:
+      $ref: "./schemas/matchmaking.yaml#/ReportMatchResultResponse"
+    QueueEntry:
+      $ref: "./schemas/matchmaking.yaml#/QueueEntry"
+    CourtSuggestion:
+      $ref: "./schemas/matchmaking.yaml#/CourtSuggestion"
+    SetPinRequest:
+      $ref: "./schemas/matchmaking.yaml#/SetPinRequest"
   securitySchemes:
     bearerAuth:
       type: http
