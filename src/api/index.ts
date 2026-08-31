@@ -26,7 +26,6 @@ export * from './hooks/useCreateTeam';
 export * from './hooks/useUpdateTeam';
 export * from './hooks/useDiscardDraft';
 export * from './hooks/useSessionQueue';
-export * from './hooks/useSeedQueue';
 export * from './hooks/useFillCourts';
 export * from './hooks/usePinQueuePlayer';
 export * from './hooks/useMatches';

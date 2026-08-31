@@ -26,7 +26,6 @@ import {
   useMatches,
   useSessionQueue,
   useUpdateSession,
-  useSeedQueue,
   useFillCourts,
   usePinQueuePlayer,
   useDiscardDraft,
@@ -94,7 +93,6 @@ export function SessionDetail() {
   const { data: queue, isLoading: isLoadingQueue } = useSessionQueue(sessionId);
 
   const updateSession = useUpdateSession();
-  const seedQueue = useSeedQueue();
   const fillCourts = useFillCourts();
   const pinPlayer = usePinQueuePlayer();
   const discardDraft = useDiscardDraft();
@@ -146,16 +144,6 @@ export function SessionDetail() {
         .filter((team) => team.status === DRAFT)
         .sort((a, b) => (a.court ?? 99) - (b.court ?? 99) || a.createdAt.localeCompare(b.createdAt)),
     [teams],
-  );
-
-  const startableTeams = useMemo(
-    () =>
-      (teams ?? []).filter(
-        (team) =>
-          (team.status === DRAFT || team.status === HOLDING) &&
-          team.playerIds.length === playersPerTeam,
-      ),
-    [teams, playersPerTeam],
   );
 
   const disbandedTeams = useMemo(
@@ -313,9 +301,6 @@ export function SessionDetail() {
       if (error instanceof Error) message.error(error.message);
     }
   };
-
-  const handleSeed = () =>
-    runMutation(() => seedQueue.mutateAsync(session.id), 'Rascunhos de abertura formados!');
 
   const handleFill = () =>
     runMutation(() => fillCourts.mutateAsync(session.id), 'Quadras ociosas revisadas.');
@@ -501,7 +486,7 @@ export function SessionDetail() {
 
                           {!drafts.length && (
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                              Sem desafiante sugerido. Use “Preencher” ou monte uma dupla manual.
+                              Sem desafiante sugerido. Use “Preencher” ou “Abrir quadra”.
                             </Text>
                           )}
 
@@ -545,23 +530,16 @@ export function SessionDetail() {
                     })}
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-                    {!hasMatches && (
-                      <Button
-                        block
-                        type="primary"
-                        icon={<OrderedListOutlined />}
-                        loading={seedQueue.isPending}
-                        onClick={handleSeed}
-                        disabled={(queue?.length ?? 0) < session.settings.playersPerTeam}
-                      >
-                        Sortear duplas de abertura
-                      </Button>
-                    )}
-                    <Button block icon={<PlayCircleOutlined />} onClick={() => setMatchSheetOpen(true)}>
-                      Abrir quadra manualmente
-                    </Button>
-                  </div>
+                  <Button
+                    block
+                    type={hasMatches ? 'default' : 'primary'}
+                    icon={<PlayCircleOutlined />}
+                    onClick={() => setMatchSheetOpen(true)}
+                    disabled={availablePlayersForTeam.length < session.settings.playersPerTeam * 2}
+                    style={{ marginTop: 12 }}
+                  >
+                    Abrir quadra
+                  </Button>
                 </Section>
 
                 {!!looseDrafts.length && (
@@ -808,18 +786,6 @@ export function SessionDetail() {
             children: (
               <div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                  {!hasMatches && (
-                    <Button
-                      block
-                      type="primary"
-                      icon={<OrderedListOutlined />}
-                      loading={seedQueue.isPending}
-                      onClick={handleSeed}
-                      disabled={(queue?.length ?? 0) < session.settings.playersPerTeam}
-                    >
-                      Sortear duplas de abertura
-                    </Button>
-                  )}
                   <Button
                     block
                     icon={<PlusOutlined />}
@@ -836,7 +802,7 @@ export function SessionDetail() {
                   </div>
                 )}
                 {!isLoadingTeams && !activeTeams.length && (
-                  <Empty description="Nenhum time ativo. Sorteie a abertura ou reporte um resultado." />
+                  <Empty description="Nenhum time ativo. Abra uma quadra (aba Quadras) ou reporte um resultado." />
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -906,8 +872,8 @@ export function SessionDetail() {
         <MatchFormSheet
           open={matchSheetOpen}
           sessionId={sessionId}
-          teams={startableTeams}
-          teamLabel={teamLabel}
+          playersPerTeam={session.settings.playersPerTeam}
+          availablePlayers={availablePlayersForTeam}
           defaultCourt={courtStates.find((c) => !c.running)?.court ?? 1}
           onClose={() => setMatchSheetOpen(false)}
           onError={(error) => message.error(error)}

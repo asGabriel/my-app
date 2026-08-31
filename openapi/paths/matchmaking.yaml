@@ -258,33 +258,6 @@ sessionQueue:
               items:
                 $ref: "../schemas/matchmaking.yaml#/QueueEntry"
 
-seedQueue:
-  post:
-    operationId: seedQueue
-    summary: Forma os Drafts de abertura da sessão
-    description: >-
-      Distribui os jogadores da fila em até 2 x quadras times Draft, pro
-      operador confirmar. Só funciona enquanto a sessão não tiver nenhuma
-      partida. Substitui o antigo sorteio de times.
-    tags:
-      - Matchmaking
-    parameters:
-      - name: sessionId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    responses:
-      "200":
-        description: Drafts de abertura criados
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: "../schemas/matchmaking.yaml#/Team"
-
 fillCourts:
   post:
     operationId: fillIdleCourts

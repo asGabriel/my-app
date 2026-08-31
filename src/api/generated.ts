@@ -338,18 +338,6 @@ const QueueEntry = z
     pinnedAt: z.string().nullable(),
   })
   .passthrough();
-const TeamStatus = z.enum(["draft", "holding", "playing", "disbanded"]);
-const Team = z
-  .object({
-    id: z.string().uuid(),
-    sessionId: z.string().uuid(),
-    playerIds: z.array(z.string().uuid()),
-    status: TeamStatus,
-    consecutiveWins: z.number().int(),
-    court: z.number().int().nullable(),
-    createdAt: z.string(),
-  })
-  .passthrough();
 const CourtSuggestion = z
   .object({
     court: z.number().int(),
@@ -363,6 +351,18 @@ const CreateTeamRequest = z
   .object({
     sessionId: z.string().uuid(),
     playerIds: z.array(z.string().uuid()),
+  })
+  .passthrough();
+const TeamStatus = z.enum(["draft", "holding", "playing", "disbanded"]);
+const Team = z
+  .object({
+    id: z.string().uuid(),
+    sessionId: z.string().uuid(),
+    playerIds: z.array(z.string().uuid()),
+    status: TeamStatus,
+    consecutiveWins: z.number().int(),
+    court: z.number().int().nullable(),
+    createdAt: z.string(),
   })
   .passthrough();
 const UpdateTeamRequest = z
@@ -435,11 +435,11 @@ export const schemas = {
   Session,
   UpdateSessionRequest,
   QueueEntry,
-  TeamStatus,
-  Team,
   CourtSuggestion,
   SetPinRequest,
   CreateTeamRequest,
+  TeamStatus,
+  Team,
   UpdateTeamRequest,
   CreateMatchRequest,
   Match,
@@ -906,21 +906,6 @@ const endpoints = makeApi([
       },
     ],
     response: z.array(CourtSuggestion),
-  },
-  {
-    method: "post",
-    path: "/matchmaking/sessions/:sessionId/queue/seed",
-    alias: "seedQueue",
-    description: `Distribui os jogadores da fila em até 2 x quadras times Draft, pro operador confirmar. Só funciona enquanto a sessão não tiver nenhuma partida. Substitui o antigo sorteio de times.`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "sessionId",
-        type: "Path",
-        schema: z.string().uuid(),
-      },
-    ],
-    response: z.array(Team),
   },
   {
     method: "post",

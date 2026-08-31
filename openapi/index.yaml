@@ -55,8 +55,6 @@ paths:
     $ref: "./paths/matchmaking.yaml#/session"
   /matchmaking/sessions/{sessionId}/queue:
     $ref: "./paths/matchmaking.yaml#/sessionQueue"
-  /matchmaking/sessions/{sessionId}/queue/seed:
-    $ref: "./paths/matchmaking.yaml#/seedQueue"
   /matchmaking/sessions/{sessionId}/queue/fill:
     $ref: "./paths/matchmaking.yaml#/fillCourts"
   /matchmaking/sessions/{sessionId}/queue/{playerId}:
