@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Typography, Tag, Tabs, Button, App, Empty, Spin, Popconfirm } from 'antd';
+import { Typography, Tag, Tabs, Button, App, Empty, Spin, Popconfirm, Select } from 'antd';
 import {
   ArrowLeftOutlined,
   PlusOutlined,
@@ -274,6 +274,10 @@ export function SessionDetail() {
     .filter((player): player is NonNullable<typeof player> => player != null)
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  const playersNotInSession = (players ?? [])
+    .filter((player) => !session.playerIds.includes(player.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const hasMatches = !!matches?.length;
   const idleCourtCount = courtStates.filter((c) => !c.running).length;
 
@@ -321,6 +325,30 @@ export function SessionDetail() {
     runMutation(
       () => pinPlayer.mutateAsync({ sessionId: session.id, playerId, pinned }),
       pinned ? 'Jogador fixado no topo da fila.' : 'Jogador desafixado.',
+    );
+
+  // Quick roster tweak from the queue view: someone gives up mid-session, or
+  // a latecomer joins. Goes through updateSession, which syncs session_queue
+  // (removed → leaves the list; added → joins with 0 games, behind everyone
+  // else who hasn't played).
+  const handleLeaveSession = (playerId: string) =>
+    runMutation(
+      () =>
+        updateSession.mutateAsync({
+          sessionId: session.id,
+          data: { playerIds: session.playerIds.filter((id) => id !== playerId) },
+        }),
+      'Jogador saiu da sessão.',
+    );
+
+  const handleJoinSession = (playerId: string) =>
+    runMutation(
+      () =>
+        updateSession.mutateAsync({
+          sessionId: session.id,
+          data: { playerIds: [...session.playerIds, playerId] },
+        }),
+      'Jogador entrou na fila.',
     );
 
   const startCourt = (court: number, teamAId: string, teamBId: string) =>
@@ -643,6 +671,18 @@ export function SessionDetail() {
                   Ordem de quem entra primeiro: fixados, depois quem jogou menos, depois quem espera há mais tempo.
                 </Text>
 
+                <Select
+                  showSearch
+                  value={null}
+                  placeholder="Adicionar jogador à fila…"
+                  optionFilterProp="label"
+                  style={{ width: '100%', marginBottom: 12 }}
+                  loading={updateSession.isPending}
+                  disabled={!playersNotInSession.length}
+                  onChange={(playerId: string) => handleJoinSession(playerId)}
+                  options={playersNotInSession.map((player) => ({ label: player.name, value: player.id }))}
+                />
+
                 {isLoadingQueue && (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
                     <Spin />
@@ -662,13 +702,24 @@ export function SessionDetail() {
                           {entry.gamesPlayed} jogo{entry.gamesPlayed === 1 ? '' : 's'}
                         </Text>
                       </div>
-                      <Button
-                        size="small"
-                        type={entry.pinned ? 'primary' : 'default'}
-                        icon={entry.pinned ? <PushpinFilled /> : <PushpinOutlined />}
-                        loading={pinPlayer.isPending}
-                        onClick={() => handlePin(entry.playerId, !entry.pinned)}
-                      />
+                      <div style={actions}>
+                        <Button
+                          size="small"
+                          type={entry.pinned ? 'primary' : 'default'}
+                          icon={entry.pinned ? <PushpinFilled /> : <PushpinOutlined />}
+                          loading={pinPlayer.isPending}
+                          onClick={() => handlePin(entry.playerId, !entry.pinned)}
+                        />
+                        <Popconfirm
+                          title="Tirar da sessão?"
+                          description={`${entry.name} sai da fila e da lista de confirmados.`}
+                          okText="Tirar"
+                          cancelText="Cancelar"
+                          onConfirm={() => handleLeaveSession(entry.playerId)}
+                        >
+                          <Button size="small" danger icon={<DeleteOutlined />} loading={updateSession.isPending} />
+                        </Popconfirm>
+                      </div>
                     </div>
                   ))}
                 </div>
