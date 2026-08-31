@@ -23,6 +23,7 @@ export function useUpdateSession() {
     onSuccess: (_data, { sessionId }) => {
       queryClient.invalidateQueries({ queryKey: ['matchmaking', 'sessions'] });
       queryClient.invalidateQueries({ queryKey: ['matchmaking', 'sessions', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['matchmaking', 'queue', sessionId] });
     },
   });
 }

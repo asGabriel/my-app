@@ -6,17 +6,12 @@ import {
   PlusOutlined,
   PlayCircleOutlined,
   TrophyOutlined,
-  AppstoreOutlined,
-  TeamOutlined,
   UserOutlined,
   EditOutlined,
   DeleteOutlined,
-  HistoryOutlined,
-  ApartmentOutlined,
   PushpinOutlined,
   PushpinFilled,
   ReloadOutlined,
-  OrderedListOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -72,7 +67,12 @@ function Section({ title, extra, children }: { title: string; extra?: ReactNode;
   );
 }
 
-const card: React.CSSProperties = { background: '#fafafa', borderRadius: 10, padding: 12 };
+const card: React.CSSProperties = {
+  background: '#fafafa',
+  borderRadius: 10,
+  padding: 14,
+  border: '1px solid #f0f0f0',
+};
 const row: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 };
 // A player/team name in a flex row: takes the leftover space, is allowed to
 // shrink to nothing and wrap so it never pushes the trailing buttons/tags
@@ -402,15 +402,11 @@ export function SessionDetail() {
         activeKey={activeTab}
         onChange={setActiveTab}
         size="small"
-        tabBarGutter={12}
+        tabBarGutter={8}
         items={[
           {
             key: 'overview',
-            label: (
-              <span>
-                <AppstoreOutlined /> Quadras
-              </span>
-            ),
+            label: 'Quadras',
             children: (
               <>
                 <Section
@@ -434,7 +430,7 @@ export function SessionDetail() {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {courtStates.map(({ court, running, holding, drafts }) => {
                       if (running) {
                         return (
@@ -457,11 +453,11 @@ export function SessionDetail() {
                             {[running.teamAId, running.teamBId].map((teamId, idx) => (
                               <div key={teamId}>
                                 {idx === 1 && (
-                                  <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12, margin: '6px 0' }}>
+                                  <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12, margin: '8px 0' }}>
                                     vs
                                   </div>
                                 )}
-                                <div style={row}>
+                                <div style={{ ...row, padding: '3px 0' }}>
                                   <Text strong style={nameText}>
                                     {teamLabelById(teamId)}
                                   </Text>
@@ -472,7 +468,7 @@ export function SessionDetail() {
                                     cancelText="Cancelar"
                                     onConfirm={() => handleReportResult(running.id, teamId)}
                                   >
-                                    <Button size="small" style={{ flexShrink: 0 }} loading={reportMatchResult.isPending}>
+                                    <Button style={{ flexShrink: 0 }} loading={reportMatchResult.isPending}>
                                       Venceu
                                     </Button>
                                   </Popconfirm>
@@ -503,53 +499,58 @@ export function SessionDetail() {
                             <Tag style={{ marginRight: 0 }}>Ociosa</Tag>
                           </div>
 
-                          {holding && (
-                            <div style={{ ...row, marginBottom: 6 }}>
-                              <Tag color="gold" style={{ marginRight: 0, flexShrink: 0 }}>
-                                Segurando
-                              </Tag>
-                              <Text style={nameText}>{teamLabel(holding)}</Text>
-                            </div>
-                          )}
-
-                          {!drafts.length && (
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Sem desafiante sugerido. Use “Preencher” ou “Abrir quadra”.
-                            </Text>
-                          )}
-
-                          {drafts.map((d) => (
-                            <div
-                              key={d.id}
-                              style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 6 }}
-                            >
-                              <Tag color="blue" style={{ marginRight: 0, flexShrink: 0 }}>
-                                Rascunho
-                              </Tag>
-                              <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(d)}</Text>
-                              <div style={actions}>
-                                <Button size="small" icon={<EditOutlined />} onClick={() => setEditingTeam(d)} />
-                                <Popconfirm
-                                  title="Descartar rascunho?"
-                                  okText="Descartar"
-                                  cancelText="Cancelar"
-                                  onConfirm={() => handleDiscard(d.id)}
-                                >
-                                  <Button size="small" danger icon={<DeleteOutlined />} loading={discardDraft.isPending} />
-                                </Popconfirm>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {holding && (
+                              <div style={row}>
+                                <Tag color="gold" style={{ marginRight: 0, flexShrink: 0 }}>
+                                  Segurando
+                                </Tag>
+                                <Text style={nameText}>{teamLabel(holding)}</Text>
                               </div>
-                            </div>
-                          ))}
+                            )}
+
+                            {holding && !!drafts.length && (
+                              <div style={{ color: '#bfbfbf', fontSize: 12, paddingLeft: 2 }}>vs</div>
+                            )}
+
+                            {!drafts.length && (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                Sem desafiante sugerido. Use “Preencher” ou “Abrir quadra”.
+                              </Text>
+                            )}
+
+                            {drafts.map((d) => (
+                              <div
+                                key={d.id}
+                                style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, rowGap: 8 }}
+                              >
+                                <Tag color="blue" style={{ marginRight: 0, flexShrink: 0 }}>
+                                  Rascunho
+                                </Tag>
+                                <Text style={{ ...nameText, minWidth: 100 }}>{teamLabel(d)}</Text>
+                                <div style={actions}>
+                                  <Button size="small" icon={<EditOutlined />} onClick={() => setEditingTeam(d)} />
+                                  <Popconfirm
+                                    title="Descartar rascunho?"
+                                    okText="Descartar"
+                                    cancelText="Cancelar"
+                                    onConfirm={() => handleDiscard(d.id)}
+                                  >
+                                    <Button size="small" danger icon={<DeleteOutlined />} loading={discardDraft.isPending} />
+                                  </Popconfirm>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
 
                           <Button
                             block
-                            size="small"
                             type="primary"
                             icon={<PlayCircleOutlined />}
                             disabled={!canStart}
                             loading={createMatch.isPending}
                             onClick={() => canStart && startCourt(court, teamAId!, teamBId!)}
-                            style={{ marginTop: 4 }}
+                            style={{ marginTop: 12 }}
                           >
                             Iniciar partida
                           </Button>
@@ -572,7 +573,7 @@ export function SessionDetail() {
 
                 {!!looseDrafts.length && (
                   <Section title="Rascunhos sem quadra">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {looseDrafts.map((d) => (
                         <div
                           key={d.id}
@@ -608,7 +609,7 @@ export function SessionDetail() {
                   {!isLoadingMatches && !matchHistory.length && (
                     <Text type="secondary">Nenhuma partida finalizada ainda.</Text>
                   )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {matchHistory.map((match) => {
                       const teamAWon = match.winnerTeamId === match.teamAId;
                       return (
@@ -660,11 +661,7 @@ export function SessionDetail() {
           },
           {
             key: 'fila',
-            label: (
-              <span>
-                <OrderedListOutlined /> Fila ({orderedQueue.length})
-              </span>
-            ),
+            label: `Fila (${orderedQueue.length})`,
             children: (
               <div>
                 <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>
@@ -690,7 +687,7 @@ export function SessionDetail() {
                 )}
                 {!isLoadingQueue && !orderedQueue.length && <Empty description="Fila vazia." />}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {orderedQueue.map((entry, index) => (
                     <div key={entry.id} style={{ ...card, ...row }}>
                       <Text strong style={{ width: 24, flexShrink: 0 }}>
@@ -728,16 +725,12 @@ export function SessionDetail() {
           },
           {
             key: 'ranking',
-            label: (
-              <span>
-                <TrophyOutlined /> Ranking
-              </span>
-            ),
+            label: 'Ranking',
             children: (
               <div>
                 {!playerStandings.length && <Empty description="Nenhum jogador confirmado ainda." />}
                 {!!playerStandings.length && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {playerStandings.map((standing, index) => (
                       <div key={standing.playerId} style={{ ...card, ...row }}>
                         <Text strong style={{ width: 28 }}>
@@ -766,11 +759,7 @@ export function SessionDetail() {
           },
           {
             key: 'players',
-            label: (
-              <span>
-                <TeamOutlined /> Jogadores ({confirmedPlayers.length})
-              </span>
-            ),
+            label: `Jogadores (${confirmedPlayers.length})`,
             children: (
               <div>
                 <Button
@@ -829,23 +818,18 @@ export function SessionDetail() {
           },
           {
             key: 'times',
-            label: (
-              <span>
-                <ApartmentOutlined /> Times ({activeTeams.length})
-              </span>
-            ),
+            label: `Times (${activeTeams.length})`,
             children: (
               <div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                  <Button
-                    block
-                    icon={<PlusOutlined />}
-                    onClick={() => setTeamSheetOpen(true)}
-                    disabled={!availablePlayersForTeam.length}
-                  >
-                    Nova dupla (manual)
-                  </Button>
-                </div>
+                <Button
+                  block
+                  icon={<PlusOutlined />}
+                  onClick={() => setTeamSheetOpen(true)}
+                  disabled={!availablePlayersForTeam.length}
+                  style={{ marginBottom: 16 }}
+                >
+                  Nova dupla (manual)
+                </Button>
 
                 {isLoadingTeams && (
                   <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
@@ -856,10 +840,10 @@ export function SessionDetail() {
                   <Empty description="Nenhum time ativo. Abra uma quadra (aba Quadras) ou reporte um resultado." />
                 )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {activeTeams.map((team) => (
                     <div key={team.id} style={{ ...card }}>
-                      <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                      <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap', rowGap: 6 }}>
                         <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(team)}</Text>
                         <div style={actions}>
                           {team.court != null && <Tag style={{ marginRight: 0 }}>Q{team.court}</Tag>}
@@ -872,7 +856,7 @@ export function SessionDetail() {
                         </div>
                       </div>
                       {(team.playerIds.length !== playersPerTeam || team.consecutiveWins > 0) && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
                           {team.playerIds.length !== playersPerTeam && 'Roster incompleto'}
                           {team.playerIds.length !== playersPerTeam && team.consecutiveWins > 0 && ' · '}
                           {team.consecutiveWins > 0 &&
@@ -882,37 +866,35 @@ export function SessionDetail() {
                     </div>
                   ))}
                 </div>
-              </div>
-            ),
-          },
-          {
-            key: 'disbanded-teams',
-            label: (
-              <span>
-                <HistoryOutlined /> Encerrados ({disbandedTeams.length})
-              </span>
-            ),
-            children: (
-              <div>
-                {!disbandedTeams.length && <Empty description="Nenhum time encerrado ainda." />}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {disbandedTeams.map((team) => (
-                    <div key={team.id} style={{ ...card }}>
-                      <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                        <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(team)}</Text>
-                        <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0, flexShrink: 0 }}>
-                          {teamStatusLabel[team.status]}
-                        </Tag>
-                      </div>
-                      {team.consecutiveWins > 0 && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {team.consecutiveWins} vitória{team.consecutiveWins > 1 ? 's' : ''} seguida
-                          {team.consecutiveWins > 1 ? 's' : ''}
-                        </Text>
-                      )}
+
+                {!!disbandedTeams.length && (
+                  <>
+                    <Text
+                      type="secondary"
+                      style={{ display: 'block', margin: '20px 0 8px', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}
+                    >
+                      Encerrados ({disbandedTeams.length})
+                    </Text>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {disbandedTeams.map((team) => (
+                        <div key={team.id} style={{ ...card, opacity: 0.7 }}>
+                          <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap', rowGap: 6 }}>
+                            <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(team)}</Text>
+                            <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0, flexShrink: 0 }}>
+                              {teamStatusLabel[team.status]}
+                            </Tag>
+                          </div>
+                          {team.consecutiveWins > 0 && (
+                            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
+                              {team.consecutiveWins} vitória{team.consecutiveWins > 1 ? 's' : ''} seguida
+                              {team.consecutiveWins > 1 ? 's' : ''}
+                            </Text>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
               </div>
             ),
           },
