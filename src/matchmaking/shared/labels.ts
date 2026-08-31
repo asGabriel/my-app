@@ -25,14 +25,14 @@ export const gameModeColor: Record<GameMode, string> = {
 };
 
 export const teamStatusLabel: Record<TeamStatus, string> = {
-  waiting: 'Na fila',
+  draft: 'Rascunho',
   holding: 'Segurando quadra',
   playing: 'Jogando',
   disbanded: 'Encerrado',
 };
 
 export const teamStatusColor: Record<TeamStatus, string> = {
-  waiting: 'blue',
+  draft: 'blue',
   holding: 'gold',
   playing: 'green',
   disbanded: 'default',

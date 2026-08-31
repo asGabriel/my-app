@@ -15,7 +15,7 @@ GameMode:
 TeamStatus:
   type: string
   enum:
-    - waiting
+    - draft
     - holding
     - playing
     - disbanded
@@ -177,7 +177,7 @@ Team:
     - playerIds
     - status
     - consecutiveWins
-    - priority
+    - court
     - createdAt
   properties:
     id:
@@ -195,12 +195,93 @@ Team:
       $ref: "#/TeamStatus"
     consecutiveWins:
       type: integer
-    priority:
-      type: boolean
-      description: "Time marcado para jogar em seguida (entrada manual de próximo), ignorando a ordem normal da fila"
+    court:
+      type: integer
+      nullable: true
+      description: "Quadra da qual esse Draft é o próximo desafiante (null num Draft manual, ou quando o time já está Playing/Holding)"
     createdAt:
       type: string
       description: "DateTime string (RFC3339)"
+
+QueueEntry:
+  type: object
+  required:
+    - id
+    - sessionId
+    - playerId
+    - gamesPlayed
+    - enqueuedAt
+    - pinned
+    - pinnedAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    sessionId:
+      type: string
+      format: uuid
+    playerId:
+      type: string
+      format: uuid
+    gamesPlayed:
+      type: integer
+      description: "Partidas que o jogador já terminou nessa sessão"
+    enqueuedAt:
+      type: string
+      description: "DateTime string (RFC3339); vira agora toda vez que o jogador (re)entra na lista"
+    pinned:
+      type: boolean
+      description: "Jogador fixado no topo da fila (prioridade manual)"
+    pinnedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339); null quando não fixado"
+
+CourtSuggestion:
+  type: object
+  required:
+    - court
+    - holdingTeamId
+    - draftTeamIds
+    - missingChallenger
+  properties:
+    court:
+      type: integer
+    holdingTeamId:
+      type: string
+      format: uuid
+      nullable: true
+      description: "Time que venceu e está segurando essa quadra (null se a quadra abre com 2 times novos)"
+    draftTeamIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: "Draft(s) sugeridos pra essa quadra — o operador confirma, edita ou descarta"
+    missingChallenger:
+      type: boolean
+      description: "A fila não tinha jogadores suficientes (ex.: gênero desbalanceado no Misto) pra formar o desafiante — quadra fica ociosa até montar manual ou a fila encher"
+
+ReportMatchResultResponse:
+  type: object
+  required:
+    - match
+    - courts
+  properties:
+    match:
+      $ref: "#/Match"
+    courts:
+      type: array
+      items:
+        $ref: "#/CourtSuggestion"
+
+SetPinRequest:
+  type: object
+  required:
+    - pinned
+  properties:
+    pinned:
+      type: boolean
 
 CreateTeamRequest:
   type: object

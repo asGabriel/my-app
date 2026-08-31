@@ -1,122 +1,126 @@
 import { useEffect } from 'react';
-import { Form, InputNumber, Select } from 'antd';
-import { useCreateMatch, type Team } from '../../api';
+import { Alert, Form, InputNumber, Select } from 'antd';
+import { useCreateMatch, useCreateTeam } from '../../api';
 import { BottomSheet } from './BottomSheet';
 
 interface MatchFormSheetProps {
   open: boolean;
   sessionId: string;
-  teams: Team[];
-  teamLabel: (team: Team) => string;
+  playersPerTeam: number;
+  availablePlayers: { id: string; label: string }[];
   defaultCourt?: number;
-  defaultTeamAId?: string;
-  defaultTeamBId?: string;
   onClose: () => void;
   onError: (message: string) => void;
 }
 
 interface MatchFormValues {
   court: number;
-  teamAId: string;
-  teamBId: string;
+  teamAPlayerIds: string[];
+  teamBPlayerIds: string[];
 }
 
+/**
+ * Opens a court by hand: pick the court and the two rosters. Creates both
+ * teams (`createTeam`, which pulls the players off the session queue and
+ * ignores the game mode's gender rules) then starts the match. This is how
+ * a session gets its first matches going.
+ */
 export function MatchFormSheet({
   open,
   sessionId,
-  teams,
-  teamLabel,
+  playersPerTeam,
+  availablePlayers,
   defaultCourt,
-  defaultTeamAId,
-  defaultTeamBId,
   onClose,
   onError,
 }: MatchFormSheetProps) {
   const [form] = Form.useForm<MatchFormValues>();
+  const createTeam = useCreateTeam();
   const createMatch = useCreateMatch();
-  const teamAId = Form.useWatch('teamAId', form);
+  const teamAPlayerIds: string[] = Form.useWatch('teamAPlayerIds', form) ?? [];
 
   useEffect(() => {
     if (open) {
       form.resetFields();
-      form.setFieldsValue({
-        court: defaultCourt ?? 1,
-        teamAId: defaultTeamAId,
-        teamBId: defaultTeamBId,
-      });
+      form.setFieldsValue({ court: defaultCourt ?? 1, teamAPlayerIds: [], teamBPlayerIds: [] });
     }
-    // Defaults are captured only at the moment the sheet opens; re-running
-    // this on every defaultCourt/defaultTeamAId/defaultTeamBId change would
-    // reset fields the user is actively editing as the queue shifts underneath.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, form]);
 
-  const teamOptions = teams.map((team) => ({ label: teamLabel(team), value: team.id }));
+  const rosterRules = [
+    { required: true, message: 'Selecione os jogadores' },
+    {
+      validator(_: unknown, value?: string[]) {
+        if (value && value.length !== playersPerTeam) {
+          return Promise.reject(new Error(`O time precisa de exatamente ${playersPerTeam} jogadores`));
+        }
+        return Promise.resolve();
+      },
+    },
+  ];
+
+  const options = (exclude: string[]) =>
+    availablePlayers
+      .filter((player) => !exclude.includes(player.id))
+      .map((player) => ({ label: player.label, value: player.id }));
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
 
+      const teamA = await createTeam.mutateAsync({ sessionId, playerIds: values.teamAPlayerIds });
+      const teamB = await createTeam.mutateAsync({ sessionId, playerIds: values.teamBPlayerIds });
       await createMatch.mutateAsync({
         sessionId,
         court: values.court,
-        teamAId: values.teamAId,
-        teamBId: values.teamBId,
+        teamAId: teamA.id,
+        teamBId: teamB.id,
       });
 
       onClose();
     } catch (error) {
-      if (error instanceof Error) {
-        onError(error.message);
-      }
+      if (error instanceof Error) onError(error.message);
     }
   };
 
   return (
     <BottomSheet
-      title="Abrir Quadra"
+      title="Abrir quadra"
       open={open}
       onClose={onClose}
       onSubmit={handleSubmit}
       submitText="Abrir"
-      loading={createMatch.isPending}
+      loading={createTeam.isPending || createMatch.isPending}
     >
+      <Alert
+        type="info"
+        showIcon
+        message="Monta os dois times na mão"
+        description="Os jogadores escolhidos saem da fila. Não valida gênero — o operador decide as duplas."
+        style={{ marginBottom: 16 }}
+      />
       <Form form={form} layout="vertical" size="large">
-        <Form.Item
-          name="court"
-          label="Quadra"
-          rules={[{ required: true, message: 'Informe a quadra' }]}
-        >
+        <Form.Item name="court" label="Quadra" rules={[{ required: true, message: 'Informe a quadra' }]}>
           <InputNumber min={1} style={{ width: '100%' }} />
         </Form.Item>
 
-        <Form.Item
-          name="teamAId"
-          label="Time A"
-          rules={[{ required: true, message: 'Selecione o time A' }]}
-        >
-          <Select options={teamOptions} placeholder="Selecione o time A" />
+        <Form.Item name="teamAPlayerIds" label="Time A" rules={rosterRules}>
+          <Select
+            mode="multiple"
+            maxCount={playersPerTeam}
+            optionFilterProp="label"
+            placeholder="Jogadores do time A"
+            options={options([])}
+          />
         </Form.Item>
 
-        <Form.Item
-          name="teamBId"
-          label="Time B"
-          dependencies={['teamAId']}
-          rules={[
-            { required: true, message: 'Selecione o time B' },
-            ({ getFieldValue }) => ({
-              validator(_, value) {
-                if (value && value === getFieldValue('teamAId')) {
-                  return Promise.reject(new Error('Time B deve ser diferente do Time A'));
-                }
-                return Promise.resolve();
-              },
-            }),
-          ]}
-        >
+        <Form.Item name="teamBPlayerIds" label="Time B" dependencies={['teamAPlayerIds']} rules={rosterRules}>
           <Select
-            options={teamOptions.filter((option) => option.value !== teamAId)}
-            placeholder="Selecione o time B"
+            mode="multiple"
+            maxCount={playersPerTeam}
+            optionFilterProp="label"
+            placeholder="Jogadores do time B"
+            options={options(teamAPlayerIds)}
           />
         </Form.Item>
       </Form>

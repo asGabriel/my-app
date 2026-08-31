@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Alert, Form, Select } from 'antd';
-import { useCreateTeam, useCreatePriorityTeam, useUpdateTeam, type Team } from '../../api';
+import { useCreateTeam, useUpdateTeam, type Team } from '../../api';
 import { BottomSheet } from './BottomSheet';
 
 const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
@@ -20,14 +20,9 @@ interface TeamFormSheetProps {
   playersPerTeam: number;
   availablePlayers: { id: string; label: string }[];
   playerNameById: Map<string, string>;
-  /** When true, submits via the priority-queue path (jumps this pairing to
-   * the front of the line, allowed to pull a player out of another waiting
-   * team) instead of a plain manual team. Ignored when `team` is set. */
-  priority?: boolean;
-  /** When set, edits this existing (Waiting) team's roster instead of
-   * creating a new team — pulling in a player already in another waiting
-   * team swaps them: that team is broken up and whoever this edit itself
-   * dropped fills the vacancy. */
+  /** When set, edits this existing `Draft`'s roster instead of creating a
+   * new one — pulling in a player already in another draft breaks that
+   * draft up, and whoever this edit dropped goes back to the queue. */
   team?: Team;
   onClose: () => void;
   onError: (message: string) => void;
@@ -43,16 +38,14 @@ export function TeamFormSheet({
   playersPerTeam,
   availablePlayers,
   playerNameById,
-  priority = false,
   team,
   onClose,
   onError,
 }: TeamFormSheetProps) {
   const [form] = Form.useForm<TeamFormValues>();
   const createTeam = useCreateTeam();
-  const createPriorityTeam = useCreatePriorityTeam();
   const updateTeam = useUpdateTeam();
-  const mutation = team ? updateTeam : priority ? createPriorityTeam : createTeam;
+  const mutation = team ? updateTeam : createTeam;
 
   useEffect(() => {
     if (open) {
@@ -67,10 +60,7 @@ export function TeamFormSheet({
       if (team) {
         await updateTeam.mutateAsync({ teamId: team.id, sessionId, playerIds: values.playerIds });
       } else {
-        await (priority ? createPriorityTeam : createTeam).mutateAsync({
-          sessionId,
-          playerIds: values.playerIds,
-        });
+        await createTeam.mutateAsync({ sessionId, playerIds: values.playerIds });
       }
 
       onClose();
@@ -83,38 +73,20 @@ export function TeamFormSheet({
 
   return (
     <BottomSheet
-      title={team ? 'Editar Dupla' : priority ? 'Próximo Manual' : 'Nova Dupla'}
+      title={team ? 'Editar rascunho' : 'Nova dupla'}
       open={open}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText={team ? 'Salvar' : priority ? 'Definir' : 'Criar'}
+      submitText={team ? 'Salvar' : 'Criar'}
       loading={mutation.isPending}
     >
-      {team ? (
-        <Alert
-          type="warning"
-          showIcon
-          message="Editando dupla em espera"
-          description="Se escolher alguém que já está em outra dupla esperando, essa dupla de origem é desfeita e o parceiro que sobrar — junto com quem sair dessa dupla — volta pra fila normalmente."
-          style={{ marginBottom: 16 }}
-        />
-      ) : priority ? (
-        <Alert
-          type="warning"
-          showIcon
-          message="Pula a fila"
-          description="Essa dupla joga assim que uma quadra liberar, na frente de todo mundo — ignora a ordem da fila e as restrições de gênero/duplas inéditas do sorteio. Se escolher alguém que já está em outra dupla esperando, essa dupla é desfeita e quem sobrar volta pra fila normalmente."
-          style={{ marginBottom: 16 }}
-        />
-      ) : (
-        <Alert
-          type="info"
-          showIcon
-          message="Entrada manual"
-          description="Essa dupla entra direto na fila da sessão, ignorando as restrições de gênero e de duplas inéditas do modo de sorteio — use pra corrigir a fila manualmente em caso de imprevisto."
-          style={{ marginBottom: 16 }}
-        />
-      )}
+      <Alert
+        type="info"
+        showIcon
+        message="Montagem manual"
+        description="Ignora as restrições de gênero do modo da sessão — use pra corrigir a fila manualmente. Quem entra sai da fila; quem sai volta pra ela."
+        style={{ marginBottom: 16 }}
+      />
       <Form form={form} layout="vertical" size="large">
         <Form.Item
           name="playerIds"
