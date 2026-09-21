@@ -1,0 +1,25 @@
+listDebts:
+  post:
+    operationId: listFinanceDebts
+    summary: Lista dívidas (módulo finance)
+    description: >-
+      Por padrão devolve só as dívidas de nível-topo (pais de parcelamento
+      inclusos, sem as parcelas). Use parentId para listar as parcelas de uma
+      dívida, ou includeChildren para uma lista plana com tudo.
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/DebtFilters"
+    responses:
+      "200":
+        description: Lista de dívidas
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/finance.yaml#/Debt"

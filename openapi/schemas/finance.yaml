@@ -1,0 +1,134 @@
+DebtStatus:
+  type: string
+  description: Status temporal da dívida (Open = em aberto, Settled = quitada)
+  enum:
+    - OPEN
+    - SETTLED
+
+DebtCategory:
+  type: string
+  enum:
+    - UNKNOWN
+    - HOME
+    - TRANSPORT
+    - HEALTH
+    - FOOD
+    - LIFESTYLE
+    - EDUCATION
+    - GOALS
+    - SUBSCRIPTIONS
+    - OBLIGATIONS
+    - PURCHASES
+
+ExpenseType:
+  type: string
+  enum:
+    - FIXED
+    - VARIABLE
+
+Debt:
+  type: object
+  description: >-
+    Dívida unificada do módulo finance. Uma dívida parcelada é um pai
+    (installmentCount preenchido, dueDate nulo) com N filhas (parentId
+    preenchido, installmentNumber 1..N) — só as filhas são pagáveis.
+  required:
+    - id
+    - clientId
+    - category
+    - expenseType
+    - tags
+    - identification
+    - description
+    - totalAmount
+    - paidAmount
+    - remainingAmount
+    - status
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    clientId:
+      type: string
+      format: uuid
+    category:
+      $ref: "#/DebtCategory"
+    expenseType:
+      $ref: "#/ExpenseType"
+    tags:
+      type: array
+      items:
+        type: string
+    identification:
+      type: string
+    description:
+      type: string
+    totalAmount:
+      type: string
+      description: "Decimal serializado como string (ex.: \"450.00\")"
+    paidAmount:
+      type: string
+      description: "Decimal serializado como string"
+    remainingAmount:
+      type: string
+      description: "Decimal serializado como string"
+    dueDate:
+      type: string
+      nullable: true
+      description: "Data (YYYY-MM-DD). Nulo na dívida-pai de um parcelamento."
+    status:
+      $ref: "#/DebtStatus"
+    installmentCount:
+      type: integer
+      nullable: true
+      description: Total de parcelas. Preenchido no pai e copiado nas filhas (exibição "k/N").
+    parentId:
+      type: string
+      format: uuid
+      nullable: true
+      description: Preenchido quando a linha é uma parcela de outra dívida.
+    installmentNumber:
+      type: integer
+      nullable: true
+      description: Ordinal da parcela (1..N), só nas filhas.
+    createdAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339)"
+
+DebtFilters:
+  type: object
+  description: Todos os campos são opcionais.
+  properties:
+    ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    statuses:
+      type: array
+      items:
+        $ref: "#/DebtStatus"
+    startDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+    endDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+    categoryNames:
+      type: array
+      items:
+        $ref: "#/DebtCategory"
+    parentId:
+      type: string
+      format: uuid
+      description: Lista as parcelas (filhas) da dívida informada.
+    includeChildren:
+      type: boolean
+      description: >-
+        Lista plana que inclui as parcelas junto das dívidas de nível-topo.
+        Sem isso (e sem parentId) só volta o nível-topo.

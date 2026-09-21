@@ -1,23 +1,48 @@
-@media (min-width: 992px) {
-    .mobile-menu-toggle {
-        display: none !important;
-    }
+/* Shell do Controle Mensal — sidebar "Controle" no desktop, barra de abas
+   fixa no mobile (ver src/layouts/MainLayout.tsx). */
 
-    .mobile-drawer {
-        display: none !important;
-    }
+.controle-bottom-tabs {
+  display: none;
+}
+
+/* Ações que só fazem sentido no mobile porque o desktop já tem equivalente
+   na sidebar "Controle" (ex.: sair, dentro de MesTab). */
+.mobile-only {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .controle-bottom-tabs {
+    display: none !important;
+  }
 }
 
 @media (max-width: 991px) {
-    .desktop-sider {
-        display: none !important;
-    }
+  .controle-sider {
+    display: none !important;
+  }
 
-    .desktop-menu-toggle {
-        display: none !important;
-    }
+  .mobile-only {
+    display: inline-flex !important;
+  }
 
-    .main-layout-content {
-        margin-left: 0 !important;
-    }
+  .controle-main {
+    padding: 16px 16px calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .controle-bottom-tabs {
+    display: grid !important;
+    /* uma coluna por item, qualquer que seja a quantidade de abas */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 2px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 90;
+    padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, var(--color-bg) 62%, rgba(22, 24, 38, 0));
+    backdrop-filter: blur(6px);
+  }
 }

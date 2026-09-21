@@ -10,6 +10,7 @@ import {
     Tooltip,
     Row,
     Col,
+    theme,
 } from 'antd';
 import {
     PlusOutlined,
@@ -54,6 +55,7 @@ function useIsMobile(maxWidth = 768) {
 }
 
 function InstrumentCard({ record }: { record: FinancialInstrument }) {
+    const { token } = theme.useToken();
     const typeConfig = record.instrumentType
         ? INSTRUMENT_TYPE_CONFIG[record.instrumentType]
         : null;
@@ -75,7 +77,7 @@ function InstrumentCard({ record }: { record: FinancialInstrument }) {
                 </div>
                 <code
                     style={{
-                        background: '#f5f5f5',
+                        background: token.colorFillTertiary,
                         padding: '4px 8px',
                         borderRadius: 4,
                         fontSize: 12,
@@ -100,6 +102,7 @@ function InstrumentCard({ record }: { record: FinancialInstrument }) {
 }
 
 export function FinancialInstruments() {
+    const { token } = theme.useToken();
     const [modalOpen, setModalOpen] = useState(false);
     const isMobile = useIsMobile();
     const { data: instruments, isLoading } = useFinancialInstruments();
@@ -128,7 +131,7 @@ export function FinancialInstruments() {
             render: (id: string) => (
                 <code
                     style={{
-                        background: '#f5f5f5',
+                        background: token.colorFillTertiary,
                         padding: '2px 8px',
                         borderRadius: 4,
                         fontSize: 12,

@@ -1,19 +1,10 @@
 export * from './generated';
 export * from './inferredTypes';
 export * from './hooks/useAuth';
-export * from './hooks/useIncomes';
-export * from './hooks/usePayments';
-export * from './hooks/useDebts';
-export * from './hooks/useFinancialInstruments';
-export * from './hooks/useCreateDebt';
-export * from './hooks/useCreatePayment';
-export * from './hooks/useCreateIncome';
-export * from './hooks/useCreateFinancialInstrument';
-export * from './hooks/useInstallments';
-export * from './hooks/useUpdateDebt';
-export * from './hooks/useRecurrences';
-export * from './hooks/useCreateRecurrence';
-export * from './hooks/useUpdateRecurrence';
+// financeManager: sem cobertura por hora — backend em reformulação (v2).
+// Hooks do novo módulo `finance` voltam aqui aos poucos, junto com as rotas
+// em openapi/index.yaml.
+export * from './hooks/useFinanceDebts';
 export * from './hooks/usePlayers';
 export * from './hooks/useCreatePlayer';
 export * from './hooks/useUpdatePlayer';
@@ -21,6 +12,8 @@ export * from './hooks/useSessions';
 export * from './hooks/useSession';
 export * from './hooks/useCreateSession';
 export * from './hooks/useUpdateSession';
+export * from './hooks/useCheckInPlayer';
+export * from './hooks/useCheckOutPlayer';
 export * from './hooks/useTeams';
 export * from './hooks/useCreateTeam';
 export * from './hooks/useUpdateTeam';

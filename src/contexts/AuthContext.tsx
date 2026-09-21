@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { authRequest, ApiError, setUnauthorizedHandler } from '../services/api';
 import { schemas } from '../api/generated';
 import { queryClient } from '../services/queryClient';
+import { FINANCE_MOCK, MOCK_TOKEN, MOCK_USER } from '../finance/mock/config';
 
 type UserResponse = typeof schemas.UserResponse._type;
 
@@ -63,6 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const initAuth = async () => {
+            if (FINANCE_MOCK) {
+                setToken(MOCK_TOKEN);
+                setUser(MOCK_USER);
+                setIsLoading(false);
+                return;
+            }
+
             const storedToken = localStorage.getItem(TOKEN_KEY);
             const storedUser = localStorage.getItem(USER_KEY);
 

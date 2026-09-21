@@ -10,6 +10,7 @@ import {
     Tooltip,
     Row,
     Col,
+    theme,
 } from 'antd';
 import {
     PlusOutlined,
@@ -45,6 +46,7 @@ function RecurrenceCard({
     record: Recurrence;
     onClick: () => void;
 }) {
+    const { token } = theme.useToken();
     const start = dayjs(record.startDate).format('DD/MM/YYYY');
     const end = record.endDate
         ? dayjs(record.endDate).format('DD/MM/YYYY')
@@ -61,9 +63,9 @@ function RecurrenceCard({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                     <Space size={4}>
-                        <SyncOutlined style={{ color: '#1890ff', fontSize: 14 }} />
+                        <SyncOutlined style={{ color: token.colorPrimary, fontSize: 14 }} />
                         <Text strong style={{ fontSize: 14 }}>{record.description}</Text>
-                        <EditOutlined style={{ color: '#1890ff', fontSize: 12 }} />
+                        <EditOutlined style={{ color: token.colorPrimary, fontSize: 12 }} />
                     </Space>
                     {record.active ? (
                         <Tag color="success" icon={<CheckCircleOutlined />} style={{ margin: 0 }}>
@@ -76,7 +78,7 @@ function RecurrenceCard({
                     )}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                    <Text strong style={{ color: '#cf1322', fontSize: 14 }}>
+                    <Text strong style={{ color: token.colorError, fontSize: 14 }}>
                         R$ {formatCurrency(parseFloat(record.amount))}
                     </Text>
                     <Tag color="blue" style={{ margin: 0 }}>
@@ -94,6 +96,7 @@ function RecurrenceCard({
 }
 
 export function Recurrences() {
+    const { token } = theme.useToken();
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedRecurrence, setSelectedRecurrence] = useState<Recurrence | null>(null);
     const isMobile = useIsMobile();
@@ -121,9 +124,9 @@ export function Recurrences() {
             key: 'description',
             render: (description: string) => (
                 <Space>
-                    <SyncOutlined style={{ color: '#1890ff' }} />
+                    <SyncOutlined style={{ color: token.colorPrimary }} />
                     <span style={{ fontWeight: 500 }}>{description}</span>
-                    <EditOutlined style={{ color: '#1890ff', fontSize: 12 }} />
+                    <EditOutlined style={{ color: token.colorPrimary, fontSize: 12 }} />
                 </Space>
             ),
         },
@@ -132,7 +135,7 @@ export function Recurrences() {
             dataIndex: 'amount',
             key: 'amount',
             render: (amount: string) => (
-                <Text strong style={{ color: '#cf1322' }}>
+                <Text strong style={{ color: token.colorError }}>
                     R$ {formatCurrency(parseFloat(amount))}
                 </Text>
             ),

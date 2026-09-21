@@ -1,5 +1,6 @@
 const API_BASE = '/api';
 const FINANCE_PATH = `${API_BASE}/financeManager`;
+const FINANCE_V2_PATH = `${API_BASE}/finance`;
 const AUTH_PATH = `${API_BASE}/auth`;
 const MATCHMAKING_PATH = `${API_BASE}/matchmaking`;
 
@@ -67,4 +68,12 @@ export async function matchmakingRequest<T>(
   options: RequestOptions = {}
 ): Promise<T> {
   return request<T>(`${MATCHMAKING_PATH}${endpoint}`, options);
+}
+
+/** Módulo `finance` do rust-api (sucessor do financeManager). */
+export async function financeRequest<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  return request<T>(`${FINANCE_V2_PATH}${endpoint}`, options);
 }

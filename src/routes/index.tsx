@@ -1,12 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { MainLayout } from '../layouts/MainLayout';
-import { Dashboard } from '../pages/Dashboard';
 import { Login } from '../pages/Login';
-import { FinancialInstruments } from '../pages/FinancialInstruments';
-import { DebtList } from '../pages/DebtList';
-import { IncomeList } from '../pages/IncomeList';
-import { Recurrences } from '../pages/Recurrences';
-import { AccountMovements } from '../pages/AccountMovements';
+import { MesTab } from '../pages/controle-mensal/MesTab';
+import { ParcelasTab } from '../pages/controle-mensal/ParcelasTab';
+import { PainelTab } from '../pages/controle-mensal/PainelTab';
+import { DebtsTab } from '../pages/controle-mensal/DebtsTab';
+import { NovoTab } from '../pages/controle-mensal/NovoTab';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 
 export function AppRouter() {
@@ -22,13 +21,17 @@ export function AppRouter() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Dashboard />} />
-          <Route path="contas-a-pagar" element={<DebtList />} />
-          <Route path="receitas" element={<IncomeList />} />
-          <Route path="movimentacoes-conta" element={<AccountMovements />} />
-          <Route path="cadastros/instrumentos-financeiros" element={<FinancialInstruments />} />
-          <Route path="cadastros/recorrencias" element={<Recurrences />} />
-          <Route path="configuracoes" element={<div>Página de Configurações (em construção)</div>} />
+          {/* Controle Mensal: mesmo estado de mês/privacidade compartilhado
+              entre as 4 telas via FinanceMonthProvider (ver MainLayout). */}
+          <Route index element={<MesTab />} />
+          <Route path="parcelas" element={<ParcelasTab />} />
+          <Route path="painel" element={<PainelTab />} />
+          <Route path="debitos" element={<DebtsTab />} />
+          <Route path="novo" element={<NovoTab />} />
+
+          {/* Receitas, Extrato, Cadastros e Configurações removidos das rotas
+              por hora (a pedido do Gabriel) — telas continuam no repo,
+              intactas, só não estão mais no menu/roteamento. */}
         </Route>
         {/* Rota catch-all: redireciona para home */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Typography, Tag, Tabs, Button, App, Empty, Spin, Popconfirm, Select } from 'antd';
+import { Typography, Tag, Tabs, Button, App, Empty, Spin, Popconfirm, Select, Switch } from 'antd';
 import {
   ArrowLeftOutlined,
   PlusOutlined,
@@ -21,6 +21,8 @@ import {
   useMatches,
   useSessionQueue,
   useUpdateSession,
+  useCheckInPlayer,
+  useCheckOutPlayer,
   useFillCourts,
   usePinQueuePlayer,
   useDiscardDraft,
@@ -93,6 +95,8 @@ export function SessionDetail() {
   const { data: queue, isLoading: isLoadingQueue } = useSessionQueue(sessionId);
 
   const updateSession = useUpdateSession();
+  const checkInPlayer = useCheckInPlayer();
+  const checkOutPlayer = useCheckOutPlayer();
   const fillCourts = useFillCourts();
   const pinPlayer = usePinQueuePlayer();
   const discardDraft = useDiscardDraft();
@@ -274,33 +278,44 @@ export function SessionDetail() {
     .filter((player): player is NonNullable<typeof player> => player != null)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const playersNotInSession = (players ?? [])
+  // The session roster (players selected for the day). Check-in toggles happen
+  // within this list; someone not on the roster has to be added via RosterSheet
+  // first.
+  const rosterPlayers = session.rosterPlayerIds
+    .map((id) => playerById.get(id))
+    .filter((player): player is NonNullable<typeof player> => player != null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const rosteredNotCheckedIn = rosterPlayers
     .filter((player) => !session.playerIds.includes(player.id))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const hasMatches = !!matches?.length;
   const idleCourtCount = courtStates.filter((c) => !c.running).length;
 
+  const runMutation = async (fn: () => Promise<unknown>, ok: string) => {
+    try {
+      await fn();
+      message.success(ok);
+    } catch (error) {
+      if (error instanceof Error) message.error(error.message);
+    }
+  };
+
   const openRosterSheet = () => {
-    setRosterSelection(session.playerIds);
+    setRosterSelection(session.rosterPlayerIds);
     setRosterSheetOpen(true);
   };
 
   const handleSaveRoster = async () => {
     if (!sessionId) return;
     try {
-      await updateSession.mutateAsync({ sessionId, data: { playerIds: rosterSelection } });
-      message.success('Jogadores da sessão atualizados!');
+      await updateSession.mutateAsync({
+        sessionId,
+        data: { rosterPlayerIds: rosterSelection },
+      });
+      message.success('Roster da sessão atualizado!');
       setRosterSheetOpen(false);
-    } catch (error) {
-      if (error instanceof Error) message.error(error.message);
-    }
-  };
-
-  const runMutation = async (fn: () => Promise<unknown>, ok: string) => {
-    try {
-      await fn();
-      message.success(ok);
     } catch (error) {
       if (error instanceof Error) message.error(error.message);
     }
@@ -327,28 +342,23 @@ export function SessionDetail() {
       pinned ? 'Jogador fixado no topo da fila.' : 'Jogador desafixado.',
     );
 
-  // Quick roster tweak from the queue view: someone gives up mid-session, or
-  // a latecomer joins. Goes through updateSession, which syncs session_queue
-  // (removed → leaves the list; added → joins with 0 games, behind everyone
-  // else who hasn't played).
+  // Check-in / check-out of a rostered player, from the "Jogadores" toggles or
+  // the queue view: someone gives up mid-session, or a latecomer arrives. The
+  // single-player check-in/out endpoints sync session_queue too — checked out
+  // leaves the list; checked in joins the queue with gamesPlayed derived from
+  // the match record, so a re-check-in keeps the fair (games-played) ordering
+  // instead of jumping the front. Only players already on the roster can be
+  // checked in (backend returns 409 otherwise).
   const handleLeaveSession = (playerId: string) =>
     runMutation(
-      () =>
-        updateSession.mutateAsync({
-          sessionId: session.id,
-          data: { playerIds: session.playerIds.filter((id) => id !== playerId) },
-        }),
-      'Jogador saiu da sessão.',
+      () => checkOutPlayer.mutateAsync({ sessionId: session.id, playerId }),
+      'Check-out feito; jogador saiu da fila.',
     );
 
   const handleJoinSession = (playerId: string) =>
     runMutation(
-      () =>
-        updateSession.mutateAsync({
-          sessionId: session.id,
-          data: { playerIds: [...session.playerIds, playerId] },
-        }),
-      'Jogador entrou na fila.',
+      () => checkInPlayer.mutateAsync({ sessionId: session.id, playerId }),
+      'Check-in feito; jogador entrou na fila.',
     );
 
   const startCourt = (court: number, teamAId: string, teamBId: string) =>
@@ -671,13 +681,13 @@ export function SessionDetail() {
                 <Select
                   showSearch
                   value={null}
-                  placeholder="Adicionar jogador à fila…"
+                  placeholder="Check-in de jogador do roster…"
                   optionFilterProp="label"
                   style={{ width: '100%', marginBottom: 12 }}
-                  loading={updateSession.isPending}
-                  disabled={!playersNotInSession.length}
+                  loading={checkInPlayer.isPending}
+                  disabled={!rosteredNotCheckedIn.length}
                   onChange={(playerId: string) => handleJoinSession(playerId)}
-                  options={playersNotInSession.map((player) => ({ label: player.name, value: player.id }))}
+                  options={rosteredNotCheckedIn.map((player) => ({ label: player.name, value: player.id }))}
                 />
 
                 {isLoadingQueue && (
@@ -708,13 +718,13 @@ export function SessionDetail() {
                           onClick={() => handlePin(entry.playerId, !entry.pinned)}
                         />
                         <Popconfirm
-                          title="Tirar da sessão?"
-                          description={`${entry.name} sai da fila e da lista de confirmados.`}
-                          okText="Tirar"
+                          title="Fazer check-out?"
+                          description={`${entry.name} sai da fila. Continua no roster da sessão.`}
+                          okText="Check-out"
                           cancelText="Cancelar"
                           onConfirm={() => handleLeaveSession(entry.playerId)}
                         >
-                          <Button size="small" danger icon={<DeleteOutlined />} loading={updateSession.isPending} />
+                          <Button size="small" danger icon={<DeleteOutlined />} loading={checkOutPlayer.isPending} />
                         </Popconfirm>
                       </div>
                     </div>
@@ -759,59 +769,85 @@ export function SessionDetail() {
           },
           {
             key: 'players',
-            label: `Jogadores (${confirmedPlayers.length})`,
+            label: `Jogadores (${confirmedPlayers.length}/${rosterPlayers.length})`,
             children: (
               <div>
+                <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>
+                  Marque o check-in de quem está presente e disponível para jogar — quem está marcado
+                  entra na fila para os sorteios. Para incluir ou remover jogadores da sessão, edite o
+                  roster.
+                </Text>
+
                 <Button
                   block
                   icon={<EditOutlined />}
-                  loading={isLoadingPlayers}
+                  loading={isLoadingPlayers || updateSession.isPending}
                   onClick={openRosterSheet}
                   style={{ marginBottom: 16 }}
                 >
-                  Editar jogadores confirmados
+                  Editar roster da sessão
                 </Button>
-                {!confirmedPlayers.length && <Empty description="Nenhum jogador confirmado ainda." />}
+
+                {isLoadingPlayers && (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+                    <Spin />
+                  </div>
+                )}
+                {!isLoadingPlayers && !rosterPlayers.length && (
+                  <Empty description="Nenhum jogador no roster ainda." />
+                )}
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {confirmedPlayers.map((player) => (
-                    <div
-                      key={player.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                        background: '#fff',
-                        borderRadius: 12,
-                        padding: '14px 16px',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
-                      }}
-                    >
+                  {rosterPlayers.map((player) => {
+                    const checkedIn = session.playerIds.includes(player.id);
+                    return (
                       <div
+                        key={player.id}
                         style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: '50%',
-                          background: player.gender === 'male' ? '#e6f4ff' : '#fff0f6',
-                          color: player.gender === 'male' ? '#1677ff' : '#eb2f96',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 18,
-                          flexShrink: 0,
+                          gap: 12,
+                          background: '#fff',
+                          borderRadius: 12,
+                          padding: '14px 16px',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
+                          opacity: checkedIn ? 1 : 0.55,
                         }}
                       >
-                        <UserOutlined />
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: player.gender === 'male' ? '#e6f4ff' : '#fff0f6',
+                            color: player.gender === 'male' ? '#1677ff' : '#eb2f96',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 18,
+                            flexShrink: 0,
+                          }}
+                        >
+                          <UserOutlined />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Text strong style={{ display: 'block' }}>
+                            {player.name}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            {genderLabel[player.gender]}
+                          </Text>
+                        </div>
+                        <Switch
+                          checked={checkedIn}
+                          loading={checkInPlayer.isPending || checkOutPlayer.isPending}
+                          onChange={(next) =>
+                            next ? handleJoinSession(player.id) : handleLeaveSession(player.id)
+                          }
+                        />
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <Text strong style={{ display: 'block' }}>
-                          {player.name}
-                        </Text>
-                      </div>
-                      <Tag color={player.gender === 'male' ? 'blue' : 'magenta'} style={{ marginRight: 0 }}>
-                        {genderLabel[player.gender]}
-                      </Tag>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ),

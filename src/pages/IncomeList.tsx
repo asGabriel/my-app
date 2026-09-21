@@ -23,13 +23,14 @@ interface IncomeCardProps {
 }
 
 function IncomeCard({ item }: IncomeCardProps) {
+    const { token } = theme.useToken();
     const referenceDate = dayjs(item.reference);
 
     return (
         <Card
             size="small"
             style={{
-                borderLeft: '4px solid #52c41a',
+                borderLeft: `4px solid ${token.colorSuccess}`,
             }}
             styles={{ body: { padding: '10px 12px' } }}
         >
@@ -42,7 +43,7 @@ function IncomeCard({ item }: IncomeCardProps) {
                         Ref. {referenceDate.format('DD/MM/YYYY')}
                     </Text>
                 </div>
-                <Text strong style={{ fontSize: 14, color: '#52c41a' }}>
+                <Text strong style={{ fontSize: 14, color: token.colorSuccess }}>
                     {formatCurrency(parseFloat(item.amount))}
                 </Text>
             </div>

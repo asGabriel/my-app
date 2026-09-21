@@ -140,6 +140,68 @@ session:
             schema:
               $ref: "../schemas/matchmaking.yaml#/Session"
 
+checkIn:
+  post:
+    operationId: checkInPlayer
+    summary: Confirma (check-in) um jogador na sessão
+    description: >-
+      Adiciona o jogador à lista de presentes (playerIds) e à fila de espera
+      da sessão, tornando-o elegível para os sorteios de quadra. O jogador
+      precisa estar no roster da sessão (rosterPlayerIds) — responde 409 se
+      não estiver. Idempotente. Responde 404 se a sessão ou o jogador não
+      existir.
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: playerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Sessão atualizada com o jogador confirmado
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Session"
+  delete:
+    operationId: checkOutPlayer
+    summary: Faz check-out de um jogador da sessão
+    description: >-
+      Remove o jogador da lista de presentes (playerIds) e da fila de espera
+      da sessão. O jogador continua no roster. Idempotente. Responde 404 se a
+      sessão ou o jogador não existir.
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: playerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Sessão atualizada sem o jogador
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/matchmaking.yaml#/Session"
+
 teams:
   post:
     operationId: createTeam
