@@ -83,7 +83,7 @@ function OccRow({ occurrence, onPay, onTap }: { occurrence: Occurrence; onPay: (
             <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em' }}>{money(o.amount, privado)}</div>
             <div style={{ fontSize: 11, color: tagColor, marginTop: 2 }}>{tag}</div>
           </div>
-          {!o.isPaid && o.debtId && (
+          {!o.isPaid && o.debtId && o.payable && (
             <button
               className="btn btn-primary"
               onClick={(e) => { e.stopPropagation(); onPay(); }}
@@ -102,7 +102,8 @@ function OccRow({ occurrence, onPay, onTap }: { occurrence: Occurrence; onPay: (
 export function MesTab() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { selected, getOccurrences, getTotals, privado, togglePrivado, openDetail, openPay } = useFinanceMonth();
+  const { selected, getOccurrences, getTotals, privado, togglePrivado, openDetail, openPay, isLoading, isError, error, refetch } =
+    useFinanceMonth();
   const { year, month0 } = selected;
 
   const handleLogout = () => {
@@ -243,7 +244,18 @@ export function MesTab() {
         <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--color-accent-200)' }}>{alerta.text}</div>
       </div>
 
-      {groups.length === 0 ? (
+      {isLoading ? (
+        <div style={{ marginTop: 24, fontSize: 13, color: 'var(--color-neutral-500)', textAlign: 'center', padding: '24px 0' }}>
+          Carregando…
+        </div>
+      ) : isError ? (
+        <div style={{ marginTop: 24, textAlign: 'center' }}>
+          <div style={{ fontSize: 13, color: 'var(--color-accent-300)' }}>
+            {error instanceof Error ? error.message : 'Erro ao carregar os lançamentos do mês.'}
+          </div>
+          <button className="btn btn-secondary" onClick={refetch} style={{ marginTop: 12 }}>Tentar de novo</button>
+        </div>
+      ) : groups.length === 0 ? (
         <div style={{ marginTop: 24, fontSize: 13, color: 'var(--color-neutral-500)', textAlign: 'center', padding: '24px 0' }}>
           Nenhum lançamento neste mês.
         </div>

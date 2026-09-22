@@ -1,12 +1,10 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import dayjs from 'dayjs';
+import { useFinanceDebts, type Debt } from '../api';
 import {
-  useDebts,
-  useInstallments,
   useRecurrences,
   useIncomes,
   useFinancialInstruments,
-  type Debt,
   type FinancialInstrument,
 } from './mock';
 import {
@@ -49,6 +47,11 @@ interface FinanceMonthContextValue {
   privado: boolean;
   togglePrivado: () => void;
   isLoading: boolean;
+  /** Erro ao buscar os débitos reais (módulo `finance`) — renda/recorrência
+   * seguem no mock e não falham. */
+  isError: boolean;
+  error: unknown;
+  refetch: () => void;
   getOccurrences: (year: number, month0: number) => Occurrence[];
   getTotals: (year: number, month0: number) => MonthTotals;
   debtsById: Map<string, Debt>;
@@ -93,53 +96,47 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
     [windowStart, windowEnd]
   );
 
-  const { data: debts, isLoading: isLoadingDebts } = useDebts(dateFilters);
-  const { data: installments, isLoading: isLoadingInstallments } = useInstallments(dateFilters);
+  // Débitos avulsos/recorrentes-materializados e parcelas (filhas) que vencem
+  // na janela — numa única chamada, como já faz o resto do Controle Mensal
+  // (ParcelasTab, DebtsTab). Com filtro de data o backend não devolve os pais
+  // de parcelamento (due_date nulo neles), então eles vêm numa 2ª request.
+  const monthFilters = useMemo(() => ({ includeChildren: true, ...dateFilters }), [dateFilters]);
+  const { data: windowDebts, isLoading: isLoadingDebts, isError: isDebtsError, error: debtsError, refetch: refetchDebts } =
+    useFinanceDebts(monthFilters);
   const { data: recurrences, isLoading: isLoadingRecurrences } = useRecurrences({ active: true });
   const { data: incomes, isLoading: isLoadingIncomes } = useIncomes(dateFilters);
   const { data: financialInstruments } = useFinancialInstruments();
 
-  // Parcelas com débito-pai fora da janela de busca (ex.: 48x iniciado há anos)
-  const extraDebtIds = useMemo(() => {
-    if (!installments) return [];
-    const known = new Set(debts?.map((d) => d.id) ?? []);
-    const ids = new Set<string>();
-    installments.forEach((i) => {
-      if (!known.has(i.debtId)) ids.add(i.debtId);
-    });
-    return Array.from(ids);
-  }, [installments, debts]);
-
-  const { data: extraDebts } = useDebts({ ids: extraDebtIds }, extraDebtIds.length > 0);
+  const parentIds = useMemo(
+    () => Array.from(new Set((windowDebts ?? []).flatMap((d) => (d.parentId ? [d.parentId] : [])))),
+    [windowDebts]
+  );
+  const { data: parents } = useFinanceDebts({ ids: parentIds }, parentIds.length > 0);
 
   const debtsById = useMemo(() => {
     const map = new Map<string, Debt>();
-    debts?.forEach((d) => map.set(d.id, d));
-    extraDebts?.forEach((d) => map.set(d.id, d));
+    windowDebts?.forEach((d) => map.set(d.id, d));
+    parents?.forEach((d) => map.set(d.id, d));
     return map;
-  }, [debts, extraDebts]);
-
-  const allDebts = useMemo(() => Array.from(debtsById.values()), [debtsById]);
+  }, [windowDebts, parents]);
 
   const occurrencesByMonth = useMemo(() => {
     const map = new Map<string, Occurrence[]>();
-    if (!installments || !recurrences) return map;
+    if (!windowDebts || !recurrences) return map;
     let cursor = windowStart;
     while (cursor.isBefore(windowEnd) || cursor.isSame(windowEnd, 'month')) {
       const key = monthKey(cursor.year(), cursor.month());
       map.set(
         key,
         buildMonthOccurrences(cursor.year(), cursor.month(), {
-          debts: allDebts,
-          installments,
-          debtsById,
+          debts: windowDebts,
           recurrences,
         })
       );
       cursor = cursor.add(1, 'month');
     }
     return map;
-  }, [allDebts, installments, debtsById, recurrences, windowStart, windowEnd]);
+  }, [windowDebts, recurrences, windowStart, windowEnd]);
 
   const incomeByMonth = useMemo(() => {
     const map = new Map<string, number>();
@@ -172,7 +169,10 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
     selected: { year: selected.year, month0: selected.month0 },
     privado,
     togglePrivado: () => setPrivado((p) => !p),
-    isLoading: isLoadingDebts || isLoadingInstallments || isLoadingRecurrences || isLoadingIncomes,
+    isLoading: isLoadingDebts || isLoadingRecurrences || isLoadingIncomes,
+    isError: isDebtsError,
+    error: debtsError,
+    refetch: () => void refetchDebts(),
     getOccurrences,
     getTotals,
     debtsById,

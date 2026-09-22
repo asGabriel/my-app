@@ -1,9 +1,14 @@
 /**
  * Motor de cálculo do "Controle Mensal" — deriva, a partir dos dados reais da
- * API (Debt, Installment, Recurrence, Income), a mesma visão de regime de
- * caixa mensal do protótipo Claude Design ("Controle Mensal v2"): quanto
- * sai/saiu da conta em cada mês, quebra por tipo (fixo/variável/parcelado),
- * por categoria, e projeção dos próximos meses.
+ * API (Debt, Recurrence, Income), a mesma visão de regime de caixa mensal do
+ * protótipo Claude Design ("Controle Mensal v2"): quanto sai/saiu da conta em
+ * cada mês, quebra por tipo (fixo/variável/parcelado), por categoria, e
+ * projeção dos próximos meses.
+ *
+ * `Debt` (débitos avulsos/recorrentes materializados e parcelas) já vem do
+ * módulo `finance` (rust-api) via `useFinanceDebts`. `Recurrence` e `Income`
+ * ainda não têm rota no backend — seguem vindo do mock (ver
+ * `FinanceMonthContext`) até o backend ganhar renda e recorrência.
  *
  * Limitações conhecidas do modelo de dados (ver rust-api):
  * - `Debt` não guarda o instrumento financeiro (cartão/conta) antes do
@@ -14,10 +19,15 @@
  *   job que roda mês a mês (`generate_current_recurrences`). Para meses
  *   futuros ainda não gerados, projetamos a ocorrência a partir da regra
  *   da recorrência (só existe recorrência "fixa" no backend).
+ * - Não existe rota de pagamento no módulo `finance` ainda. Toda `Occurrence`
+ *   derivada de um `Debt` real vem com `payable: false` — o botão "Pagar" só
+ *   aparece hoje nas ocorrências projetadas do mock (nenhuma, já que essas
+ *   nunca tiveram `debtId`). Quando o backend ganhar `POST /finance/payment`,
+ *   basta virar `payable: true` aqui.
  */
 import dayjs from 'dayjs';
-import type { Debt, Installment, Recurrence, Income } from './mock';
-import { schemas } from '../api';
+import { schemas, type Debt } from '../api';
+import type { Recurrence, Income } from './mock';
 import type { DebtCategory } from '../utils/constants';
 
 export type OccKind = 'fixo' | 'variavel' | 'parcelado';
@@ -38,13 +48,17 @@ export interface Occurrence {
   paidAmount: number;
   isPaid: boolean;
   dueDay: number;
-  /** Débito real (permite pagar/ver detalhe). Ausente quando `projected`. */
+  /** Débito real (permite ver detalhe). Ausente quando `projected`. */
   debtId?: string;
   installmentId?: number;
   installmentCount?: number;
   /** true = sintetizado a partir de uma Recurrence ainda não gerada como Debt. */
   projected: boolean;
   recurrenceId?: string;
+  /** true = dá para registrar pagamento por aqui. O backend ainda não expõe
+   * pagamento no módulo `finance`, então nenhuma ocorrência real é pagável
+   * por ora (ver nota no topo do arquivo). */
+  payable: boolean;
 }
 
 export interface MonthTotals {
@@ -78,58 +92,63 @@ function hasRealInstallments(debt: Debt): boolean {
   return typeof debt.installmentCount === 'number' && debt.installmentCount >= 1;
 }
 
-/** Débitos avulsos/recorrentes-materializados que caem no mês (não-parcelados). */
+function isDueIn(dueDate: string | null | undefined, year: number, month0: number): boolean {
+  if (!dueDate) return false;
+  const due = dayjs(dueDate);
+  return due.year() === year && due.month() === month0;
+}
+
+/**
+ * Débitos avulsos/recorrentes-materializados que caem no mês — dívidas de
+ * nível-topo (sem `parentId`) e sem parcelamento. As filhas de um
+ * parcelamento (`parentId` preenchido) são tratadas à parte, em
+ * `occurrencesFromInstallments`.
+ */
 function occurrencesFromDebts(debts: Debt[], year: number, month0: number): Occurrence[] {
   return debts
-    .filter((d) => !hasRealInstallments(d))
-    .filter((d) => {
-      const due = dayjs(d.dueDate);
-      return due.year() === year && due.month() === month0;
-    })
+    .filter((d) => !d.parentId && !hasRealInstallments(d))
+    .filter((d) => isDueIn(d.dueDate, year, month0))
     .map((d) => ({
       key: `debt-${d.id}`,
-      kind: (d.expenseType === 'FIXED' ? 'fixo' : 'variavel') as OccKind,
+      kind: (d.expenseType === schemas.ExpenseType.enum.FIXED ? 'fixo' : 'variavel') as OccKind,
       name: d.description,
       category: toCategory(d.category),
       amount: parseFloat(d.totalAmount),
       paidAmount: parseFloat(d.paidAmount),
-      isPaid: d.status === 'SETTLED',
+      isPaid: d.status === schemas.DebtStatus.enum.SETTLED,
       dueDay: dayjs(d.dueDate).date(),
       debtId: d.id,
       projected: false,
+      payable: false,
     }));
 }
 
-/** Parcelas (de débitos parcelados) que vencem no mês. */
-function occurrencesFromInstallments(
-  installments: Installment[],
-  debtsById: Map<string, Debt>,
-  year: number,
-  month0: number
-): Occurrence[] {
-  return installments
-    .filter((i) => {
-      const due = dayjs(i.dueDate);
-      return due.year() === year && due.month() === month0;
-    })
-    .map((i) => {
-      const parent = debtsById.get(i.debtId);
-      const amount = parseFloat(i.amount);
-      return {
-        key: `inst-${i.debtId}-${i.installmentId}`,
-        kind: 'parcelado' as OccKind,
-        name: parent?.description ?? 'Parcela',
-        category: toCategory(parent?.category),
-        amount,
-        paidAmount: i.isPaid ? amount : 0,
-        isPaid: i.isPaid,
-        dueDay: dayjs(i.dueDate).date(),
-        debtId: i.debtId,
-        installmentId: i.installmentId,
-        installmentCount: parent?.installmentCount ?? undefined,
-        projected: false,
-      };
-    });
+/**
+ * Parcelas (dívidas-filhas, `parentId` preenchido) que vencem no mês. Uma
+ * filha já copia description/categoria/installmentCount do pai na criação
+ * (ver rust-api `Debt::generate_installment_children`), então não precisa de
+ * lookup no pai para exibição — só o pai sabe o total ainda em aberto do
+ * parcelamento inteiro (`remainingAmount`), consultado à parte quando
+ * necessário (ver `DetailSheet`).
+ */
+function occurrencesFromInstallments(children: Debt[], year: number, month0: number): Occurrence[] {
+  return children
+    .filter((d) => isDueIn(d.dueDate, year, month0))
+    .map((d) => ({
+      key: `debt-${d.id}`,
+      kind: 'parcelado' as OccKind,
+      name: d.description,
+      category: toCategory(d.category),
+      amount: parseFloat(d.totalAmount),
+      paidAmount: parseFloat(d.paidAmount),
+      isPaid: d.status === schemas.DebtStatus.enum.SETTLED,
+      dueDay: dayjs(d.dueDate).date(),
+      debtId: d.id,
+      installmentId: d.installmentNumber ?? undefined,
+      installmentCount: d.installmentCount ?? undefined,
+      projected: false,
+      payable: false,
+    }));
 }
 
 /**
@@ -160,7 +179,7 @@ function occurrencesFromRecurrences(
         (d) =>
           !hasRealInstallments(d) &&
           d.description === r.description &&
-          d.expenseType === 'FIXED' &&
+          d.expenseType === schemas.ExpenseType.enum.FIXED &&
           Math.abs(parseFloat(d.totalAmount) - parseFloat(r.amount)) < 0.005
       );
       return !already;
@@ -177,6 +196,7 @@ function occurrencesFromRecurrences(
         isPaid: false,
         dueDay: day,
         projected: true,
+        payable: false,
         recurrenceId: r.id,
       };
     });
@@ -185,15 +205,15 @@ function occurrencesFromRecurrences(
 export function buildMonthOccurrences(
   year: number,
   month0: number,
-  data: { debts: Debt[]; installments: Installment[]; debtsById: Map<string, Debt>; recurrences: Recurrence[] }
+  data: { debts: Debt[]; recurrences: Recurrence[] }
 ): Occurrence[] {
-  const debtsThisMonth = data.debts.filter((d) => {
-    const due = dayjs(d.dueDate);
-    return due.year() === year && due.month() === month0;
-  });
-  const fromDebts = occurrencesFromDebts(data.debts, year, month0);
-  const fromInstallments = occurrencesFromInstallments(data.installments, data.debtsById, year, month0);
-  const fromRecurrences = occurrencesFromRecurrences(data.recurrences, debtsThisMonth, year, month0);
+  const singles = data.debts.filter((d) => !d.parentId);
+  const children = data.debts.filter((d) => !!d.parentId);
+  const singlesThisMonth = singles.filter((d) => isDueIn(d.dueDate, year, month0));
+
+  const fromDebts = occurrencesFromDebts(singles, year, month0);
+  const fromInstallments = occurrencesFromInstallments(children, year, month0);
+  const fromRecurrences = occurrencesFromRecurrences(data.recurrences, singlesThisMonth, year, month0);
 
   return [...fromDebts, ...fromInstallments, ...fromRecurrences].sort((a, b) => a.dueDay - b.dueDay);
 }
@@ -263,12 +283,4 @@ export function computeMix(totals: MonthTotals): MixSlice[] {
       amount,
       pct: totals.total > 0 ? Math.round((amount / totals.total) * 100) : 0,
     }));
-}
-
-/** Débitos parcelados ainda ativos (não quitados) que têm ocorrência no mês. */
-export function activeInstallmentDebts(occurrences: Occurrence[], debtsById: Map<string, Debt>): Debt[] {
-  const ids = new Set(occurrences.filter((o) => o.kind === 'parcelado' && o.debtId).map((o) => o.debtId!));
-  return Array.from(ids)
-    .map((id) => debtsById.get(id))
-    .filter((d): d is Debt => !!d && d.status !== 'SETTLED');
 }
