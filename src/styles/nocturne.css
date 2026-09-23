@@ -82,6 +82,64 @@ h1, h2, h3, h4, h5, h6 {
   display: none;
 }
 
+/* — horizontal scroller (HorizontalScroller) — */
+.hscroll {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+.hscroll-track {
+  position: relative;
+  display: flex;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+}
+.hscroll-track > * {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+}
+.hscroll-fade-left {
+  mask-image: linear-gradient(to right, transparent, #000 32px);
+}
+.hscroll-fade-right {
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+.hscroll-fade-left.hscroll-fade-right {
+  mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+}
+.hscroll-arrow {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--color-divider);
+  background: var(--color-surface);
+  color: var(--color-neutral-300);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+.hscroll-arrow-left {
+  left: 0;
+}
+.hscroll-arrow-right {
+  right: 0;
+}
+/* setas só em dispositivos com mouse; no touch o swipe já resolve */
+@media (hover: hover) and (pointer: fine) {
+  .hscroll-arrow {
+    display: inline-flex;
+  }
+}
+
 /* — buttons — */
 .btn {
   display: inline-flex;

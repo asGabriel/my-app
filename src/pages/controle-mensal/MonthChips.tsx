@@ -1,10 +1,11 @@
+import { HorizontalScroller } from '../../components/HorizontalScroller';
 import { useFinanceMonth } from '../../finance/FinanceMonthContext';
 
 export function MonthChips() {
   const { months, mi, setMi } = useFinanceMonth();
 
   return (
-    <div className="mzs" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+    <HorizontalScroller activeIndex={mi} ariaLabel="Selecionar mês">
       {months.map((m, i) => {
         const active = i === mi;
         return (
@@ -12,12 +13,12 @@ export function MonthChips() {
             key={`${m.year}-${m.month0}`}
             onClick={() => setMi(i)}
             className={active ? 'pill pill-active' : 'pill'}
-            style={{ flex: '0 0 auto' }}
+            aria-pressed={active}
           >
             {m.chip}
           </button>
         );
       })}
-    </div>
+    </HorizontalScroller>
   );
 }
