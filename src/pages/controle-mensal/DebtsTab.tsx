@@ -1,10 +1,11 @@
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import { schemas, useFinanceDebts, type Debt, type DebtFilters } from '../../api';
+import { schemas, useFinanceDebts, useFinanceLists, type Debt, type DebtFilters, type DebtList } from '../../api';
 import { useFinanceMonth, MESES_LONGOS } from '../../finance/FinanceMonthContext';
 import { money, short } from '../../finance/format';
 import { categoryIcon } from '../../finance/categoryIcon';
 import { EXPENSE_TYPE_LABELS } from '../../utils/constants';
+import { DebtListSheet } from '../../components/DebtListSheet';
 import { MonthChips } from './MonthChips';
 
 type StatusFilter = 'all' | 'open' | 'settled';
@@ -15,19 +16,53 @@ const STATUS_OPTIONS: { v: StatusFilter; label: string }[] = [
   { v: 'settled', label: 'Quitadas' },
 ];
 
+/** `null` = "Todos". Qualquer outro valor é o `id` de uma lista. */
+type ListFilter = string | null;
+
 /** Lista plana do mês selecionado: débitos comuns + parcelas (filhas) que
  * vencem nele. Com filtro de data o backend já deixa o pai do parcelamento de
- * fora (ele não tem `due_date`), então o pai é buscado à parte (ver DebtsTab). */
-function buildFilters(filter: StatusFilter, year: number, month0: number): DebtFilters {
+ * fora (ele não tem `due_date`), então o pai é buscado à parte (ver DebtsTab).
+ * Status e lista são filtrados no cliente sobre o mês inteiro, para os chips
+ * de lista não sumirem/aparecerem ao trocar o status. */
+function buildFilters(year: number, month0: number): DebtFilters {
   const first = dayjs(new Date(year, month0, 1));
-  const base: DebtFilters = {
+  return {
     includeChildren: true,
     startDate: first.format('YYYY-MM-DD'),
     endDate: first.endOf('month').format('YYYY-MM-DD'),
   };
-  if (filter === 'open') return { ...base, statuses: [schemas.DebtStatus.enum.OPEN] };
-  if (filter === 'settled') return { ...base, statuses: [schemas.DebtStatus.enum.SETTLED] };
-  return base;
+}
+
+function matchesStatus(debt: Debt, filter: StatusFilter): boolean {
+  if (filter === 'open') return debt.status === schemas.DebtStatus.enum.OPEN;
+  if (filter === 'settled') return debt.status === schemas.DebtStatus.enum.SETTLED;
+  return true;
+}
+
+/** Chips de lista, no estilo dos filtros do WhatsApp: "Todos" + só as listas
+ * que têm algum débito no mês. Sem nenhuma lista no mês, a linha nem aparece. */
+function ListChips({ lists, value, onChange }: { lists: DebtList[]; value: ListFilter; onChange: (v: ListFilter) => void }) {
+  if (lists.length === 0) return null;
+
+  const options: { v: ListFilter; label: string }[] = [
+    { v: null, label: 'Todos' },
+    ...lists.map((l) => ({ v: l.id, label: l.name })),
+  ];
+
+  return (
+    <div className="mzs" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, marginTop: 12 }}>
+      {options.map((o) => (
+        <button
+          key={o.v ?? 'all'}
+          onClick={() => onChange(o.v)}
+          className={value === o.v ? 'pill pill-active' : 'pill'}
+          style={{ flex: '0 0 auto' }}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function DebtTag({ debt, privado }: { debt: Debt; privado: boolean }) {
@@ -38,26 +73,39 @@ function DebtTag({ debt, privado }: { debt: Debt; privado: boolean }) {
   return <span style={{ color: 'var(--color-neutral-500)' }}>em aberto</span>;
 }
 
-/** Linha única e curta: "1/3 · 10/10 · resta R$ 1.000" (parcela) ou "vence 10/10 · fixa".
+/** Linha única e curta: "1/3 · 10/10 · resta R$ 1.000" (parcela) ou "vence 10/10 · fixa",
+ * seguida do nome da lista quando houver.
  * A contagem de parcelas e o restante vêm do pai: nas filhas o backend pode devolver a contagem nula. */
-function subtitle(debt: Debt, parent: Debt | undefined, privado: boolean): string {
+function subtitle(debt: Debt, parent: Debt | undefined, listName: string | undefined, privado: boolean): string {
   const due = debt.dueDate ? dayjs(debt.dueDate).format('DD/MM') : null;
   if (!debt.parentId) {
-    return [due && `vence ${due}`, EXPENSE_TYPE_LABELS[debt.expenseType].toLowerCase()].filter(Boolean).join(' · ');
+    return [due && `vence ${due}`, EXPENSE_TYPE_LABELS[debt.expenseType].toLowerCase(), listName].filter(Boolean).join(' · ');
   }
   const count = parent?.installmentCount ?? debt.installmentCount ?? '?';
   const rest = parent && `resta ${short(parseFloat(parent.remainingAmount), privado)}`;
-  return [`${debt.installmentNumber}/${count}`, due, rest].filter(Boolean).join(' · ');
+  return [`${debt.installmentNumber}/${count}`, due, rest, listName].filter(Boolean).join(' · ');
 }
 
-function DebtRow({ debt, parent, privado }: { debt: Debt; parent?: Debt; privado: boolean }) {
+interface DebtRowProps {
+  debt: Debt;
+  parent?: Debt;
+  listName?: string;
+  privado: boolean;
+  onClick: () => void;
+}
+
+function DebtRow({ debt, parent, listName, privado, onClick }: DebtRowProps) {
   const settled = debt.status === schemas.DebtStatus.enum.SETTLED;
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
       style={{
         display: 'grid', gridTemplateColumns: '34px minmax(0, 1fr) auto', gap: 12, alignItems: 'center',
-        padding: '11px 0', borderTop: '1px solid var(--color-divider)', opacity: settled ? 0.55 : 1,
+        padding: '11px 0', borderTop: '1px solid var(--color-divider)', opacity: settled ? 0.55 : 1, cursor: 'pointer',
       }}
     >
       <div className="avatar-icon" style={{ width: 34, height: 34, fontSize: 16 }}>
@@ -73,7 +121,7 @@ function DebtRow({ debt, parent, privado }: { debt: Debt; parent?: Debt; privado
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}
         >
-          {subtitle(debt, parent, privado)}
+          {subtitle(debt, parent, listName, privado)}
         </div>
       </div>
       <div style={{ textAlign: 'right' }}>
@@ -90,10 +138,29 @@ export function DebtsTab() {
   const { privado, togglePrivado, selected } = useFinanceMonth();
   const { year, month0 } = selected;
   const [filter, setFilter] = useState<StatusFilter>('all');
-  const { data, isLoading, isError, error, refetch } = useFinanceDebts(buildFilters(filter, year, month0));
+  const [listFilter, setListFilter] = useState<ListFilter>(null);
+  const [editing, setEditing] = useState<Debt | null>(null);
+  const { data, isLoading, isError, error, refetch } = useFinanceDebts(buildFilters(year, month0));
+  const { data: allLists } = useFinanceLists();
+  const lists = useMemo(() => allLists ?? [], [allLists]);
+  const listsById = useMemo(() => new Map(lists.map((l) => [l.id, l])), [lists]);
 
   // A API já devolve por vencimento (ORDER BY due_date ASC).
-  const debts = useMemo(() => data ?? [], [data]);
+  const monthDebts = useMemo(() => data ?? [], [data]);
+
+  // Só as listas com débito no mês, na ordem de criação que a API devolve.
+  const monthLists = useMemo(() => {
+    const used = new Set(monthDebts.flatMap((d) => (d.listId ? [d.listId] : [])));
+    return lists.filter((l) => used.has(l.id));
+  }, [monthDebts, lists]);
+
+  // Lista selecionada que não existe no mês novo cai para "Todos".
+  const activeList = monthLists.some((l) => l.id === listFilter) ? listFilter : null;
+
+  const debts = useMemo(
+    () => monthDebts.filter((d) => matchesStatus(d, filter) && (activeList === null || d.listId === activeList)),
+    [monthDebts, filter, activeList]
+  );
 
   // Pais dos parcelamentos que aparecem no mês (total/restante da compra).
   const parentIds = useMemo(
@@ -128,6 +195,8 @@ export function DebtsTab() {
       <div style={{ marginTop: 16 }}>
         <MonthChips />
       </div>
+
+      <ListChips lists={monthLists} value={activeList} onChange={setListFilter} />
 
       <div className="mzs" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, marginTop: 12 }}>
         {STATUS_OPTIONS.map((o) => (
@@ -172,9 +241,28 @@ export function DebtsTab() {
             Nenhum débito em {MESES_LONGOS[month0]}.
           </div>
         ) : (
-          debts.map((d) => <DebtRow key={d.id} debt={d} parent={d.parentId ? parentsById.get(d.parentId) : undefined} privado={privado} />)
+          debts.map((d) => (
+            <DebtRow
+              key={d.id}
+              debt={d}
+              parent={d.parentId ? parentsById.get(d.parentId) : undefined}
+              // Com uma lista filtrada o nome seria redundante em toda linha.
+              listName={activeList === null && d.listId ? listsById.get(d.listId)?.name : undefined}
+              privado={privado}
+              onClick={() => setEditing(d)}
+            />
+          ))
         )}
       </div>
+
+      {editing && (
+        <DebtListSheet
+          debt={editing}
+          parent={editing.parentId ? parentsById.get(editing.parentId) : undefined}
+          lists={lists}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }

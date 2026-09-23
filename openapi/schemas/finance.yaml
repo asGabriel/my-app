@@ -100,6 +100,58 @@ Debt:
       nullable: true
       description: "DateTime string (RFC3339)"
 
+DebtList:
+  type: object
+  description: Agrupador de dívidas (módulo finance). Dívidas apontam para ele via listId.
+  required:
+    - id
+    - clientId
+    - name
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    clientId:
+      type: string
+      format: uuid
+    name:
+      type: string
+    createdAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339)"
+
+CreateDebtListRequest:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+
+UpdateDebtRequest:
+  type: object
+  description: Todos os campos são opcionais; ausente = mantém o valor atual.
+  properties:
+    category:
+      $ref: "#/DebtCategory"
+    expenseType:
+      $ref: "#/ExpenseType"
+    listId:
+      type: string
+      format: uuid
+      nullable: true
+      description: null desvincula da lista; ausente mantém a lista atual.
+    description:
+      type: string
+    dueDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+
 DebtFilters:
   type: object
   description: Todos os campos são opcionais.

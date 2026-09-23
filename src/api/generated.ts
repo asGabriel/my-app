@@ -76,6 +76,26 @@ const Debt = z
     updatedAt: z.string().nullish(),
   })
   .passthrough();
+const UpdateDebtRequest = z
+  .object({
+    category: DebtCategory,
+    expenseType: ExpenseType,
+    listId: z.string().uuid().nullable(),
+    description: z.string(),
+    dueDate: z.string(),
+  })
+  .partial()
+  .passthrough();
+const DebtList = z
+  .object({
+    id: z.string().uuid(),
+    clientId: z.string().uuid(),
+    name: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
+  })
+  .passthrough();
+const CreateDebtListRequest = z.object({ name: z.string() }).passthrough();
 const Gender = z.enum(["male", "female"]);
 const CreatePlayerRequest = z
   .object({ name: z.string(), gender: Gender })
@@ -213,6 +233,9 @@ export const schemas = {
   DebtFilters,
   ExpenseType,
   Debt,
+  UpdateDebtRequest,
+  DebtList,
+  CreateDebtListRequest,
   Gender,
   CreatePlayerRequest,
   Player,
@@ -293,6 +316,26 @@ const endpoints = makeApi([
     ],
   },
   {
+    method: "patch",
+    path: "/finance/debt/:debtId",
+    alias: "updateFinanceDebt",
+    description: `Parcelas (filhas) não são editáveis — o backend responde 400. Mudar o listId de uma dívida-pai propaga para todas as parcelas.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateDebtRequest,
+      },
+      {
+        name: "debtId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Debt,
+  },
+  {
     method: "post",
     path: "/finance/debt/list",
     alias: "listFinanceDebts",
@@ -306,6 +349,28 @@ const endpoints = makeApi([
       },
     ],
     response: z.array(Debt),
+  },
+  {
+    method: "get",
+    path: "/finance/list",
+    alias: "listFinanceLists",
+    description: `Uma lista é só um agrupador: cada dívida aponta para no máximo uma via listId. Ordenadas por data de criação.`,
+    requestFormat: "json",
+    response: z.array(DebtList),
+  },
+  {
+    method: "post",
+    path: "/finance/list",
+    alias: "createFinanceList",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ name: z.string() }).passthrough(),
+      },
+    ],
+    response: DebtList,
   },
   {
     method: "post",

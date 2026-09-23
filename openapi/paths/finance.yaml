@@ -23,3 +23,70 @@ listDebts:
               type: array
               items:
                 $ref: "../schemas/finance.yaml#/Debt"
+
+updateDebt:
+  patch:
+    operationId: updateFinanceDebt
+    summary: Atualiza uma dívida (módulo finance)
+    description: >-
+      Parcelas (filhas) não são editáveis — o backend responde 400. Mudar o
+      listId de uma dívida-pai propaga para todas as parcelas.
+    tags:
+      - Finance
+    parameters:
+      - name: debtId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/UpdateDebtRequest"
+    responses:
+      "200":
+        description: Dívida atualizada
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/finance.yaml#/Debt"
+
+lists:
+  get:
+    operationId: listFinanceLists
+    summary: Lista as listas (agrupadores de dívidas) do cliente
+    description: >-
+      Uma lista é só um agrupador: cada dívida aponta para no máximo uma via
+      listId. Ordenadas por data de criação.
+    tags:
+      - Finance
+    responses:
+      "200":
+        description: Listas do cliente
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/finance.yaml#/DebtList"
+  post:
+    operationId: createFinanceList
+    summary: Cria uma lista (agrupador de dívidas)
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/CreateDebtListRequest"
+    responses:
+      "200":
+        description: Lista criada
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/finance.yaml#/DebtList"
