@@ -48,6 +48,7 @@ const DebtFilters = z
     startDate: z.string(),
     endDate: z.string(),
     categoryNames: z.array(DebtCategory),
+    listId: z.string().uuid(),
     parentId: z.string().uuid(),
     includeChildren: z.boolean(),
   })
@@ -60,7 +61,7 @@ const Debt = z
     clientId: z.string().uuid(),
     category: DebtCategory,
     expenseType: ExpenseType,
-    tags: z.array(z.string()),
+    listId: z.string().uuid().nullish(),
     identification: z.string(),
     description: z.string(),
     totalAmount: z.string(),

@@ -37,7 +37,6 @@ Debt:
     - clientId
     - category
     - expenseType
-    - tags
     - identification
     - description
     - totalAmount
@@ -56,10 +55,11 @@ Debt:
       $ref: "#/DebtCategory"
     expenseType:
       $ref: "#/ExpenseType"
-    tags:
-      type: array
-      items:
-        type: string
+    listId:
+      type: string
+      format: uuid
+      nullable: true
+      description: Lista (agrupamento) à qual a dívida pertence, se houver.
     identification:
       type: string
     description:
@@ -123,6 +123,10 @@ DebtFilters:
       type: array
       items:
         $ref: "#/DebtCategory"
+    listId:
+      type: string
+      format: uuid
+      description: Filtra pela lista (agrupamento) informada.
     parentId:
       type: string
       format: uuid
