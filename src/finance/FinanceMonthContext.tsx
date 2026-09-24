@@ -1,12 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import dayjs from 'dayjs';
 import { useFinanceDebts, type Debt } from '../api';
-import {
-  useRecurrences,
-  useIncomes,
-  useFinancialInstruments,
-  type FinancialInstrument,
-} from './mock';
+import { useRecurrences, useIncomes } from './mock';
 import {
   buildMonthOccurrences,
   computeIncomeForMonth,
@@ -55,7 +50,6 @@ interface FinanceMonthContextValue {
   getOccurrences: (year: number, month0: number) => Occurrence[];
   getTotals: (year: number, month0: number) => MonthTotals;
   debtsById: Map<string, Debt>;
-  financialInstruments: FinancialInstrument[];
   detail: DetailState | null;
   openDetail: (occurrence: Occurrence, year: number, month0: number) => void;
   closeDetail: () => void;
@@ -105,7 +99,6 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
     useFinanceDebts(monthFilters);
   const { data: recurrences, isLoading: isLoadingRecurrences } = useRecurrences({ active: true });
   const { data: incomes, isLoading: isLoadingIncomes } = useIncomes(dateFilters);
-  const { data: financialInstruments } = useFinancialInstruments();
 
   const parentIds = useMemo(
     () => Array.from(new Set((windowDebts ?? []).flatMap((d) => (d.parentId ? [d.parentId] : [])))),
@@ -176,7 +169,6 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
     getOccurrences,
     getTotals,
     debtsById,
-    financialInstruments: financialInstruments ?? [],
     detail,
     openDetail: (occurrence, year, month0) => setDetail({ occurrence, year, month0 }),
     closeDetail: () => setDetail(null),

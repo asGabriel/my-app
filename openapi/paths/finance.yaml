@@ -90,3 +90,70 @@ lists:
           application/json:
             schema:
               $ref: "../schemas/finance.yaml#/DebtList"
+
+payments:
+  post:
+    operationId: createFinancePayment
+    summary: Registra um pagamento de uma dívida (módulo finance)
+    description: >-
+      Aceita pagamento parcial. O backend responde 400 para valor <= 0, com
+      mais de 2 casas decimais ou acima do que falta, para dívida já quitada
+      e para a dívida-pai de um parcelamento (paga-se cada parcela). Pagar uma
+      parcela também atualiza o saldo do pai.
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/CreatePaymentRequest"
+    responses:
+      "200":
+        description: Pagamento registrado
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/finance.yaml#/Payment"
+
+listPayments:
+  post:
+    operationId: listFinancePayments
+    summary: Lista pagamentos ativos (não estornados) do cliente
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/PaymentFilters"
+    responses:
+      "200":
+        description: Lista de pagamentos
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/finance.yaml#/Payment"
+
+refundPayment:
+  delete:
+    operationId: refundFinancePayment
+    summary: Estorna um pagamento
+    description: >-
+      Soft delete do pagamento; o valor volta a ficar em aberto na dívida (e
+      no pai, se for parcela).
+    tags:
+      - Finance
+    parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Pagamento estornado

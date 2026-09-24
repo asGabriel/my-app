@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import dayjs from 'dayjs';
+import { useFinancePayments, useRefundFinancePayment } from '../api';
 import { useFinanceMonth } from '../finance/FinanceMonthContext';
 import { money } from '../finance/format';
 import { categoryIcon } from '../finance/categoryIcon';
@@ -6,10 +8,39 @@ import { KIND_LABELS } from '../finance/monthEngine';
 import { DEBT_CATEGORY_LABELS, type DebtCategory } from '../utils/constants';
 
 export function DetailSheet() {
-  const { detail, closeDetail, privado, debtsById, openPay } = useFinanceMonth();
+  const { detail, closeDetail, privado, debtsById, openPay, getOccurrences } = useFinanceMonth();
+  const refund = useRefundFinancePayment();
+  const [confirmRefundId, setConfirmRefundId] = useState<string | null>(null);
+  const [refundError, setRefundError] = useState<string | null>(null);
 
-  if (!detail) return null;
-  const { occurrence: o, year, month0 } = detail;
+  // `detail.occurrence` é um retrato de quando o sheet abriu — relê do mês
+  // para refletir pagamento/estorno feitos com ele aberto.
+  const o = detail
+    ? getOccurrences(detail.year, detail.month0).find((x) => x.key === detail.occurrence.key) ?? detail.occurrence
+    : undefined;
+  const { data: payments } = useFinancePayments(
+    { debtIds: o?.debtId ? [o.debtId] : [] },
+    !!o?.debtId && o.paidAmount > 0.005
+  );
+
+  if (!detail || !o) return null;
+  const { year, month0 } = detail;
+
+  const handleRefund = async (paymentId: string) => {
+    setRefundError(null);
+    try {
+      await refund.mutateAsync({ paymentId });
+      setConfirmRefundId(null);
+    } catch (e) {
+      setRefundError(e instanceof Error ? e.message : 'Erro ao estornar pagamento');
+    }
+  };
+
+  const close = () => {
+    setConfirmRefundId(null);
+    setRefundError(null);
+    closeDetail();
+  };
   // `debtId` é a dívida-filha (parcela) quando parcelado — ela já carrega sua
   // própria data e valor. Só o pai sabe o total ainda em aberto do
   // parcelamento inteiro.
@@ -44,7 +75,7 @@ export function DetailSheet() {
   });
 
   return (
-    <div className="sheet-backdrop" onClick={closeDetail}>
+    <div className="sheet-backdrop" onClick={close}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-grabber" />
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -73,16 +104,45 @@ export function DetailSheet() {
           ))}
         </div>
 
-        {o.projected ? (
+        {o.projected && (
           <div style={{ marginTop: 16, fontSize: 12, color: 'var(--color-neutral-500)', lineHeight: 1.5 }}>
             Esta é uma projeção da recorrência — ela ainda não virou um lançamento real neste mês, então não dá para pagar por aqui.
           </div>
-        ) : (
-          !o.isPaid && o.debtId && !o.payable && (
-            <div style={{ marginTop: 16, fontSize: 12, color: 'var(--color-neutral-500)', lineHeight: 1.5 }}>
-              O backend ainda não expõe pagamento no módulo financeiro novo — assim que expuser, dá pra pagar direto por aqui.
+        )}
+
+        {o.paidAmount > 0.005 && payments && payments.length > 0 && (
+          <div style={{ marginTop: 18 }}>
+            <div className="field-kicker" style={{ paddingBottom: 8 }}>Pagamentos</div>
+            <div style={{ display: 'grid', gap: 9 }}>
+              {payments.map((p) => (
+                <div key={p.id} className="kv-row" style={{ alignItems: 'center' }}>
+                  <span className="kv-row-label">{dayjs(p.paymentDate).format('DD/MM/YYYY')}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="kv-row-value">{money(parseFloat(p.amount), privado)}</span>
+                    {confirmRefundId === p.id ? (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => handleRefund(p.id)}
+                        disabled={refund.isPending}
+                        style={{ padding: '3px 9px', fontSize: 11, borderRadius: 999 }}
+                      >
+                        {refund.isPending ? 'Estornando…' : 'Confirmar estorno'}
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => { setRefundError(null); setConfirmRefundId(p.id); }}
+                        style={{ padding: '3px 9px', fontSize: 11, borderRadius: 999 }}
+                      >
+                        Estornar
+                      </button>
+                    )}
+                  </span>
+                </div>
+              ))}
             </div>
-          )
+            {refundError && <div style={{ marginTop: 10, fontSize: 12.5, color: 'var(--color-accent-300)' }}>{refundError}</div>}
+          </div>
         )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
@@ -90,7 +150,7 @@ export function DetailSheet() {
             <button
               className="btn btn-primary"
               onClick={() => {
-                closeDetail();
+                close();
                 openPay(o, year, month0);
               }}
               style={{ flex: '1 1 auto', justifyContent: 'center' }}
@@ -100,7 +160,7 @@ export function DetailSheet() {
           )}
           <button
             className="btn btn-secondary"
-            onClick={closeDetail}
+            onClick={close}
             style={{ flex: o.isPaid || !o.debtId || !o.payable ? '1 1 auto' : '0 0 auto' }}
           >
             Fechar

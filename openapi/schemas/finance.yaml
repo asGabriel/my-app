@@ -188,3 +188,70 @@ DebtFilters:
       description: >-
         Lista plana que inclui as parcelas junto das dívidas de nível-topo.
         Sem isso (e sem parentId) só volta o nível-topo.
+
+Payment:
+  type: object
+  description: Pagamento (total ou parcial) de uma dívida do módulo finance.
+  required:
+    - id
+    - clientId
+    - debtId
+    - amount
+    - paymentDate
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    clientId:
+      type: string
+      format: uuid
+    debtId:
+      type: string
+      format: uuid
+    amount:
+      type: string
+      description: "Decimal serializado como string (ex.: \"450.00\")"
+    paymentDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+    createdAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339)"
+
+CreatePaymentRequest:
+  type: object
+  required:
+    - debtId
+  properties:
+    debtId:
+      type: string
+      format: uuid
+    amount:
+      type: string
+      description: >-
+        Decimal como string, no máximo 2 casas. Ausente = paga todo o valor
+        em aberto da dívida.
+    paymentDate:
+      type: string
+      description: "Data (YYYY-MM-DD). Ausente = hoje (UTC, no backend)."
+
+PaymentFilters:
+  type: object
+  description: Todos os campos são opcionais.
+  properties:
+    debtIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+    startDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+    endDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"

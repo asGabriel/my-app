@@ -96,6 +96,32 @@ const DebtList = z
   })
   .passthrough();
 const CreateDebtListRequest = z.object({ name: z.string() }).passthrough();
+const CreatePaymentRequest = z
+  .object({
+    debtId: z.string().uuid(),
+    amount: z.string().optional(),
+    paymentDate: z.string().optional(),
+  })
+  .passthrough();
+const Payment = z
+  .object({
+    id: z.string().uuid(),
+    clientId: z.string().uuid(),
+    debtId: z.string().uuid(),
+    amount: z.string(),
+    paymentDate: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
+  })
+  .passthrough();
+const PaymentFilters = z
+  .object({
+    debtIds: z.array(z.string().uuid()),
+    startDate: z.string(),
+    endDate: z.string(),
+  })
+  .partial()
+  .passthrough();
 const Gender = z.enum(["male", "female"]);
 const CreatePlayerRequest = z
   .object({ name: z.string(), gender: Gender })
@@ -236,6 +262,9 @@ export const schemas = {
   UpdateDebtRequest,
   DebtList,
   CreateDebtListRequest,
+  CreatePaymentRequest,
+  Payment,
+  PaymentFilters,
   Gender,
   CreatePlayerRequest,
   Player,
@@ -371,6 +400,50 @@ const endpoints = makeApi([
       },
     ],
     response: DebtList,
+  },
+  {
+    method: "post",
+    path: "/finance/payment",
+    alias: "createFinancePayment",
+    description: `Aceita pagamento parcial. O backend responde 400 para valor &lt;&#x3D; 0, com mais de 2 casas decimais ou acima do que falta, para dívida já quitada e para a dívida-pai de um parcelamento (paga-se cada parcela). Pagar uma parcela também atualiza o saldo do pai.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreatePaymentRequest,
+      },
+    ],
+    response: Payment,
+  },
+  {
+    method: "delete",
+    path: "/finance/payment/:paymentId",
+    alias: "refundFinancePayment",
+    description: `Soft delete do pagamento; o valor volta a ficar em aberto na dívida (e no pai, se for parcela).`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "paymentId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/finance/payment/list",
+    alias: "listFinancePayments",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: PaymentFilters,
+      },
+    ],
+    response: z.array(Payment),
   },
   {
     method: "post",

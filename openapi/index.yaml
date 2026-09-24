@@ -21,7 +21,7 @@ paths:
     $ref: "./paths/auth.yaml#/me"
   # financeManager: sem cobertura por hora — backend em reformulação (v2).
   # O novo módulo `finance` (rust-api) volta aos poucos: por ora a listagem
-  # de dívidas, edição de dívida e listas (agrupadores). Ver openapi/paths/finance.yaml e
+  # de dívidas, edição de dívida, listas (agrupadores) e pagamentos. Ver openapi/paths/finance.yaml e
   # matchmaking.yaml para o padrão.
   /finance/debt/list:
     $ref: "./paths/finance.yaml#/listDebts"
@@ -29,6 +29,12 @@ paths:
     $ref: "./paths/finance.yaml#/updateDebt"
   /finance/list:
     $ref: "./paths/finance.yaml#/lists"
+  /finance/payment:
+    $ref: "./paths/finance.yaml#/payments"
+  /finance/payment/list:
+    $ref: "./paths/finance.yaml#/listPayments"
+  /finance/payment/{paymentId}:
+    $ref: "./paths/finance.yaml#/refundPayment"
   /matchmaking/players/:
     $ref: "./paths/matchmaking.yaml#/players"
   /matchmaking/players/{playerId}:
@@ -86,6 +92,12 @@ components:
       $ref: "./schemas/finance.yaml#/CreateDebtListRequest"
     UpdateDebtRequest:
       $ref: "./schemas/finance.yaml#/UpdateDebtRequest"
+    Payment:
+      $ref: "./schemas/finance.yaml#/Payment"
+    CreatePaymentRequest:
+      $ref: "./schemas/finance.yaml#/CreatePaymentRequest"
+    PaymentFilters:
+      $ref: "./schemas/finance.yaml#/PaymentFilters"
     Gender:
       $ref: "./schemas/matchmaking.yaml#/Gender"
     GameMode:

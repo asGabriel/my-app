@@ -11,19 +11,18 @@
  * `FinanceMonthContext`) até o backend ganhar renda e recorrência.
  *
  * Limitações conhecidas do modelo de dados (ver rust-api):
- * - `Debt` não guarda o instrumento financeiro (cartão/conta) antes do
- *   pagamento — só `Payment.accountId` sabe de onde saiu, e só depois de
- *   pago. Por isso não há aqui um agrupamento "fatura do cartão" como no
- *   protótipo: cada débito/parcela aparece como seu próprio lançamento.
+ * - O módulo `finance` não tem instrumento financeiro (cartão/conta) — nem
+ *   na dívida nem no pagamento. Por isso não há aqui um agrupamento "fatura
+ *   do cartão" como no protótipo: cada débito/parcela aparece como seu
+ *   próprio lançamento.
  * - `Recurrence` só é materializada em `Debt` para o mês corrente, por um
  *   job que roda mês a mês (`generate_current_recurrences`). Para meses
  *   futuros ainda não gerados, projetamos a ocorrência a partir da regra
  *   da recorrência (só existe recorrência "fixa" no backend).
- * - Não existe rota de pagamento no módulo `finance` ainda. Toda `Occurrence`
- *   derivada de um `Debt` real vem com `payable: false` — o botão "Pagar" só
- *   aparece hoje nas ocorrências projetadas do mock (nenhuma, já que essas
- *   nunca tiveram `debtId`). Quando o backend ganhar `POST /finance/payment`,
- *   basta virar `payable: true` aqui.
+ * - Pagamento (`POST /finance/payment`) só existe para `Debt` real: toda
+ *   `Occurrence` derivada de um débito/parcela é `payable`; as projetadas de
+ *   `Recurrence` não (ainda não viraram dívida). A dívida-pai de um
+ *   parcelamento nunca vira ocorrência — só as parcelas são pagáveis.
  */
 import dayjs from 'dayjs';
 import { schemas, type Debt } from '../api';
@@ -55,9 +54,8 @@ export interface Occurrence {
   /** true = sintetizado a partir de uma Recurrence ainda não gerada como Debt. */
   projected: boolean;
   recurrenceId?: string;
-  /** true = dá para registrar pagamento por aqui. O backend ainda não expõe
-   * pagamento no módulo `finance`, então nenhuma ocorrência real é pagável
-   * por ora (ver nota no topo do arquivo). */
+  /** true = dá para registrar pagamento por aqui (há um `Debt` real por trás;
+   * ver nota no topo do arquivo). Quitação é checada à parte via `isPaid`. */
   payable: boolean;
 }
 
@@ -119,7 +117,7 @@ function occurrencesFromDebts(debts: Debt[], year: number, month0: number): Occu
       dueDay: dayjs(d.dueDate).date(),
       debtId: d.id,
       projected: false,
-      payable: false,
+      payable: true,
     }));
 }
 
@@ -147,7 +145,7 @@ function occurrencesFromInstallments(children: Debt[], year: number, month0: num
       installmentId: d.installmentNumber ?? undefined,
       installmentCount: d.installmentCount ?? undefined,
       projected: false,
-      payable: false,
+      payable: true,
     }));
 }
 
