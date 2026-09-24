@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import dayjs from 'dayjs';
 import { useFinancePayments, useRefundFinancePayment } from '../api';
+import { debtAmounts, lastInstallmentDueDate, parentOf } from '../finance/debt';
 import { useFinanceMonth } from '../finance/FinanceMonthContext';
 import { money } from '../finance/format';
 import { categoryIcon } from '../finance/categoryIcon';
@@ -45,12 +46,8 @@ export function DetailSheet() {
   // própria data e valor. Só o pai sabe o total ainda em aberto do
   // parcelamento inteiro.
   const debt = o.debtId ? debtsById.get(o.debtId) : undefined;
-  const parent = debt?.parentId ? debtsById.get(debt.parentId) : undefined;
-  const installmentCount = parent?.installmentCount ?? debt?.installmentCount;
-  const lastDue =
-    debt?.dueDate && installmentCount && debt.installmentNumber
-      ? dayjs(debt.dueDate).add(installmentCount - debt.installmentNumber, 'month')
-      : null;
+  const parent = debt && parentOf(debt, debtsById);
+  const lastDue = debt ? lastInstallmentDueDate(debt, parent) : null;
 
   const rows: { k: string; v: string }[] = [
     { k: 'Tipo', v: KIND_LABELS[o.kind].replace(/^./, (c) => c.toUpperCase()) },
@@ -60,7 +57,7 @@ export function DetailSheet() {
   if (o.kind === 'parcelado' && o.installmentId) {
     rows.push({ k: 'Parcela', v: `${o.installmentId} de ${o.installmentCount}` });
     if (lastDue) rows.push({ k: 'Última', v: lastDue.format('MMM/YY') });
-    if (parent) rows.push({ k: 'Falta pagar (total)', v: money(parseFloat(parent.remainingAmount), privado) });
+    if (parent) rows.push({ k: 'Falta pagar (total)', v: money(debtAmounts(parent).remaining, privado) });
   } else if (o.kind === 'variavel') {
     rows.push({ k: 'Geração', v: 'Lançamento avulso deste mês, categorizado como variável' });
   } else if (o.kind === 'fixo') {

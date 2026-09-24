@@ -5,6 +5,7 @@ export * from './hooks/useAuth';
 // Hooks do novo módulo `finance` voltam aqui aos poucos, junto com as rotas
 // em openapi/index.yaml.
 export * from './hooks/useFinanceDebts';
+export * from './hooks/useFinanceDebtParents';
 export * from './hooks/useFinanceLists';
 export * from './hooks/useCreateFinanceList';
 export * from './hooks/useUpdateFinanceDebt';

@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
-import { schemas, useFinanceDebts, type Debt } from '../../api';
+import { useFinanceDebtParents, useFinanceDebts } from '../../api';
+import { debtAmounts, installmentCountOf, isInstallment, isSettled, lastInstallmentDueDate } from '../../finance/debt';
 import { useFinanceMonth, MESES_CURTOS, MESES_LONGOS } from '../../finance/FinanceMonthContext';
 import { money, short } from '../../finance/format';
 
@@ -21,35 +22,28 @@ export function ParcelasTab() {
     };
   }, [year, month0]);
   const { data, isLoading, isError, error, refetch } = useFinanceDebts(monthFilters);
-  const parcelas = useMemo(() => (data ?? []).filter((d) => !!d.parentId), [data]);
+  const parcelas = useMemo(() => (data ?? []).filter(isInstallment), [data]);
 
-  const parentIds = useMemo(() => Array.from(new Set(parcelas.map((d) => d.parentId!))), [parcelas]);
-  const { data: parents } = useFinanceDebts({ ids: parentIds }, parentIds.length > 0);
-  const parentsById = useMemo(() => new Map((parents ?? []).map((p) => [p.id, p])), [parents]);
+  const { parentIds, parentsById } = useFinanceDebtParents(parcelas);
 
   // A renda ainda vem do mock (não existe no módulo `finance`).
   const renda = getTotals(year, month0).renda;
-  const totalParcelas = parcelas.reduce((sum, d) => sum + parseFloat(d.totalAmount), 0);
+  const totalParcelas = parcelas.reduce((sum, d) => sum + debtAmounts(d).total, 0);
   const pctRenda = renda > 0 ? Math.round((totalParcelas / renda) * 100) : 0;
 
-  const restanteTotal = Array.from(parentsById.values()).reduce((sum, p) => sum + parseFloat(p.remainingAmount), 0);
+  const restanteTotal = Array.from(parentsById.values()).reduce((sum, p) => sum + debtAmounts(p).remaining, 0);
 
-  /** As parcelas são mensais: a última cai (contagem - número) meses depois desta. */
-  const lastDue = (d: Debt, parent?: Debt) => {
-    const count = parent?.installmentCount ?? d.installmentCount;
-    return d.dueDate && count && d.installmentNumber ? dayjs(d.dueDate).add(count - d.installmentNumber, 'month') : null;
-  };
   const label = (m: dayjs.Dayjs) => `${MESES_CURTOS[m.month()]}/${String(m.year()).slice(2)}`;
 
   const cards = parcelas.map((d) => {
     const parent = parentsById.get(d.parentId!);
-    const count = parent?.installmentCount ?? d.installmentCount ?? null;
-    const last = lastDue(d, parent);
+    const count = installmentCountOf(d, parent) ?? null;
+    const last = lastInstallmentDueDate(d, parent);
     return {
       debt: d,
       count,
       pct: count && d.installmentNumber ? Math.round((d.installmentNumber / count) * 100) : 0,
-      restante: parent ? parseFloat(parent.remainingAmount) : null,
+      restante: parent ? debtAmounts(parent).remaining : null,
       lastLabel: last ? label(last) : '—',
       last,
     };
@@ -119,11 +113,11 @@ export function ParcelasTab() {
           <div
             key={debt.id}
             className="card"
-            style={{ marginTop: 10, padding: '13px 14px', opacity: debt.status === schemas.DebtStatus.enum.SETTLED ? 0.55 : 1 }}
+            style={{ marginTop: 10, padding: '13px 14px', opacity: isSettled(debt) ? 0.55 : 1 }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
               <div style={{ fontSize: 14, fontWeight: 500 }}>{debt.description}</div>
-              <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em' }}>{money(parseFloat(debt.totalAmount), privado)}</div>
+              <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em' }}>{money(debtAmounts(debt).total, privado)}</div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginTop: 7 }}>
               <div style={{ fontSize: 11.5, color: 'var(--color-neutral-500)' }}>

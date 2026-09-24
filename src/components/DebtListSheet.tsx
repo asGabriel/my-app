@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCreateFinanceList, useUpdateFinanceDebt, type Debt, type DebtList } from '../api';
+import { installmentCountOf, isInstallment } from '../finance/debt';
 
 interface DebtListSheetProps {
   debt: Debt;
@@ -20,7 +21,7 @@ export function DebtListSheet({ debt, parent, lists, onClose }: DebtListSheetPro
 
   const targetId = debt.parentId ?? debt.id;
   const current = (parent ?? debt).listId ?? null;
-  const installmentCount = parent?.installmentCount ?? debt.installmentCount;
+  const installmentCount = installmentCountOf(debt, parent);
   const isPending = updateDebt.isPending || createList.isPending;
 
   const link = async (listId: string | null) => {
@@ -49,7 +50,7 @@ export function DebtListSheet({ debt, parent, lists, onClose }: DebtListSheetPro
         <div className="sheet-grabber" />
         <div className="field-kicker">Lista</div>
         <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 500, fontSize: 17, marginTop: 4 }}>{debt.description}</div>
-        {debt.parentId && (
+        {isInstallment(debt) && (
           <div style={{ fontSize: 12, color: 'var(--color-neutral-500)', marginTop: 4, lineHeight: 1.5 }}>
             Vale para {installmentCount ? `as ${installmentCount} parcelas` : 'todas as parcelas'} deste parcelamento.
           </div>

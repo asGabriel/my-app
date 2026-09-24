@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import dayjs from 'dayjs';
-import { useFinanceDebts, type Debt } from '../api';
+import { useFinanceDebtParents, useFinanceDebts, type Debt } from '../api';
 import { useRecurrences, useIncomes } from './mock';
 import {
   buildMonthOccurrences,
@@ -100,11 +100,7 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
   const { data: recurrences, isLoading: isLoadingRecurrences } = useRecurrences({ active: true });
   const { data: incomes, isLoading: isLoadingIncomes } = useIncomes(dateFilters);
 
-  const parentIds = useMemo(
-    () => Array.from(new Set((windowDebts ?? []).flatMap((d) => (d.parentId ? [d.parentId] : [])))),
-    [windowDebts]
-  );
-  const { data: parents } = useFinanceDebts({ ids: parentIds }, parentIds.length > 0);
+  const { parents } = useFinanceDebtParents(windowDebts);
 
   const debtsById = useMemo(() => {
     const map = new Map<string, Debt>();

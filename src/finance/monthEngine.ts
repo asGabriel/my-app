@@ -28,6 +28,7 @@ import dayjs from 'dayjs';
 import { schemas, type Debt } from '../api';
 import type { Recurrence, Income } from './mock';
 import type { DebtCategory } from '../utils/constants';
+import { debtAmounts, installmentCountOf, isInstallment, isInstallmentParent, isSettled, parentOf } from './debt';
 
 export type OccKind = 'fixo' | 'variavel' | 'parcelado';
 
@@ -86,10 +87,6 @@ function toCategory(value: string | undefined | null): DebtCategory {
   return parsed.success ? parsed.data : schemas.DebtCategory.enum.UNKNOWN;
 }
 
-function hasRealInstallments(debt: Debt): boolean {
-  return typeof debt.installmentCount === 'number' && debt.installmentCount >= 1;
-}
-
 function isDueIn(dueDate: string | null | undefined, year: number, month0: number): boolean {
   if (!dueDate) return false;
   const due = dayjs(dueDate);
@@ -104,16 +101,16 @@ function isDueIn(dueDate: string | null | undefined, year: number, month0: numbe
  */
 function occurrencesFromDebts(debts: Debt[], year: number, month0: number): Occurrence[] {
   return debts
-    .filter((d) => !d.parentId && !hasRealInstallments(d))
+    .filter((d) => !isInstallment(d) && !isInstallmentParent(d))
     .filter((d) => isDueIn(d.dueDate, year, month0))
     .map((d) => ({
       key: `debt-${d.id}`,
       kind: (d.expenseType === schemas.ExpenseType.enum.FIXED ? 'fixo' : 'variavel') as OccKind,
       name: d.description,
       category: toCategory(d.category),
-      amount: parseFloat(d.totalAmount),
-      paidAmount: parseFloat(d.paidAmount),
-      isPaid: d.status === schemas.DebtStatus.enum.SETTLED,
+      amount: debtAmounts(d).total,
+      paidAmount: debtAmounts(d).paid,
+      isPaid: isSettled(d),
       dueDay: dayjs(d.dueDate).date(),
       debtId: d.id,
       projected: false,
@@ -124,9 +121,8 @@ function occurrencesFromDebts(debts: Debt[], year: number, month0: number): Occu
 /**
  * Parcelas (dívidas-filhas, `parentId` preenchido) que vencem no mês. Uma
  * filha copia description/categoria do pai na criação (ver rust-api
- * `Debt::generate_installment_children`), mas o total de parcelas pode vir
- * nulo nela — o pai é a fonte da verdade (mesma regra de `ParcelasTab`,
- * `DebtsTab` e `DetailSheet`). Só o pai sabe também o total ainda em aberto
+ * `Debt::generate_installment_children`), mas o total de parcelas vem do
+ * pai (ver `installmentCountOf`). Só o pai sabe também o total ainda em aberto
  * do parcelamento inteiro (`remainingAmount`), consultado à parte quando
  * necessário (ver `DetailSheet`).
  */
@@ -143,14 +139,13 @@ function occurrencesFromInstallments(
       kind: 'parcelado' as OccKind,
       name: d.description,
       category: toCategory(d.category),
-      amount: parseFloat(d.totalAmount),
-      paidAmount: parseFloat(d.paidAmount),
-      isPaid: d.status === schemas.DebtStatus.enum.SETTLED,
+      amount: debtAmounts(d).total,
+      paidAmount: debtAmounts(d).paid,
+      isPaid: isSettled(d),
       dueDay: dayjs(d.dueDate).date(),
       debtId: d.id,
       installmentId: d.installmentNumber ?? undefined,
-      installmentCount:
-        (d.parentId ? parentsById.get(d.parentId)?.installmentCount : undefined) ?? d.installmentCount ?? undefined,
+      installmentCount: installmentCountOf(d, parentOf(d, parentsById)),
       projected: false,
       payable: true,
     }));
@@ -182,10 +177,10 @@ function occurrencesFromRecurrences(
       // já foi materializada como Debt este mês?
       const already = realDebtsThisMonth.some(
         (d) =>
-          !hasRealInstallments(d) &&
+          !isInstallmentParent(d) &&
           d.description === r.description &&
           d.expenseType === schemas.ExpenseType.enum.FIXED &&
-          Math.abs(parseFloat(d.totalAmount) - parseFloat(r.amount)) < 0.005
+          Math.abs(debtAmounts(d).total - parseFloat(r.amount)) < 0.005
       );
       return !already;
     })
@@ -212,8 +207,8 @@ export function buildMonthOccurrences(
   month0: number,
   data: { debts: Debt[]; parentsById: Map<string, Debt>; recurrences: Recurrence[] }
 ): Occurrence[] {
-  const singles = data.debts.filter((d) => !d.parentId);
-  const children = data.debts.filter((d) => !!d.parentId);
+  const singles = data.debts.filter((d) => !isInstallment(d));
+  const children = data.debts.filter(isInstallment);
   const singlesThisMonth = singles.filter((d) => isDueIn(d.dueDate, year, month0));
 
   const fromDebts = occurrencesFromDebts(singles, year, month0);

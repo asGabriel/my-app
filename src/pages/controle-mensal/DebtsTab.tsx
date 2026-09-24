@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import { schemas, useFinanceDebts, useFinanceLists, type Debt, type DebtFilters, type DebtList } from '../../api';
+import { useFinanceDebtParents, useFinanceDebts, useFinanceLists, type Debt, type DebtFilters, type DebtList } from '../../api';
+import { debtAmounts, installmentCountOf, isInstallment, isOpen, isSettled, parentOf } from '../../finance/debt';
 import { useFinanceMonth, MESES_LONGOS } from '../../finance/FinanceMonthContext';
 import { money, short } from '../../finance/format';
 import { categoryIcon } from '../../finance/categoryIcon';
@@ -34,8 +35,8 @@ function buildFilters(year: number, month0: number): DebtFilters {
 }
 
 function matchesStatus(debt: Debt, filter: StatusFilter): boolean {
-  if (filter === 'open') return debt.status === schemas.DebtStatus.enum.OPEN;
-  if (filter === 'settled') return debt.status === schemas.DebtStatus.enum.SETTLED;
+  if (filter === 'open') return isOpen(debt);
+  if (filter === 'settled') return isSettled(debt);
   return true;
 }
 
@@ -66,9 +67,8 @@ function ListChips({ lists, value, onChange }: { lists: DebtList[]; value: ListF
 }
 
 function DebtTag({ debt, privado }: { debt: Debt; privado: boolean }) {
-  const remaining = parseFloat(debt.remainingAmount);
-  const paid = parseFloat(debt.paidAmount);
-  if (debt.status === schemas.DebtStatus.enum.SETTLED) return <span style={{ color: 'var(--color-neutral-500)' }}>quitada</span>;
+  const { remaining, paid } = debtAmounts(debt);
+  if (isSettled(debt)) return <span style={{ color: 'var(--color-neutral-500)' }}>quitada</span>;
   if (paid > 0.01) return <span style={{ color: 'var(--color-accent-300)' }}>falta {short(remaining, privado)}</span>;
   return <span style={{ color: 'var(--color-neutral-500)' }}>em aberto</span>;
 }
@@ -78,11 +78,11 @@ function DebtTag({ debt, privado }: { debt: Debt; privado: boolean }) {
  * A contagem de parcelas e o restante vêm do pai: nas filhas o backend pode devolver a contagem nula. */
 function subtitle(debt: Debt, parent: Debt | undefined, listName: string | undefined, privado: boolean): string {
   const due = debt.dueDate ? dayjs(debt.dueDate).format('DD/MM') : null;
-  if (!debt.parentId) {
+  if (!isInstallment(debt)) {
     return [due && `vence ${due}`, EXPENSE_TYPE_LABELS[debt.expenseType].toLowerCase(), listName].filter(Boolean).join(' · ');
   }
-  const count = parent?.installmentCount ?? debt.installmentCount ?? '?';
-  const rest = parent && `resta ${short(parseFloat(parent.remainingAmount), privado)}`;
+  const count = installmentCountOf(debt, parent) ?? '?';
+  const rest = parent && `resta ${short(debtAmounts(parent).remaining, privado)}`;
   return [`${debt.installmentNumber}/${count}`, due, rest, listName].filter(Boolean).join(' · ');
 }
 
@@ -95,7 +95,7 @@ interface DebtRowProps {
 }
 
 function DebtRow({ debt, parent, listName, privado, onClick }: DebtRowProps) {
-  const settled = debt.status === schemas.DebtStatus.enum.SETTLED;
+  const settled = isSettled(debt);
 
   return (
     <div
@@ -126,7 +126,7 @@ function DebtRow({ debt, parent, listName, privado, onClick }: DebtRowProps) {
       </div>
       <div style={{ textAlign: 'right' }}>
         <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em' }}>
-          {money(parseFloat(debt.totalAmount), privado)}
+          {money(debtAmounts(debt).total, privado)}
         </div>
         <div style={{ fontSize: 11, marginTop: 2 }}><DebtTag debt={debt} privado={privado} /></div>
       </div>
@@ -163,16 +163,14 @@ export function DebtsTab() {
   );
 
   // Pais dos parcelamentos que aparecem no mês (total/restante da compra).
-  const parentIds = useMemo(
-    () => Array.from(new Set(debts.flatMap((d) => (d.parentId ? [d.parentId] : [])))),
-    [debts]
-  );
-  const { data: parents } = useFinanceDebts({ ids: parentIds }, parentIds.length > 0);
-  const parentsById = useMemo(() => new Map((parents ?? []).map((p) => [p.id, p])), [parents]);
+  const { parentsById } = useFinanceDebtParents(debts);
 
   const totals = useMemo(
     () => debts.reduce(
-      (acc, d) => ({ total: acc.total + parseFloat(d.totalAmount), remaining: acc.remaining + parseFloat(d.remainingAmount) }),
+      (acc, d) => {
+        const { total, remaining } = debtAmounts(d);
+        return { total: acc.total + total, remaining: acc.remaining + remaining };
+      },
       { total: 0, remaining: 0 }
     ),
     [debts]
@@ -245,7 +243,7 @@ export function DebtsTab() {
             <DebtRow
               key={d.id}
               debt={d}
-              parent={d.parentId ? parentsById.get(d.parentId) : undefined}
+              parent={parentOf(d, parentsById)}
               // Com uma lista filtrada o nome seria redundante em toda linha.
               listName={activeList === null && d.listId ? listsById.get(d.listId)?.name : undefined}
               privado={privado}
@@ -258,7 +256,7 @@ export function DebtsTab() {
       {editing && (
         <DebtListSheet
           debt={editing}
-          parent={editing.parentId ? parentsById.get(editing.parentId) : undefined}
+          parent={parentOf(editing, parentsById)}
           lists={lists}
           onClose={() => setEditing(null)}
         />
