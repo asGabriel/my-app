@@ -123,13 +123,14 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
         key,
         buildMonthOccurrences(cursor.year(), cursor.month(), {
           debts: windowDebts,
+          parentsById: debtsById,
           recurrences,
         })
       );
       cursor = cursor.add(1, 'month');
     }
     return map;
-  }, [windowDebts, recurrences, windowStart, windowEnd]);
+  }, [windowDebts, debtsById, recurrences, windowStart, windowEnd]);
 
   const incomeByMonth = useMemo(() => {
     const map = new Map<string, number>();

@@ -123,13 +123,19 @@ function occurrencesFromDebts(debts: Debt[], year: number, month0: number): Occu
 
 /**
  * Parcelas (dívidas-filhas, `parentId` preenchido) que vencem no mês. Uma
- * filha já copia description/categoria/installmentCount do pai na criação
- * (ver rust-api `Debt::generate_installment_children`), então não precisa de
- * lookup no pai para exibição — só o pai sabe o total ainda em aberto do
- * parcelamento inteiro (`remainingAmount`), consultado à parte quando
+ * filha copia description/categoria do pai na criação (ver rust-api
+ * `Debt::generate_installment_children`), mas o total de parcelas pode vir
+ * nulo nela — o pai é a fonte da verdade (mesma regra de `ParcelasTab`,
+ * `DebtsTab` e `DetailSheet`). Só o pai sabe também o total ainda em aberto
+ * do parcelamento inteiro (`remainingAmount`), consultado à parte quando
  * necessário (ver `DetailSheet`).
  */
-function occurrencesFromInstallments(children: Debt[], year: number, month0: number): Occurrence[] {
+function occurrencesFromInstallments(
+  children: Debt[],
+  parentsById: Map<string, Debt>,
+  year: number,
+  month0: number
+): Occurrence[] {
   return children
     .filter((d) => isDueIn(d.dueDate, year, month0))
     .map((d) => ({
@@ -143,7 +149,8 @@ function occurrencesFromInstallments(children: Debt[], year: number, month0: num
       dueDay: dayjs(d.dueDate).date(),
       debtId: d.id,
       installmentId: d.installmentNumber ?? undefined,
-      installmentCount: d.installmentCount ?? undefined,
+      installmentCount:
+        (d.parentId ? parentsById.get(d.parentId)?.installmentCount : undefined) ?? d.installmentCount ?? undefined,
       projected: false,
       payable: true,
     }));
@@ -203,14 +210,14 @@ function occurrencesFromRecurrences(
 export function buildMonthOccurrences(
   year: number,
   month0: number,
-  data: { debts: Debt[]; recurrences: Recurrence[] }
+  data: { debts: Debt[]; parentsById: Map<string, Debt>; recurrences: Recurrence[] }
 ): Occurrence[] {
   const singles = data.debts.filter((d) => !d.parentId);
   const children = data.debts.filter((d) => !!d.parentId);
   const singlesThisMonth = singles.filter((d) => isDueIn(d.dueDate, year, month0));
 
   const fromDebts = occurrencesFromDebts(singles, year, month0);
-  const fromInstallments = occurrencesFromInstallments(children, year, month0);
+  const fromInstallments = occurrencesFromInstallments(children, data.parentsById, year, month0);
   const fromRecurrences = occurrencesFromRecurrences(data.recurrences, singlesThisMonth, year, month0);
 
   return [...fromDebts, ...fromInstallments, ...fromRecurrences].sort((a, b) => a.dueDay - b.dueDay);
