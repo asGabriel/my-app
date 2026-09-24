@@ -36,10 +36,13 @@ async function request<T>(
       onUnauthorized();
     }
     const errorData = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, errorData.message || `API Error: ${response.status}`);
+    // rust-api responde RFC 7807 (`detail`); `message` fica pelo financeManager legado.
+    throw new ApiError(response.status, errorData.message || errorData.detail || `API Error: ${response.status}`);
   }
 
-  return response.json();
+  // DELETEs do rust-api respondem 200/204 sem corpo.
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export class ApiError extends Error {
