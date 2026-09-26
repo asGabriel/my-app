@@ -5,8 +5,8 @@
  */
 import dayjs from 'dayjs';
 import type {
-  Debt, Installment, Recurrence, Income, FinancialInstrument, Payment,
-  CreateDebtRequest, CreateRecurrenceRequest, CreatePaymentRequest,
+  Debt, Installment, Income, FinancialInstrument, Payment,
+  CreateDebtRequest, CreatePaymentRequest,
 } from './types';
 
 const CLIENT_ID = '00000000-0000-4000-8000-000000000001';
@@ -38,7 +38,6 @@ export const instruments: FinancialInstrument[] = [
 
 export const debts: Debt[] = [];
 export const installments: Installment[] = [];
-export const recurrences: Recurrence[] = [];
 export const incomes: Income[] = [];
 export const payments: Payment[] = [];
 
@@ -96,8 +95,7 @@ function seed() {
     }
   }
 
-  // Recorrências fixas (materializadas como Debt até o mês corrente; meses
-  // futuros são projetados pelo monthEngine a partir da regra).
+  // Débitos fixos mensais, já gerados como Debt até o mês corrente.
   const fixed: [string, string, number, number][] = [
     ['Aluguel', 'HOME', 1800, 5],
     ['Internet', 'HOME', 120, 12],
@@ -105,11 +103,6 @@ function seed() {
     ['Netflix', 'LIFESTYLE', 55, 20],
   ];
   fixed.forEach(([description, category, amount, day]) => {
-    recurrences.push({
-      id: uuid(), clientId: CLIENT_ID, financialInstrumentId: ACCOUNT_ID, description, category,
-      amount: money(amount), startDate: monthStart(-12).format(FMT), endDate: null, dayOfMonth: day,
-      nextRunDate: dayIn(1, day).format(FMT), active: true, createdAt: NOW,
-    });
     for (let o = -12; o <= 0; o++) {
       const due = dayIn(o, day);
       const paid = due.isBefore(dayjs(), 'day');
@@ -158,16 +151,6 @@ export function createDebt(req: CreateDebtRequest): Debt {
     }
   }
   return debt;
-}
-
-export function createRecurrence(req: CreateRecurrenceRequest): Recurrence {
-  const rec: Recurrence = {
-    id: uuid(), clientId: CLIENT_ID, financialInstrumentId: req.financialInstrumentId ?? null,
-    description: req.description, category: req.category, amount: req.amount, startDate: req.startDate,
-    endDate: req.endDate ?? null, dayOfMonth: req.dayOfMonth, nextRunDate: req.startDate, active: true, createdAt: NOW,
-  };
-  recurrences.push(rec);
-  return rec;
 }
 
 export function createPayment(req: CreatePaymentRequest): Payment {

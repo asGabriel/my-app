@@ -1,32 +1,27 @@
 /**
  * Motor de cálculo do "Controle Mensal" — deriva, a partir dos dados reais da
- * API (Debt, Recurrence, Income), a mesma visão de regime de caixa mensal do
- * protótipo Claude Design ("Controle Mensal v2"): quanto sai/saiu da conta em
- * cada mês, quebra por tipo (fixo/variável/parcelado), por categoria, e
- * projeção dos próximos meses.
+ * API (Debt, Income), a mesma visão de regime de caixa mensal do protótipo
+ * Claude Design ("Controle Mensal v2"): quanto sai/saiu da conta em cada mês,
+ * quebra por tipo (fixo/variável/parcelado), por categoria, e projeção dos
+ * próximos meses.
  *
- * `Debt` (débitos avulsos/recorrentes materializados e parcelas) já vem do
- * módulo `finance` (rust-api) via `useFinanceDebts`. `Recurrence` e `Income`
- * ainda não têm rota no backend — seguem vindo do mock (ver
- * `FinanceMonthContext`) até o backend ganhar renda e recorrência.
+ * As ocorrências do mês são só os `Debt` reais (avulsos e parcelas) do módulo
+ * `finance` (rust-api), via `useFinanceDebts` — débitos mensais fixos são
+ * criados no backend por rotina própria, então nada é projetado aqui a partir
+ * de regra de recorrência. `Income` ainda não tem rota no backend e segue
+ * vindo do mock (ver `FinanceMonthContext`).
  *
  * Limitações conhecidas do modelo de dados (ver rust-api):
  * - O módulo `finance` não tem instrumento financeiro (cartão/conta) — nem
  *   na dívida nem no pagamento. Por isso não há aqui um agrupamento "fatura
  *   do cartão" como no protótipo: cada débito/parcela aparece como seu
  *   próprio lançamento.
- * - `Recurrence` só é materializada em `Debt` para o mês corrente, por um
- *   job que roda mês a mês (`generate_current_recurrences`). Para meses
- *   futuros ainda não gerados, projetamos a ocorrência a partir da regra
- *   da recorrência (só existe recorrência "fixa" no backend).
- * - Pagamento (`POST /finance/payment`) só existe para `Debt` real: toda
- *   `Occurrence` derivada de um débito/parcela é `payable`; as projetadas de
- *   `Recurrence` não (ainda não viraram dívida). A dívida-pai de um
- *   parcelamento nunca vira ocorrência — só as parcelas são pagáveis.
+ * - A dívida-pai de um parcelamento nunca vira ocorrência — só as parcelas,
+ *   que são as pagáveis (`POST /finance/payment`).
  */
 import dayjs from 'dayjs';
 import { schemas, type Debt } from '../api';
-import type { Recurrence, Income } from './mock';
+import type { Income } from './mock';
 import type { DebtCategory } from '../utils/constants';
 import { debtAmounts, installmentCountOf, isInstallment, isInstallmentParent, isSettled, parentOf } from './debt';
 
@@ -48,16 +43,9 @@ export interface Occurrence {
   paidAmount: number;
   isPaid: boolean;
   dueDay: number;
-  /** Débito real (permite ver detalhe). Ausente quando `projected`. */
-  debtId?: string;
+  debtId: string;
   installmentId?: number;
   installmentCount?: number;
-  /** true = sintetizado a partir de uma Recurrence ainda não gerada como Debt. */
-  projected: boolean;
-  recurrenceId?: string;
-  /** true = dá para registrar pagamento por aqui (há um `Debt` real por trás;
-   * ver nota no topo do arquivo). Quitação é checada à parte via `isPaid`. */
-  payable: boolean;
 }
 
 export interface MonthTotals {
@@ -116,8 +104,6 @@ export function occurrenceFromDebt(d: Debt, parent?: Debt): Occurrence {
       installmentId: d.installmentNumber ?? undefined,
       installmentCount: installmentCountOf(d, parent),
     }),
-    projected: false,
-    payable: true,
   };
 }
 
@@ -153,71 +139,18 @@ function occurrencesFromInstallments(
     .map((d) => occurrenceFromDebt(d, parentOf(d, parentsById)));
 }
 
-/**
- * Ocorrências de recorrências ainda não materializadas em Debt para o mês
- * (tipicamente meses futuros — o job de geração só roda para o mês corrente).
- * Evita duplicar quando já existe um Debt real equivalente nesse mês.
- */
-function occurrencesFromRecurrences(
-  recurrences: Recurrence[],
-  realDebtsThisMonth: Debt[],
-  year: number,
-  month0: number
-): Occurrence[] {
-  const daysInMonth = dayjs(new Date(year, month0, 1)).daysInMonth();
-
-  return recurrences
-    .filter((r) => r.active)
-    .filter((r) => {
-      const day = Math.min(Math.max(r.dayOfMonth, 1), daysInMonth);
-      const due = dayjs(new Date(year, month0, day));
-      if (due.isBefore(dayjs(r.startDate), 'day')) return false;
-      if (r.endDate && due.isAfter(dayjs(r.endDate), 'day')) return false;
-      return true;
-    })
-    .filter((r) => {
-      // já foi materializada como Debt este mês?
-      const already = realDebtsThisMonth.some(
-        (d) =>
-          !isInstallmentParent(d) &&
-          d.description === r.description &&
-          d.expenseType === schemas.ExpenseType.enum.FIXED &&
-          Math.abs(debtAmounts(d).total - parseFloat(r.amount)) < 0.005
-      );
-      return !already;
-    })
-    .map((r) => {
-      const day = Math.min(Math.max(r.dayOfMonth, 1), daysInMonth);
-      return {
-        key: `rec-${r.id}-${monthKey(year, month0)}`,
-        kind: 'fixo' as OccKind,
-        name: r.description,
-        category: toCategory(r.category),
-        amount: parseFloat(r.amount),
-        paidAmount: 0,
-        isPaid: false,
-        dueDay: day,
-        projected: true,
-        payable: false,
-        recurrenceId: r.id,
-      };
-    });
-}
-
 export function buildMonthOccurrences(
   year: number,
   month0: number,
-  data: { debts: Debt[]; parentsById: Map<string, Debt>; recurrences: Recurrence[] }
+  data: { debts: Debt[]; parentsById: Map<string, Debt> }
 ): Occurrence[] {
   const singles = data.debts.filter((d) => !isInstallment(d));
   const children = data.debts.filter(isInstallment);
-  const singlesThisMonth = singles.filter((d) => isDueIn(d.dueDate, year, month0));
 
   const fromDebts = occurrencesFromDebts(singles, year, month0);
   const fromInstallments = occurrencesFromInstallments(children, data.parentsById, year, month0);
-  const fromRecurrences = occurrencesFromRecurrences(data.recurrences, singlesThisMonth, year, month0);
 
-  return [...fromDebts, ...fromInstallments, ...fromRecurrences].sort((a, b) => a.dueDay - b.dueDay);
+  return [...fromDebts, ...fromInstallments].sort((a, b) => a.dueDay - b.dueDay);
 }
 
 export function computeIncomeForMonth(incomes: Income[], year: number, month0: number): number {

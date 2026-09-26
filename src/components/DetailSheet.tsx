@@ -20,8 +20,8 @@ export function DetailSheet() {
     ? getOccurrences(detail.year, detail.month0).find((x) => x.key === detail.occurrence.key) ?? detail.occurrence
     : undefined;
   const { data: payments } = useFinancePayments(
-    { debtIds: o?.debtId ? [o.debtId] : [] },
-    !!o?.debtId && o.paidAmount > 0.005
+    { debtIds: o ? [o.debtId] : [] },
+    !!o && o.paidAmount > 0.005
   );
 
   if (!detail || !o) return null;
@@ -45,7 +45,7 @@ export function DetailSheet() {
   // `debtId` é a dívida-filha (parcela) quando parcelado — ela já carrega sua
   // própria data e valor. Só o pai sabe o total ainda em aberto do
   // parcelamento inteiro.
-  const debt = o.debtId ? debtsById.get(o.debtId) : undefined;
+  const debt = debtsById.get(o.debtId);
   const parent = debt && parentOf(debt, debtsById);
   const lastDue = debt ? lastInstallmentDueDate(debt, parent) : null;
 
@@ -62,7 +62,7 @@ export function DetailSheet() {
     rows.push({ k: 'Geração', v: 'Lançamento avulso deste mês, categorizado como variável' });
   } else if (o.kind === 'fixo') {
     rows.push({ k: 'No ano', v: money(o.amount * 12, privado) });
-    rows.push({ k: 'Geração', v: o.projected ? 'Recorrência ativa — ainda não gerada este mês' : 'Gerado automaticamente' });
+    rows.push({ k: 'Geração', v: 'Gerado automaticamente' });
   }
 
   const parcial = !o.isPaid && o.paidAmount > 0.01;
@@ -101,12 +101,6 @@ export function DetailSheet() {
           ))}
         </div>
 
-        {o.projected && (
-          <div style={{ marginTop: 16, fontSize: 12, color: 'var(--color-neutral-500)', lineHeight: 1.5 }}>
-            Esta é uma projeção da recorrência — ela ainda não virou um lançamento real neste mês, então não dá para pagar por aqui.
-          </div>
-        )}
-
         {o.paidAmount > 0.005 && payments && payments.length > 0 && (
           <div style={{ marginTop: 18 }}>
             <div className="field-kicker" style={{ paddingBottom: 8 }}>Pagamentos</div>
@@ -143,7 +137,7 @@ export function DetailSheet() {
         )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-          {!o.isPaid && o.debtId && o.payable && (
+          {!o.isPaid && (
             <button
               className="btn btn-primary"
               onClick={() => {
@@ -158,7 +152,7 @@ export function DetailSheet() {
           <button
             className="btn btn-secondary"
             onClick={close}
-            style={{ flex: o.isPaid || !o.debtId || !o.payable ? '1 1 auto' : '0 0 auto' }}
+            style={{ flex: o.isPaid ? '1 1 auto' : '0 0 auto' }}
           >
             Fechar
           </button>

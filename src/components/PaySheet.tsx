@@ -13,7 +13,7 @@ export function PaySheet() {
   const { pay, closePay, privado, debtsById } = useFinanceMonth();
   const createPayment = useCreateFinancePayment();
 
-  const debt = pay?.occurrence.debtId ? debtsById.get(pay.occurrence.debtId) : undefined;
+  const debt = pay ? debtsById.get(pay.occurrence.debtId) : undefined;
   const falta = pay ? Math.max(0, pay.occurrence.amount - pay.occurrence.paidAmount) : 0;
 
   const [valueRaw, setValueRaw] = useState('');

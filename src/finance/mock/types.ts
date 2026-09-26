@@ -1,7 +1,7 @@
 /**
  * Tipos do domínio financeiro usados pelo Controle Mensal enquanto o backend
  * v2 não expõe as rotas de finance. Espelham os schemas removidos de
- * `src/api/generated.ts` (Debt, Installment, Recurrence, Income, ...), para
+ * `src/api/generated.ts` (Debt, Installment, Income, ...), para
  * que a troca de volta pelo client gerado seja só mudar o import.
  */
 export type DebtStatus = 'OPEN' | 'INSTALLMENT' | 'SETTLED';
@@ -34,22 +34,6 @@ export interface Installment {
   amount: string;
   isPaid: boolean;
   paymentId?: string | null;
-  createdAt: string;
-  updatedAt?: string | null;
-}
-
-export interface Recurrence {
-  id: string;
-  clientId?: string | null;
-  financialInstrumentId?: string | null;
-  description: string;
-  category?: string;
-  amount: string;
-  startDate: string;
-  endDate?: string | null;
-  dayOfMonth: number;
-  nextRunDate?: string | null;
-  active: boolean;
   createdAt: string;
   updatedAt?: string | null;
 }
@@ -102,10 +86,6 @@ export interface InstallmentFilters {
   endDate?: string;
 }
 
-export interface RecurrenceFilters {
-  active?: boolean | null;
-}
-
 export interface IncomeFilters {
   startDate?: string;
   endDate?: string;
@@ -129,16 +109,6 @@ export interface CreateDebtRequest {
   financialInstrumentId?: string;
   installmentCount?: number;
   expenseType?: ExpenseType;
-}
-
-export interface CreateRecurrenceRequest {
-  financialInstrumentId?: string | null;
-  description: string;
-  amount: string;
-  startDate: string;
-  endDate?: string | null;
-  dayOfMonth: number;
-  category?: string;
 }
 
 export interface CreatePaymentRequest {

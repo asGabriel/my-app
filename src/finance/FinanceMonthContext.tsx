@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import dayjs from 'dayjs';
 import { useFinanceDebtParents, useFinanceDebts, type Debt } from '../api';
-import { useRecurrences, useIncomes } from './mock';
+import { useIncomes } from './mock';
 import {
   buildMonthOccurrences,
   computeIncomeForMonth,
@@ -42,8 +42,8 @@ interface FinanceMonthContextValue {
   privado: boolean;
   togglePrivado: () => void;
   isLoading: boolean;
-  /** Erro ao buscar os débitos reais (módulo `finance`) — renda/recorrência
-   * seguem no mock e não falham. */
+  /** Erro ao buscar os débitos reais (módulo `finance`) — a renda segue no
+   * mock e não falha. */
   isError: boolean;
   error: unknown;
   refetch: () => void;
@@ -99,7 +99,6 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
   const monthFilters = useMemo(() => ({ includeChildren: true, ...dateFilters }), [dateFilters]);
   const { data: windowDebts, isLoading: isLoadingDebts, isError: isDebtsError, error: debtsError, refetch: refetchDebts } =
     useFinanceDebts(monthFilters);
-  const { data: recurrences, isLoading: isLoadingRecurrences } = useRecurrences({ active: true });
   const { data: incomes, isLoading: isLoadingIncomes } = useIncomes(dateFilters);
 
   const { parents } = useFinanceDebtParents(windowDebts);
@@ -113,7 +112,7 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
 
   const occurrencesByMonth = useMemo(() => {
     const map = new Map<string, Occurrence[]>();
-    if (!windowDebts || !recurrences) return map;
+    if (!windowDebts) return map;
     let cursor = windowStart;
     while (cursor.isBefore(windowEnd) || cursor.isSame(windowEnd, 'month')) {
       const key = monthKey(cursor.year(), cursor.month());
@@ -122,13 +121,12 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
         buildMonthOccurrences(cursor.year(), cursor.month(), {
           debts: windowDebts,
           parentsById: debtsById,
-          recurrences,
         })
       );
       cursor = cursor.add(1, 'month');
     }
     return map;
-  }, [windowDebts, debtsById, recurrences, windowStart, windowEnd]);
+  }, [windowDebts, debtsById, windowStart, windowEnd]);
 
   const incomeByMonth = useMemo(() => {
     const map = new Map<string, number>();
@@ -161,7 +159,7 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
     selected: { year: selected.year, month0: selected.month0 },
     privado,
     togglePrivado: () => setPrivado((p) => !p),
-    isLoading: isLoadingDebts || isLoadingRecurrences || isLoadingIncomes,
+    isLoading: isLoadingDebts || isLoadingIncomes,
     isError: isDebtsError,
     error: debtsError,
     refetch: () => void refetchDebts(),

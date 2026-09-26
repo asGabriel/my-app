@@ -54,15 +54,12 @@ interface OccRowProps {
   onDelete: () => void;
 }
 
-/** Tocar abre o detalhe. Só lançamento com débito real tem ações de deslize —
- * recorrência projetada ainda não existe no backend. */
+/** Tocar abre o detalhe; deslizar mostra as ações do débito. */
 function OccRow({ occurrence, open, onOpenChange, onPay, onTap, onEdit, onDelete }: OccRowProps) {
   const { privado } = useFinanceMonth();
   const o = occurrence;
-  const canPay = !o.isPaid && !!o.debtId && o.payable;
-  const { startActions, endActions } = o.debtId
-    ? debtSwipeActions({ canPay, onPay, onEdit, onDelete })
-    : { startActions: [], endActions: [] };
+  const canPay = !o.isPaid;
+  const { startActions, endActions } = debtSwipeActions({ canPay, onPay, onEdit, onDelete });
   const parcial = !o.isPaid && o.paidAmount > 0.01;
   const tag = parcial
     ? `falta ${short(o.amount - o.paidAmount, privado)}`
@@ -70,9 +67,7 @@ function OccRow({ occurrence, open, onOpenChange, onPay, onTap, onEdit, onDelete
       ? `${o.installmentId}/${o.installmentCount}`
       : o.isPaid
         ? 'pago'
-        : o.projected
-          ? 'automático'
-          : 'a pagar';
+        : 'a pagar';
   const tagColor = parcial || o.installmentId ? 'var(--color-accent-300)' : 'var(--color-neutral-500)';
 
   return (
@@ -124,7 +119,7 @@ export function MesTab() {
   const [swiped, setSwiped] = useState<{ key: string; side: SwipeSide } | null>(null);
   const [editing, setEditing] = useState<Debt | null>(null);
   const [deleting, setDeleting] = useState<Debt | null>(null);
-  const debtOf = (o: Occurrence) => (o.debtId ? debtsById.get(o.debtId) : undefined);
+  const debtOf = (o: Occurrence) => debtsById.get(o.debtId);
 
   const handleLogout = () => {
     logout();

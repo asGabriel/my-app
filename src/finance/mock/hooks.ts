@@ -7,9 +7,9 @@ import dayjs from 'dayjs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as store from './store';
 import type {
-  CreateDebtRequest, CreatePaymentRequest, CreateRecurrenceRequest, Debt, DebtFilters,
+  CreateDebtRequest, CreatePaymentRequest, Debt, DebtFilters,
   FinancialInstrument, FinancialInstrumentListFilters, Income, IncomeFilters, Installment,
-  InstallmentFilters, Recurrence, RecurrenceFilters,
+  InstallmentFilters,
 } from './types';
 
 const LATENCY_MS = 120;
@@ -48,16 +48,6 @@ export function useInstallments(filters: InstallmentFilters = {}) {
   });
 }
 
-export function useRecurrences(filters: RecurrenceFilters = {}) {
-  return useQuery({
-    queryKey: ['recurrences', filters],
-    queryFn: () =>
-      delay<Recurrence[]>(() =>
-        store.recurrences.filter((r) => filters.active == null || r.active === filters.active).map((r) => ({ ...r }))
-      ),
-  });
-}
-
 export function useIncomes(filters: IncomeFilters = {}) {
   return useQuery({
     queryKey: ['incomes', filters],
@@ -90,14 +80,6 @@ export function useCreateDebt() {
   const invalidate = useInvalidate(['debts', 'installments']);
   return useMutation({
     mutationFn: (req: CreateDebtRequest) => delay(() => store.createDebt(req)),
-    onSuccess: invalidate,
-  });
-}
-
-export function useCreateRecurrence() {
-  const invalidate = useInvalidate(['recurrences']);
-  return useMutation({
-    mutationFn: (req: CreateRecurrenceRequest) => delay(() => store.createRecurrence(req)),
     onSuccess: invalidate,
   });
 }
