@@ -56,8 +56,9 @@ updateDebt:
     operationId: updateFinanceDebt
     summary: Atualiza uma dívida (módulo finance)
     description: >-
-      Parcelas (filhas) não são editáveis — o backend responde 400. Mudar o
-      listId de uma dívida-pai propaga para todas as parcelas.
+      Parcelas (filhas) não são editáveis — o backend responde 400. Editar
+      description, category, expenseType ou listId de uma dívida-pai propaga
+      para todas as parcelas; dueDate numa dívida-pai responde 400.
     tags:
       - Finance
     parameters:

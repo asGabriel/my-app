@@ -376,7 +376,7 @@ const endpoints = makeApi([
     method: "patch",
     path: "/finance/debt/:debtId",
     alias: "updateFinanceDebt",
-    description: `Parcelas (filhas) não são editáveis — o backend responde 400. Mudar o listId de uma dívida-pai propaga para todas as parcelas.`,
+    description: `Parcelas (filhas) não são editáveis — o backend responde 400. Editar description, category, expenseType ou listId de uma dívida-pai propaga para todas as parcelas; dueDate numa dívida-pai responde 400.`,
     requestFormat: "json",
     parameters: [
       {

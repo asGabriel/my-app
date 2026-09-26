@@ -6,7 +6,7 @@ import { useFinanceMonth, MESES_LONGOS } from '../../finance/FinanceMonthContext
 import { money, short } from '../../finance/format';
 import { categoryIcon } from '../../finance/categoryIcon';
 import { EXPENSE_TYPE_LABELS } from '../../utils/constants';
-import { DebtListSheet } from '../../components/DebtListSheet';
+import { DebtEditSheet } from '../../components/DebtEditSheet';
 import { MonthChips } from './MonthChips';
 
 type StatusFilter = 'all' | 'open' | 'settled';
@@ -254,7 +254,7 @@ export function DebtsTab() {
       </div>
 
       {editing && (
-        <DebtListSheet
+        <DebtEditSheet
           debt={editing}
           parent={parentOf(editing, parentsById)}
           lists={lists}
