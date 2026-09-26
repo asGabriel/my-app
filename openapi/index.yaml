@@ -19,32 +19,24 @@ paths:
     $ref: "./paths/auth.yaml#/register"
   /auth/me:
     $ref: "./paths/auth.yaml#/me"
-  /financeManager/income/list:
-    $ref: "./paths/income.yaml#/list"
-  /financeManager/income:
-    $ref: "./paths/income.yaml#/create"
-  /financeManager/payment/list:
-    $ref: "./paths/payment.yaml#/list"
-  /financeManager/payment:
-    $ref: "./paths/payment.yaml#/create"
-  /financeManager/debt/list:
-    $ref: "./paths/debt.yaml#/list"
-  /financeManager/debt:
-    $ref: "./paths/debt.yaml#/create"
-  /financeManager/debt/installment/list:
-    $ref: "./paths/debt.yaml#/listInstallments"
-  /financeManager/debt/{debtId}:
-    $ref: "./paths/debt.yaml#/update"
-  /financeManager/debt/recurrence:
-    $ref: "./paths/debt.yaml#/createRecurrence"
-  /financeManager/debt/recurrence/list:
-    $ref: "./paths/debt.yaml#/listRecurrences"
-  /financeManager/debt/recurrence/{recurrenceId}:
-    $ref: "./paths/debt.yaml#/updateRecurrence"
-  /financeManager/financialInstrument/list:
-    $ref: "./paths/financial_instrument.yaml#/list"
-  /financeManager/financialInstrument:
-    $ref: "./paths/financial_instrument.yaml#/createOrUpdate"
+  # financeManager: sem cobertura por hora — backend em reformulação (v2).
+  # O novo módulo `finance` (rust-api) volta aos poucos: por ora a listagem
+  # de dívidas, criação, edição e exclusão de dívida, listas (agrupadores) e pagamentos. Ver openapi/paths/finance.yaml e
+  # matchmaking.yaml para o padrão.
+  /finance/debt:
+    $ref: "./paths/finance.yaml#/debts"
+  /finance/debt/list:
+    $ref: "./paths/finance.yaml#/listDebts"
+  /finance/debt/{debtId}:
+    $ref: "./paths/finance.yaml#/updateDebt"
+  /finance/list:
+    $ref: "./paths/finance.yaml#/lists"
+  /finance/payment:
+    $ref: "./paths/finance.yaml#/payments"
+  /finance/payment/list:
+    $ref: "./paths/finance.yaml#/listPayments"
+  /finance/payment/{paymentId}:
+    $ref: "./paths/finance.yaml#/refundPayment"
   /matchmaking/players/:
     $ref: "./paths/matchmaking.yaml#/players"
   /matchmaking/players/{playerId}:
@@ -53,6 +45,8 @@ paths:
     $ref: "./paths/matchmaking.yaml#/sessions"
   /matchmaking/sessions/{sessionId}:
     $ref: "./paths/matchmaking.yaml#/session"
+  /matchmaking/sessions/{sessionId}/check-in/{playerId}:
+    $ref: "./paths/matchmaking.yaml#/checkIn"
   /matchmaking/sessions/{sessionId}/queue:
     $ref: "./paths/matchmaking.yaml#/sessionQueue"
   /matchmaking/sessions/{sessionId}/queue/fill:
@@ -84,56 +78,30 @@ components:
       $ref: "./schemas/auth.yaml#/UserResponse"
     AuthResponse:
       $ref: "./schemas/auth.yaml#/AuthResponse"
-    ListIncomesFilters:
-      $ref: "./schemas/income.yaml#/ListIncomesFilters"
-    Income:
-      $ref: "./schemas/income.yaml#/Income"
-    CreateIncomeRequest:
-      $ref: "./schemas/income.yaml#/CreateIncomeRequest"
-    ListPaymentsFilters:
-      $ref: "./schemas/payment.yaml#/ListPaymentsFilters"
-    Payment:
-      $ref: "./schemas/payment.yaml#/Payment"
-    CreatePaymentRequest:
-      $ref: "./schemas/payment.yaml#/CreatePaymentRequest"
-    CreateDebtRequest:
-      $ref: "./schemas/debt.yaml#/CreateDebtRequest"
-    DebtFilters:
-      $ref: "./schemas/debt.yaml#/DebtFilters"
-    Debt:
-      $ref: "./schemas/debt.yaml#/Debt"
-    FinancialInstrumentType:
-      $ref: "./schemas/financial_instrument.yaml#/FinancialInstrumentType"
-    InstrumentConfiguration:
-      $ref: "./schemas/financial_instrument.yaml#/InstrumentConfiguration"
-    FinancialInstrumentListFilters:
-      $ref: "./schemas/financial_instrument.yaml#/FinancialInstrumentListFilters"
-    FinancialInstrument:
-      $ref: "./schemas/financial_instrument.yaml#/FinancialInstrument"
-    CreateFinancialInstrumentRequest:
-      $ref: "./schemas/financial_instrument.yaml#/CreateFinancialInstrumentRequest"
-    UpdateFinancialInstrumentRequest:
-      $ref: "./schemas/financial_instrument.yaml#/UpdateFinancialInstrumentRequest"
-    DebtCategory:
-      $ref: "./schemas/debt.yaml#/DebtCategory"
     DebtStatus:
-      $ref: "./schemas/debt.yaml#/DebtStatus"
+      $ref: "./schemas/finance.yaml#/DebtStatus"
+    DebtCategory:
+      $ref: "./schemas/finance.yaml#/DebtCategory"
     ExpenseType:
-      $ref: "./schemas/debt.yaml#/ExpenseType"
-    InstallmentFilters:
-      $ref: "./schemas/debt.yaml#/InstallmentFilters"
-    Installment:
-      $ref: "./schemas/debt.yaml#/Installment"
+      $ref: "./schemas/finance.yaml#/ExpenseType"
+    Debt:
+      $ref: "./schemas/finance.yaml#/Debt"
+    DebtFilters:
+      $ref: "./schemas/finance.yaml#/DebtFilters"
+    DebtList:
+      $ref: "./schemas/finance.yaml#/DebtList"
+    CreateDebtListRequest:
+      $ref: "./schemas/finance.yaml#/CreateDebtListRequest"
+    CreateDebtRequest:
+      $ref: "./schemas/finance.yaml#/CreateDebtRequest"
     UpdateDebtRequest:
-      $ref: "./schemas/debt.yaml#/UpdateDebtRequest"
-    CreateRecurrenceRequest:
-      $ref: "./schemas/debt.yaml#/CreateRecurrenceRequest"
-    RecurrenceFilters:
-      $ref: "./schemas/debt.yaml#/RecurrenceFilters"
-    Recurrence:
-      $ref: "./schemas/debt.yaml#/Recurrence"
-    UpdateRecurrenceRequest:
-      $ref: "./schemas/debt.yaml#/UpdateRecurrenceRequest"
+      $ref: "./schemas/finance.yaml#/UpdateDebtRequest"
+    Payment:
+      $ref: "./schemas/finance.yaml#/Payment"
+    CreatePaymentRequest:
+      $ref: "./schemas/finance.yaml#/CreatePaymentRequest"
+    PaymentFilters:
+      $ref: "./schemas/finance.yaml#/PaymentFilters"
     Gender:
       $ref: "./schemas/matchmaking.yaml#/Gender"
     GameMode:

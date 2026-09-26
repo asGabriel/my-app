@@ -27,134 +27,6 @@ const RegisterRequest = z
     name: z.string(),
   })
   .passthrough();
-const ListIncomesFilters = z
-  .object({
-    financialInstrumentIds: z.array(z.string().uuid()),
-    startDate: z.string(),
-    endDate: z.string(),
-  })
-  .partial()
-  .passthrough();
-const Income = z
-  .object({
-    id: z.string().uuid(),
-    clientId: z.string().uuid(),
-    financialInstrumentId: z.string().uuid().nullish(),
-    description: z.string(),
-    amount: z.string(),
-    reference: z.string(),
-    createdAt: z.string(),
-    updatedAt: z.string().nullish(),
-  })
-  .passthrough();
-const CreateIncomeRequest = z
-  .object({
-    financialInstrumentId: z.string().uuid(),
-    description: z.string(),
-    amount: z.string(),
-    dateReference: z.string(),
-  })
-  .passthrough();
-const ListPaymentsFilters = z
-  .object({
-    debtIds: z.array(z.string().uuid()),
-    financialInstrumentIds: z.array(z.string().uuid()),
-    accountIds: z.array(z.string().uuid()),
-    startDate: z.string(),
-    endDate: z.string(),
-  })
-  .partial()
-  .passthrough();
-const Payment = z
-  .object({
-    id: z.string().uuid(),
-    clientId: z.string().uuid(),
-    debtId: z.string().uuid(),
-    accountId: z.string().uuid(),
-    financialInstrumentId: z.string().uuid().nullish(),
-    amount: z.string(),
-    paymentDate: z.string(),
-    createdAt: z.string(),
-    updatedAt: z.string().nullish(),
-  })
-  .passthrough();
-const CreatePaymentRequest = z
-  .object({
-    debtId: z.string().uuid(),
-    financialInstrumentId: z.string().uuid().nullish(),
-    paymentDate: z.string(),
-    amount: z.string().nullish(),
-    reconcile: z.boolean().nullish(),
-  })
-  .passthrough();
-const DebtStatus = z.enum(["OPEN", "INSTALLMENT", "SETTLED"]);
-const DebtFilters = z
-  .object({
-    ids: z.array(z.string().uuid()),
-    statuses: z.array(DebtStatus),
-    startDate: z.string(),
-    endDate: z.string(),
-  })
-  .partial()
-  .passthrough();
-const ExpenseType = z.enum(["FIXED", "VARIABLE"]);
-const Debt = z
-  .object({
-    id: z.string().uuid(),
-    clientId: z.string().uuid(),
-    category: z.string(),
-    tags: z.array(z.string()),
-    identification: z.string(),
-    description: z.string(),
-    totalAmount: z.string(),
-    paidAmount: z.string(),
-    discountAmount: z.string(),
-    remainingAmount: z.string(),
-    dueDate: z.string(),
-    status: DebtStatus,
-    installmentCount: z.number().int().nullish(),
-    expenseType: ExpenseType.optional(),
-    createdAt: z.string(),
-    updatedAt: z.string().nullish(),
-  })
-  .passthrough();
-const CreateDebtRequest = z
-  .object({
-    category: z.string().optional(),
-    tags: z.array(z.string()).optional(),
-    description: z.string(),
-    dueDate: z.string(),
-    totalAmount: z.string(),
-    paidAmount: z.string().optional(),
-    discountAmount: z.string().optional(),
-    status: DebtStatus.optional(),
-    isPaid: z.boolean(),
-    financialInstrumentId: z.string().uuid().optional(),
-    installmentCount: z.number().int().optional(),
-    expenseType: ExpenseType.optional(),
-  })
-  .passthrough();
-const InstallmentFilters = z
-  .object({
-    debtIds: z.array(z.string().uuid()),
-    isPaid: z.boolean(),
-    startDate: z.string(),
-    endDate: z.string(),
-  })
-  .partial()
-  .passthrough();
-const Installment = z
-  .object({
-    debtId: z.string().uuid(),
-    installmentId: z.number().int(),
-    dueDate: z.string(),
-    amount: z.string(),
-    isPaid: z.boolean(),
-    paymentId: z.string().uuid().nullish(),
-    createdAt: z.string(),
-    updatedAt: z.string().nullish(),
-  })
-  .passthrough();
 const DebtCategory = z.enum([
   "UNKNOWN",
   "HOME",
@@ -164,110 +36,103 @@ const DebtCategory = z.enum([
   "LIFESTYLE",
   "EDUCATION",
   "GOALS",
-  "PERSONAL",
+  "SUBSCRIPTIONS",
+  "OBLIGATIONS",
+  "PURCHASES",
 ]);
-const UpdateDebtRequest = z
+const ExpenseType = z.enum(["FIXED", "VARIABLE"]);
+const CreateDebtRequest = z
   .object({
-    category: DebtCategory,
-    expenseType: ExpenseType,
-    tags: z.array(z.string()).nullable(),
-    description: z.string().nullable(),
-    dueDate: z.string().nullable(),
-  })
-  .partial()
-  .passthrough();
-const CreateRecurrenceRequest = z
-  .object({
-    financialInstrumentId: z.string().uuid().nullish(),
-    description: z.string(),
-    amount: z.string(),
-    startDate: z.string(),
-    endDate: z.string().nullish(),
-    dayOfMonth: z.number().int(),
     category: DebtCategory.optional(),
+    expenseType: ExpenseType.optional(),
+    listId: z.string().uuid().optional(),
+    description: z.string(),
+    dueDate: z.string(),
+    totalAmount: z.string(),
+    paidAmount: z.string().optional(),
+    installmentCount: z.number().int().optional(),
   })
   .passthrough();
-const Recurrence = z
+const DebtStatus = z.enum(["OPEN", "SETTLED"]);
+const Debt = z
   .object({
     id: z.string().uuid(),
-    clientId: z.string().uuid().nullish(),
-    financialInstrumentId: z.string().uuid().nullish(),
+    clientId: z.string().uuid(),
+    category: DebtCategory,
+    expenseType: ExpenseType,
+    listId: z.string().uuid().nullish(),
+    identification: z.string(),
     description: z.string(),
-    category: DebtCategory.optional(),
-    amount: z.string(),
-    startDate: z.string(),
-    endDate: z.string().nullish(),
-    dayOfMonth: z.number().int(),
-    nextRunDate: z.string().nullish(),
-    active: z.boolean(),
+    totalAmount: z.string(),
+    paidAmount: z.string(),
+    remainingAmount: z.string(),
+    dueDate: z.string().nullish(),
+    status: DebtStatus,
+    installmentCount: z.number().int().nullish(),
+    parentId: z.string().uuid().nullish(),
+    installmentNumber: z.number().int().nullish(),
     createdAt: z.string(),
     updatedAt: z.string().nullish(),
   })
   .passthrough();
-const RecurrenceFilters = z
+const DebtFilters = z
   .object({
-    clientId: z.string().uuid().nullable(),
-    nextRunDate: z.string().nullable(),
-    active: z.boolean().nullable(),
-  })
-  .partial()
-  .passthrough();
-const UpdateRecurrenceRequest = z
-  .object({
-    description: z.string().nullable(),
-    dayOfMonth: z.number().int().nullable(),
-    endDate: z.string().nullable(),
-    active: z.boolean().nullable(),
-  })
-  .partial()
-  .passthrough();
-const FinancialInstrumentType = z.enum([
-  "CREDIT_CARD",
-  "DEBIT_ACCOUNT",
-  "INVESTMENT_BOX",
-]);
-const FinancialInstrumentListFilters = z
-  .object({
-    clientId: z.string().uuid(),
     ids: z.array(z.string().uuid()),
-    identifications: z.array(z.string()),
-    instrumentTypes: z.array(FinancialInstrumentType),
+    statuses: z.array(DebtStatus),
+    startDate: z.string(),
+    endDate: z.string(),
+    categoryNames: z.array(DebtCategory),
+    listId: z.string().uuid(),
+    parentId: z.string().uuid(),
+    includeChildren: z.boolean(),
   })
   .partial()
   .passthrough();
-const InstrumentConfiguration = z
-  .object({ defaultDueDate: z.number().int().nullable() })
+const UpdateDebtRequest = z
+  .object({
+    category: DebtCategory,
+    expenseType: ExpenseType,
+    listId: z.string().uuid().nullable(),
+    description: z.string(),
+    dueDate: z.string(),
+  })
   .partial()
   .passthrough();
-const FinancialInstrument = z
+const DebtList = z
   .object({
     id: z.string().uuid(),
     clientId: z.string().uuid(),
     name: z.string(),
-    owner: z.string(),
-    identification: z.string(),
-    instrumentType: FinancialInstrumentType.optional(),
-    configuration: InstrumentConfiguration,
-    createdAt: z.string().datetime({ offset: true }),
-    updatedAt: z.string().datetime({ offset: true }).nullish(),
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
   })
   .passthrough();
-const CreateFinancialInstrumentRequest = z
+const CreateDebtListRequest = z.object({ name: z.string() }).passthrough();
+const CreatePaymentRequest = z
   .object({
-    name: z.string(),
-    owner: z.string(),
-    instrumentType: FinancialInstrumentType.optional(),
-    configuration: InstrumentConfiguration.optional(),
+    debtId: z.string().uuid(),
+    amount: z.string().optional(),
+    paymentDate: z.string().optional(),
   })
   .passthrough();
-const UpdateFinancialInstrumentRequest = z
+const Payment = z
   .object({
-    identification: z.string(),
-    name: z.string().optional(),
-    owner: z.string().optional(),
-    instrumentType: FinancialInstrumentType.optional(),
-    configuration: InstrumentConfiguration.optional(),
+    id: z.string().uuid(),
+    clientId: z.string().uuid(),
+    debtId: z.string().uuid(),
+    amount: z.string(),
+    paymentDate: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
   })
+  .passthrough();
+const PaymentFilters = z
+  .object({
+    debtIds: z.array(z.string().uuid()),
+    startDate: z.string(),
+    endDate: z.string(),
+  })
+  .partial()
   .passthrough();
 const Gender = z.enum(["male", "female"]);
 const CreatePlayerRequest = z
@@ -312,6 +177,7 @@ const Session = z
     availableCourts: z.number().int(),
     gameMode: GameMode,
     playerIds: z.array(z.string().uuid()),
+    rosterPlayerIds: z.array(z.string().uuid()),
     createdAt: z.string(),
     updatedAt: z.string().nullish(),
   })
@@ -323,7 +189,7 @@ const UpdateSessionRequest = z
     availableCourts: z.number().int().nullable(),
     gameMode: GameMode,
     settings: SessionSettings,
-    playerIds: z.array(z.string().uuid()).nullable(),
+    rosterPlayerIds: z.array(z.string().uuid()).nullable(),
   })
   .partial()
   .passthrough();
@@ -400,31 +266,18 @@ export const schemas = {
   UserResponse,
   AuthResponse,
   RegisterRequest,
-  ListIncomesFilters,
-  Income,
-  CreateIncomeRequest,
-  ListPaymentsFilters,
-  Payment,
-  CreatePaymentRequest,
-  DebtStatus,
-  DebtFilters,
-  ExpenseType,
-  Debt,
-  CreateDebtRequest,
-  InstallmentFilters,
-  Installment,
   DebtCategory,
+  ExpenseType,
+  CreateDebtRequest,
+  DebtStatus,
+  Debt,
+  DebtFilters,
   UpdateDebtRequest,
-  CreateRecurrenceRequest,
-  Recurrence,
-  RecurrenceFilters,
-  UpdateRecurrenceRequest,
-  FinancialInstrumentType,
-  FinancialInstrumentListFilters,
-  InstrumentConfiguration,
-  FinancialInstrument,
-  CreateFinancialInstrumentRequest,
-  UpdateFinancialInstrumentRequest,
+  DebtList,
+  CreateDebtListRequest,
+  CreatePaymentRequest,
+  Payment,
+  PaymentFilters,
   Gender,
   CreatePlayerRequest,
   Player,
@@ -506,8 +359,9 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/financeManager/debt",
-    alias: "createDebt",
+    path: "/finance/debt",
+    alias: "createFinanceDebt",
+    description: `Com installmentCount (&gt;&#x3D; 2) cria uma dívida-pai e as N parcelas mensais a partir de dueDate; o total é dividido entre elas e não aceita paidAmount. Sem installmentCount cria uma dívida comum, e paidAmount &gt; 0 registra um pagamento inicial. O backend responde 400 para totalAmount &lt;&#x3D; 0 ou com mais de 2 casas decimais.`,
     requestFormat: "json",
     parameters: [
       {
@@ -520,8 +374,9 @@ const endpoints = makeApi([
   },
   {
     method: "patch",
-    path: "/financeManager/debt/:debtId",
-    alias: "updateDebt",
+    path: "/finance/debt/:debtId",
+    alias: "updateFinanceDebt",
+    description: `Parcelas (filhas) não são editáveis — o backend responde 400. Editar description, category, expenseType ou listId de uma dívida-pai propaga para todas as parcelas; dueDate numa dívida-pai responde 400.`,
     requestFormat: "json",
     parameters: [
       {
@@ -538,23 +393,25 @@ const endpoints = makeApi([
     response: Debt,
   },
   {
-    method: "post",
-    path: "/financeManager/debt/installment/list",
-    alias: "listInstallments",
+    method: "delete",
+    path: "/finance/debt/:debtId",
+    alias: "deleteFinanceDebt",
+    description: `Soft delete. Numa dívida-pai a exclusão vale para o parcelamento inteiro: as parcelas e os pagamentos delas saem junto, na mesma transação.`,
     requestFormat: "json",
     parameters: [
       {
-        name: "body",
-        type: "Body",
-        schema: InstallmentFilters,
+        name: "debtId",
+        type: "Path",
+        schema: z.string().uuid(),
       },
     ],
-    response: z.array(Installment),
+    response: z.void(),
   },
   {
     method: "post",
-    path: "/financeManager/debt/list",
-    alias: "listDebts",
+    path: "/finance/debt/list",
+    alias: "listFinanceDebts",
+    description: `Por padrão devolve só as dívidas de nível-topo (pais de parcelamento inclusos, sem as parcelas). Use parentId para listar as parcelas de uma dívida, ou includeChildren para uma lista plana com tudo.`,
     requestFormat: "json",
     parameters: [
       {
@@ -566,126 +423,32 @@ const endpoints = makeApi([
     response: z.array(Debt),
   },
   {
-    method: "post",
-    path: "/financeManager/debt/recurrence",
-    alias: "createRecurrence",
+    method: "get",
+    path: "/finance/list",
+    alias: "listFinanceLists",
+    description: `Uma lista é só um agrupador: cada dívida aponta para no máximo uma via listId. Ordenadas por data de criação.`,
     requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: CreateRecurrenceRequest,
-      },
-    ],
-    response: Recurrence,
-  },
-  {
-    method: "patch",
-    path: "/financeManager/debt/recurrence/:recurrenceId",
-    alias: "updateRecurrence",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: UpdateRecurrenceRequest,
-      },
-      {
-        name: "recurrenceId",
-        type: "Path",
-        schema: z.string().uuid(),
-      },
-    ],
-    response: Recurrence,
+    response: z.array(DebtList),
   },
   {
     method: "post",
-    path: "/financeManager/debt/recurrence/list",
-    alias: "listRecurrences",
+    path: "/finance/list",
+    alias: "createFinanceList",
     requestFormat: "json",
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: RecurrenceFilters,
+        schema: z.object({ name: z.string() }).passthrough(),
       },
     ],
-    response: z.array(Recurrence),
+    response: DebtList,
   },
   {
     method: "post",
-    path: "/financeManager/financialInstrument",
-    alias: "createFinancialInstrument",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: CreateFinancialInstrumentRequest,
-      },
-    ],
-    response: FinancialInstrument,
-  },
-  {
-    method: "patch",
-    path: "/financeManager/financialInstrument",
-    alias: "updateFinancialInstrument",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: UpdateFinancialInstrumentRequest,
-      },
-    ],
-    response: FinancialInstrument,
-  },
-  {
-    method: "post",
-    path: "/financeManager/financialInstrument/list",
-    alias: "listFinancialInstruments",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: FinancialInstrumentListFilters,
-      },
-    ],
-    response: z.array(FinancialInstrument),
-  },
-  {
-    method: "post",
-    path: "/financeManager/income",
-    alias: "createIncome",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: CreateIncomeRequest,
-      },
-    ],
-    response: Income,
-  },
-  {
-    method: "post",
-    path: "/financeManager/income/list",
-    alias: "listIncomes",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: ListIncomesFilters,
-      },
-    ],
-    response: z.array(Income),
-  },
-  {
-    method: "post",
-    path: "/financeManager/payment",
-    alias: "createPayment",
+    path: "/finance/payment",
+    alias: "createFinancePayment",
+    description: `Aceita pagamento parcial. O backend responde 400 para valor &lt;&#x3D; 0, com mais de 2 casas decimais ou acima do que falta, para dívida já quitada e para a dívida-pai de um parcelamento (paga-se cada parcela). Pagar uma parcela também atualiza o saldo do pai.`,
     requestFormat: "json",
     parameters: [
       {
@@ -697,16 +460,30 @@ const endpoints = makeApi([
     response: Payment,
   },
   {
+    method: "delete",
+    path: "/finance/payment/:paymentId",
+    alias: "refundFinancePayment",
+    description: `Soft delete do pagamento; o valor volta a ficar em aberto na dívida (e no pai, se for parcela).`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "paymentId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
     method: "post",
-    path: "/financeManager/payment/list",
-    alias: "listPayments",
-    description: `Lista pagamentos com filtros por período, débitos, instrumentos financeiros e contas.`,
+    path: "/finance/payment/list",
+    alias: "listFinancePayments",
     requestFormat: "json",
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: ListPaymentsFilters,
+        schema: PaymentFilters,
       },
     ],
     response: z.array(Payment),
@@ -848,6 +625,46 @@ const endpoints = makeApi([
       },
       {
         name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Session,
+  },
+  {
+    method: "post",
+    path: "/matchmaking/sessions/:sessionId/check-in/:playerId",
+    alias: "checkInPlayer",
+    description: `Adiciona o jogador à lista de presentes (playerIds) e à fila de espera da sessão, tornando-o elegível para os sorteios de quadra. O jogador precisa estar no roster da sessão (rosterPlayerIds) — responde 409 se não estiver. Idempotente. Responde 404 se a sessão ou o jogador não existir.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+      {
+        name: "playerId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Session,
+  },
+  {
+    method: "delete",
+    path: "/matchmaking/sessions/:sessionId/check-in/:playerId",
+    alias: "checkOutPlayer",
+    description: `Remove o jogador da lista de presentes (playerIds) e da fila de espera da sessão. O jogador continua no roster. Idempotente. Responde 404 se a sessão ou o jogador não existir.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+      {
+        name: "playerId",
         type: "Path",
         schema: z.string().uuid(),
       },

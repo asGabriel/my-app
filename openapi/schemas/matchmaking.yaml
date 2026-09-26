@@ -90,6 +90,7 @@ Session:
     - availableCourts
     - gameMode
     - playerIds
+    - rosterPlayerIds
     - createdAt
   properties:
     id:
@@ -110,6 +111,13 @@ Session:
       $ref: "#/GameMode"
     playerIds:
       type: array
+      description: "Jogadores com check-in (presentes). Subconjunto de rosterPlayerIds; alimenta a fila e os sorteios."
+      items:
+        type: string
+        format: uuid
+    rosterPlayerIds:
+      type: array
+      description: "Jogadores selecionados para a sessão (roster). Editado via PATCH; estar aqui é pré-requisito para o check-in."
       items:
         type: string
         format: uuid
@@ -162,8 +170,9 @@ UpdateSessionRequest:
     settings:
       $ref: "#/SessionSettings"
       nullable: true
-    playerIds:
+    rosterPlayerIds:
       type: array
+      description: "Substitui o roster inteiro. Check-in/out é a única via para mover playerIds; tirar daqui alguém com check-in também faz o check-out dele."
       items:
         type: string
         format: uuid

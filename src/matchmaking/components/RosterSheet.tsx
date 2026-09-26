@@ -92,7 +92,7 @@ export function RosterSheet({
 
   return (
     <BottomSheet
-      title={`Jogadores confirmados (${selectedIds.length})`}
+      title={`Jogadores da sessão (${selectedIds.length})`}
       open={open}
       onClose={onClose}
       onSubmit={onSubmit}

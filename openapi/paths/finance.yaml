@@ -1,0 +1,206 @@
+debts:
+  post:
+    operationId: createFinanceDebt
+    summary: Cria uma dívida (módulo finance)
+    description: >-
+      Com installmentCount (>= 2) cria uma dívida-pai e as N parcelas
+      mensais a partir de dueDate; o total é dividido entre elas e não aceita
+      paidAmount. Sem installmentCount cria uma dívida comum, e paidAmount > 0
+      registra um pagamento inicial. O backend responde 400 para totalAmount
+      <= 0 ou com mais de 2 casas decimais.
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/CreateDebtRequest"
+    responses:
+      "200":
+        description: >-
+          Dívida criada (num parcelamento, a dívida-pai).
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/finance.yaml#/Debt"
+
+listDebts:
+  post:
+    operationId: listFinanceDebts
+    summary: Lista dívidas (módulo finance)
+    description: >-
+      Por padrão devolve só as dívidas de nível-topo (pais de parcelamento
+      inclusos, sem as parcelas). Use parentId para listar as parcelas de uma
+      dívida, ou includeChildren para uma lista plana com tudo.
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/DebtFilters"
+    responses:
+      "200":
+        description: Lista de dívidas
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/finance.yaml#/Debt"
+
+updateDebt:
+  patch:
+    operationId: updateFinanceDebt
+    summary: Atualiza uma dívida (módulo finance)
+    description: >-
+      Parcelas (filhas) não são editáveis — o backend responde 400. Editar
+      description, category, expenseType ou listId de uma dívida-pai propaga
+      para todas as parcelas; dueDate numa dívida-pai responde 400.
+    tags:
+      - Finance
+    parameters:
+      - name: debtId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/UpdateDebtRequest"
+    responses:
+      "200":
+        description: Dívida atualizada
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/finance.yaml#/Debt"
+  delete:
+    operationId: deleteFinanceDebt
+    summary: Exclui uma dívida (módulo finance)
+    description: >-
+      Soft delete. Numa dívida-pai a exclusão vale para o parcelamento
+      inteiro: as parcelas e os pagamentos delas saem junto, na mesma
+      transação.
+    tags:
+      - Finance
+    parameters:
+      - name: debtId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Dívida excluída
+
+lists:
+  get:
+    operationId: listFinanceLists
+    summary: Lista as listas (agrupadores de dívidas) do cliente
+    description: >-
+      Uma lista é só um agrupador: cada dívida aponta para no máximo uma via
+      listId. Ordenadas por data de criação.
+    tags:
+      - Finance
+    responses:
+      "200":
+        description: Listas do cliente
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/finance.yaml#/DebtList"
+  post:
+    operationId: createFinanceList
+    summary: Cria uma lista (agrupador de dívidas)
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/CreateDebtListRequest"
+    responses:
+      "200":
+        description: Lista criada
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/finance.yaml#/DebtList"
+
+payments:
+  post:
+    operationId: createFinancePayment
+    summary: Registra um pagamento de uma dívida (módulo finance)
+    description: >-
+      Aceita pagamento parcial. O backend responde 400 para valor <= 0, com
+      mais de 2 casas decimais ou acima do que falta, para dívida já quitada
+      e para a dívida-pai de um parcelamento (paga-se cada parcela). Pagar uma
+      parcela também atualiza o saldo do pai.
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/CreatePaymentRequest"
+    responses:
+      "200":
+        description: Pagamento registrado
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/finance.yaml#/Payment"
+
+listPayments:
+  post:
+    operationId: listFinancePayments
+    summary: Lista pagamentos ativos (não estornados) do cliente
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/PaymentFilters"
+    responses:
+      "200":
+        description: Lista de pagamentos
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/finance.yaml#/Payment"
+
+refundPayment:
+  delete:
+    operationId: refundFinancePayment
+    summary: Estorna um pagamento
+    description: >-
+      Soft delete do pagamento; o valor volta a ficar em aberto na dívida (e
+      no pai, se for parcela).
+    tags:
+      - Finance
+    parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Pagamento estornado

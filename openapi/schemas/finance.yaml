@@ -1,0 +1,293 @@
+DebtStatus:
+  type: string
+  description: Status temporal da dívida (Open = em aberto, Settled = quitada)
+  enum:
+    - OPEN
+    - SETTLED
+
+DebtCategory:
+  type: string
+  enum:
+    - UNKNOWN
+    - HOME
+    - TRANSPORT
+    - HEALTH
+    - FOOD
+    - LIFESTYLE
+    - EDUCATION
+    - GOALS
+    - SUBSCRIPTIONS
+    - OBLIGATIONS
+    - PURCHASES
+
+ExpenseType:
+  type: string
+  enum:
+    - FIXED
+    - VARIABLE
+
+Debt:
+  type: object
+  description: >-
+    Dívida unificada do módulo finance. Uma dívida parcelada é um pai
+    (installmentCount preenchido, dueDate nulo) com N filhas (parentId
+    preenchido, installmentNumber 1..N) — só as filhas são pagáveis.
+  required:
+    - id
+    - clientId
+    - category
+    - expenseType
+    - identification
+    - description
+    - totalAmount
+    - paidAmount
+    - remainingAmount
+    - status
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    clientId:
+      type: string
+      format: uuid
+    category:
+      $ref: "#/DebtCategory"
+    expenseType:
+      $ref: "#/ExpenseType"
+    listId:
+      type: string
+      format: uuid
+      nullable: true
+      description: Lista (agrupamento) à qual a dívida pertence, se houver.
+    identification:
+      type: string
+    description:
+      type: string
+    totalAmount:
+      type: string
+      description: "Decimal serializado como string (ex.: \"450.00\")"
+    paidAmount:
+      type: string
+      description: "Decimal serializado como string"
+    remainingAmount:
+      type: string
+      description: "Decimal serializado como string"
+    dueDate:
+      type: string
+      nullable: true
+      description: "Data (YYYY-MM-DD). Nulo na dívida-pai de um parcelamento."
+    status:
+      $ref: "#/DebtStatus"
+    installmentCount:
+      type: integer
+      nullable: true
+      description: Total de parcelas. Preenchido no pai e copiado nas filhas (exibição "k/N").
+    parentId:
+      type: string
+      format: uuid
+      nullable: true
+      description: Preenchido quando a linha é uma parcela de outra dívida.
+    installmentNumber:
+      type: integer
+      nullable: true
+      description: Ordinal da parcela (1..N), só nas filhas.
+    createdAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339)"
+
+DebtList:
+  type: object
+  description: Agrupador de dívidas (módulo finance). Dívidas apontam para ele via listId.
+  required:
+    - id
+    - clientId
+    - name
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    clientId:
+      type: string
+      format: uuid
+    name:
+      type: string
+    createdAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339)"
+
+CreateDebtListRequest:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+
+CreateDebtRequest:
+  type: object
+  required:
+    - description
+    - dueDate
+    - totalAmount
+  properties:
+    category:
+      $ref: "#/DebtCategory"
+    expenseType:
+      $ref: "#/ExpenseType"
+    listId:
+      type: string
+      format: uuid
+      description: Lista (agrupamento) à qual a dívida pertence, se houver.
+    description:
+      type: string
+    dueDate:
+      type: string
+      description: >-
+        Data (YYYY-MM-DD). Num parcelamento, vencimento da 1ª parcela; as
+        demais caem no mesmo dia dos meses seguintes.
+    totalAmount:
+      type: string
+      description: >-
+        Decimal como string, > 0 e no máximo 2 casas. Num parcelamento é o
+        valor cheio (soma das parcelas).
+    paidAmount:
+      type: string
+      description: >-
+        Decimal como string. Valor já pago na criação (gera um pagamento).
+        Não aceito em parcelamento.
+    installmentCount:
+      type: integer
+      description: Número de parcelas (>= 2). Ausente = dívida comum.
+
+UpdateDebtRequest:
+  type: object
+  description: Todos os campos são opcionais; ausente = mantém o valor atual.
+  properties:
+    category:
+      $ref: "#/DebtCategory"
+    expenseType:
+      $ref: "#/ExpenseType"
+    listId:
+      type: string
+      format: uuid
+      nullable: true
+      description: null desvincula da lista; ausente mantém a lista atual.
+    description:
+      type: string
+    dueDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+
+DebtFilters:
+  type: object
+  description: Todos os campos são opcionais.
+  properties:
+    ids:
+      type: array
+      items:
+        type: string
+        format: uuid
+    statuses:
+      type: array
+      items:
+        $ref: "#/DebtStatus"
+    startDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+    endDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+    categoryNames:
+      type: array
+      items:
+        $ref: "#/DebtCategory"
+    listId:
+      type: string
+      format: uuid
+      description: Filtra pela lista (agrupamento) informada.
+    parentId:
+      type: string
+      format: uuid
+      description: Lista as parcelas (filhas) da dívida informada.
+    includeChildren:
+      type: boolean
+      description: >-
+        Lista plana que inclui as parcelas junto das dívidas de nível-topo.
+        Sem isso (e sem parentId) só volta o nível-topo.
+
+Payment:
+  type: object
+  description: Pagamento (total ou parcial) de uma dívida do módulo finance.
+  required:
+    - id
+    - clientId
+    - debtId
+    - amount
+    - paymentDate
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    clientId:
+      type: string
+      format: uuid
+    debtId:
+      type: string
+      format: uuid
+    amount:
+      type: string
+      description: "Decimal serializado como string (ex.: \"450.00\")"
+    paymentDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+    createdAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339)"
+
+CreatePaymentRequest:
+  type: object
+  required:
+    - debtId
+  properties:
+    debtId:
+      type: string
+      format: uuid
+    amount:
+      type: string
+      description: >-
+        Decimal como string, no máximo 2 casas. Ausente = paga todo o valor
+        em aberto da dívida.
+    paymentDate:
+      type: string
+      description: "Data (YYYY-MM-DD). Ausente = hoje (UTC, no backend)."
+
+PaymentFilters:
+  type: object
+  description: Todos os campos são opcionais.
+  properties:
+    debtIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+    startDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+    endDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"

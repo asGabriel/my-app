@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.matchmaking.tsbuildinfo",
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
@@ -22,9 +22,9 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"],
-  /* Isolado do matchmaking (ver tsconfig.matchmaking.json): esse módulo tem
-     seu próprio projeto de type-check, para que um problema de um lado nunca
-     trave o build do outro. */
-  "exclude": ["src/matchmaking"]
+  /* Escopo isolado do app financeiro (ver tsconfig.app.json): o matchmaking
+     só enxerga sua própria árvore + a camada de API/serviços compartilhada
+     (src/api, src/services) — nunca as páginas/módulos do financeiro, para
+     que um build não trave o outro. */
+  "include": ["src/matchmaking", "src/api", "src/services", "src/vite-env.d.ts"]
 }

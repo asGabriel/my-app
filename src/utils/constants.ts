@@ -1,8 +1,8 @@
-import type { ExpenseType, FinancialInstrumentType, DebtStatus } from '../api';
+import type { ExpenseType, DebtStatus, DebtCategory } from '../api';
+// Instrumentos financeiros ainda não existem no módulo `finance` — tipo vem do mock.
+import type { FinancialInstrumentType } from '../finance/mock';
 
-export type { DebtStatus };
-
-export type DebtCategory = 'UNKNOWN' | 'HOME' | 'TRANSPORT' | 'HEALTH' | 'FOOD' | 'LIFESTYLE' | 'EDUCATION' | 'GOALS' | 'PERSONAL';
+export type { DebtStatus, DebtCategory };
 
 export const DEBT_CATEGORY_LABELS: Record<DebtCategory, string> = {
     UNKNOWN: 'Outros',
@@ -13,7 +13,9 @@ export const DEBT_CATEGORY_LABELS: Record<DebtCategory, string> = {
     LIFESTYLE: 'Estilo de Vida',
     EDUCATION: 'Educação',
     GOALS: 'Metas',
-    PERSONAL: 'Pessoal',
+    SUBSCRIPTIONS: 'Assinaturas',
+    OBLIGATIONS: 'Obrigações',
+    PURCHASES: 'Compras',
 };
 
 export const DEBT_CATEGORY_OPTIONS: { label: string; value: DebtCategory }[] = [
@@ -24,7 +26,9 @@ export const DEBT_CATEGORY_OPTIONS: { label: string; value: DebtCategory }[] = [
     { label: 'Estilo de Vida', value: 'LIFESTYLE' },
     { label: 'Educação', value: 'EDUCATION' },
     { label: 'Metas', value: 'GOALS' },
-    { label: 'Pessoal', value: 'PERSONAL' },
+    { label: 'Assinaturas', value: 'SUBSCRIPTIONS' },
+    { label: 'Obrigações', value: 'OBLIGATIONS' },
+    { label: 'Compras', value: 'PURCHASES' },
     { label: 'Outros', value: 'UNKNOWN' },
 ];
 
@@ -40,25 +44,21 @@ export const EXPENSE_TYPE_OPTIONS: { label: string; value: ExpenseType }[] = [
 
 export const DEBT_STATUS = {
     OPEN: 'OPEN',
-    INSTALLMENT: 'INSTALLMENT',
     SETTLED: 'SETTLED',
 } as const;
 
 export const DEBT_STATUS_LABELS: Record<DebtStatus, string> = {
     OPEN: 'Em Aberto',
-    INSTALLMENT: 'Parcelada',
     SETTLED: 'Quitada',
 };
 
 export const DEBT_STATUS_OPTIONS: { label: string; value: DebtStatus }[] = [
     { label: 'Em Aberto', value: 'OPEN' },
-    { label: 'Parcelada', value: 'INSTALLMENT' },
     { label: 'Quitada', value: 'SETTLED' },
 ];
 
 export const DEBT_STATUS_COLORS: Record<DebtStatus, 'warning' | 'processing' | 'success' | 'red' | 'orange' | 'green'> = {
     OPEN: 'warning',
-    INSTALLMENT: 'processing',
     SETTLED: 'success',
 };
 

@@ -40,7 +40,7 @@ export function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'radial-gradient(120% 60% at 50% -5%, #1d2033 0%, var(--color-bg) 55%)',
         padding: 16,
       }}
     >
@@ -48,7 +48,7 @@ export function Login() {
         style={{
           width: '100%',
           maxWidth: 400,
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+          boxShadow: 'var(--shadow-lg)',
         }}
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>

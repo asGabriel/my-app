@@ -1,0 +1,413 @@
+/* Nocturne — design tokens and component classes for the finance module,
+   adapted from the "Controle Mensal" Claude Design prototype. Dark-only
+   theme (the prototype itself has no light variant), applied globally so
+   AntD surfaces (modals, selects, tables in the secondary "cadastro"
+   pages) and the custom Controle Mensal screens share the same language.
+   See also: App.tsx ConfigProvider (AntD dark algorithm + these tokens). */
+
+:root {
+  --color-bg: #161826;
+  --color-surface: #232532;
+  --color-surface-raised: #2b2e3d;
+  --color-text: #e9e9ed;
+  --color-accent: #9184d9;
+  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
+  --color-danger: #c9566a;
+
+  --color-neutral-100: #f3f5fe;
+  --color-neutral-200: #e4e7f5;
+  --color-neutral-300: #cfd3e5;
+  --color-neutral-400: #b2b6ca;
+  --color-neutral-500: #9397ab;
+  --color-neutral-600: #75798c;
+  --color-neutral-700: #595d6c;
+  --color-neutral-800: #3f424d;
+  --color-neutral-900: #292b31;
+
+  --color-accent-100: #f5f4ff;
+  --color-accent-200: #e7e5fe;
+  --color-accent-300: #d2cefd;
+  --color-accent-400: #b5abfc;
+  --color-accent-500: #968ae0;
+  --color-accent-600: #796cbf;
+  --color-accent-700: #5d5294;
+  --color-accent-800: #423a6a;
+  --color-accent-900: #2b2741;
+
+  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-heading-weight: 500;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --space-1: 2.8px;
+  --space-2: 5.6px;
+  --space-3: 8.4px;
+  --space-4: 11.2px;
+  --space-6: 16.8px;
+  --space-8: 22.4px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  --shadow-sm: 0 0 0 1px var(--color-neutral-800);
+  --shadow-md: 0 0 0 1px var(--color-neutral-700), 0 6px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-500), 0 16px 40px rgba(0, 0, 0, 0.65);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  letter-spacing: -0.015em;
+}
+
+.text-muted {
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+/* — scrollbar hide (chip rows, horizontal scrollers) — */
+.mzs {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.mzs::-webkit-scrollbar {
+  display: none;
+}
+
+/* — horizontal scroller (HorizontalScroller) — */
+.hscroll {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+.hscroll-track {
+  position: relative;
+  display: flex;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+}
+.hscroll-track > * {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+}
+.hscroll-fade-left {
+  mask-image: linear-gradient(to right, transparent, #000 32px);
+}
+.hscroll-fade-right {
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+.hscroll-fade-left.hscroll-fade-right {
+  mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+}
+.hscroll-arrow {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--color-divider);
+  background: var(--color-surface);
+  color: var(--color-neutral-300);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+.hscroll-arrow-left {
+  left: 0;
+}
+.hscroll-arrow-right {
+  right: 0;
+}
+/* setas só em dispositivos com mouse; no touch o swipe já resolve */
+@media (hover: hover) and (pointer: fine) {
+  .hscroll-arrow {
+    display: inline-flex;
+  }
+}
+
+/* — buttons — */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: var(--space-2) calc(var(--space-3) * 1.2);
+  border-radius: var(--radius-md);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-primary {
+  color: var(--color-accent-300);
+  border-color: var(--color-accent-600);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+.btn-primary:active {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+.btn-secondary {
+  border-color: var(--color-divider);
+}
+.btn-secondary:hover {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+.btn-secondary:active {
+  background: color-mix(in srgb, var(--color-text) 14%, transparent);
+}
+.btn-ghost {
+  color: var(--color-accent-300);
+  padding-inline: var(--space-1);
+}
+.btn-ghost:hover {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.btn-ghost:active {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+.btn-block {
+  width: 100%;
+}
+
+/* — forms — */
+.field > label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 5px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 16px; /* >=16px evita zoom automático no iOS ao focar o campo */
+  color: var(--color-text);
+  caret-color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+}
+.input:hover {
+  border-color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+.input:focus-visible {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 0;
+}
+
+/* — pills / segmented choices — */
+.pill {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: 1px solid var(--color-divider);
+  background: transparent;
+  color: var(--color-neutral-400);
+}
+.pill-active {
+  border-color: var(--color-accent-600);
+  background: var(--color-accent-900);
+  color: var(--color-accent-200);
+}
+
+/* — cards — */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+/* Rótulos pequenos em maiúsculas (kicker) — três papéis, três tamanhos:
+   `.section-kicker` no topo de seções/telas, `.card-kicker` (mais discreto)
+   dentro de cards pequenos de estatística, `.field-kicker` acima de campos
+   e grupos de opção no wizard "Novo". */
+.section-kicker {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-neutral-500);
+}
+.card-kicker {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-500);
+}
+.field-kicker {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-500);
+}
+
+/* Linha "rótulo à esquerda, valor à direita" — resumos, comprovantes,
+   detalhe de lançamento (NovoTab, PaySheet, DetailSheet). */
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.kv-row-label {
+  color: var(--color-neutral-500);
+}
+.kv-row-value {
+  text-align: right;
+}
+
+/* Ícone circular avatar-like (linha de lançamento, sheets) — o tamanho
+   varia por contexto (34/40px) e é definido inline por quem usa a classe. */
+.avatar-icon {
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--color-neutral-900);
+  color: var(--color-accent-300);
+}
+
+/* — sheet / modal backdrop (payment + detail bottom sheets) — */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(10, 11, 18, 0.62);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: min(88vh, 720px);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--shadow-lg);
+  padding: 18px 20px calc(26px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 577px) {
+  .sheet-backdrop {
+    align-items: center;
+  }
+  .sheet {
+    border-radius: var(--radius-lg);
+    padding-bottom: 26px;
+  }
+}
+.sheet-grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-neutral-700);
+  margin: 0 auto 16px;
+}
+
+/* — swipeable row (list rows with actions revealed by a horizontal swipe) — */
+.swipe-row {
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--color-divider);
+}
+.swipe-row-content {
+  position: relative;
+  background: var(--color-bg);
+  /* the browser keeps vertical scrolling; horizontal moves reach the handlers */
+  touch-action: pan-y;
+  user-select: none;
+}
+.swipe-actions {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+}
+.swipe-actions-start {
+  left: 0;
+}
+.swipe-actions-end {
+  right: 0;
+}
+.swipe-action {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.swipe-action i {
+  font-size: 18px;
+}
+.swipe-action-accent {
+  background: var(--color-accent-600);
+  color: var(--color-accent-100);
+}
+.swipe-action-neutral {
+  background: var(--color-neutral-800);
+  color: var(--color-neutral-100);
+}
+.swipe-action-danger {
+  background: var(--color-danger);
+  color: var(--color-neutral-100);
+}
+
+/* — hr fade — */
+.hr {
+  height: 1px;
+  border: 0;
+  margin: var(--space-4) 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-divider) 48px,
+    var(--color-divider) calc(100% - 48px),
+    transparent
+  );
+}
