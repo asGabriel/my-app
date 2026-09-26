@@ -49,6 +49,8 @@ interface FinanceMonthContextValue {
   refetch: () => void;
   getOccurrences: (year: number, month0: number) => Occurrence[];
   getTotals: (year: number, month0: number) => MonthTotals;
+  /** O mês está dentro da janela buscada? Fora dela `getTotals` devolve zeros. */
+  hasMonth: (year: number, month0: number) => boolean;
   debtsById: Map<string, Debt>;
   detail: DetailState | null;
   openDetail: (occurrence: Occurrence, year: number, month0: number) => void;
@@ -165,6 +167,7 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
     refetch: () => void refetchDebts(),
     getOccurrences,
     getTotals,
+    hasMonth: (year, month0) => occurrencesByMonth.has(monthKey(year, month0)),
     debtsById,
     detail,
     openDetail: (occurrence, year, month0) => setDetail({ occurrence, year, month0 }),

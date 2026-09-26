@@ -32,14 +32,14 @@ function pillClass(active: boolean) {
 
 export function NovoTab() {
   const navigate = useNavigate();
-  const { selected, getTotals } = useFinanceMonth();
-  const { year, month0 } = selected;
-  const totals = getTotals(year, month0);
+  const { selected, getTotals, hasMonth } = useFinanceMonth();
 
   const createDebt = useCreateFinanceDebt();
 
   const [step, setStep] = useState(1);
-  const [done, setDone] = useState<{ name: string; value: string; texto: string; impacto: string } | null>(null);
+  /** Mês de início, em meses a partir do mês selecionado no Controle Mensal. */
+  const [startOffset, setStartOffset] = useState(0);
+  const [done, setDone] = useState<{ name: string; value: string; texto: string; impacto: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     nome: '',
@@ -55,8 +55,13 @@ export function NovoTab() {
   const valorNum = Math.round((parseFloat(form.valor.replace(',', '.')) || 0) * 100) / 100;
   const nParc = Math.max(2, Math.min(48, parseInt(form.n, 10) || 12));
   const diaNum = Math.max(1, Math.min(28, parseInt(form.dia, 10) || 10));
-  const startLabel = `${dayjs(new Date(year, month0, 1)).format('MMM/YY')}`;
-  const endLabel = `${dayjs(new Date(year, month0, 1)).add(nParc - 1, 'month').format('MMM/YY')}`;
+  const start = dayjs(new Date(selected.year, selected.month0, 1)).add(startOffset, 'month');
+  const year = start.year();
+  const month0 = start.month();
+  const due = dateForDay(year, month0, diaNum);
+  const startLabel = start.format('MMM/YY');
+  const endLabel = start.add(nParc - 1, 'month').format('MMM/YY');
+  const totals = getTotals(year, month0);
 
   const isPending = createDebt.isPending;
 
@@ -67,8 +72,10 @@ export function NovoTab() {
         ? `1 lançamento de ${money(valorNum, false)} em ${startLabel}, sem repetição.`
         : `Um lançamento por mês a partir de ${startLabel}, sem data de fim (${money(valorNum, false)}/mês).`;
 
-  const impacto =
-    form.tipo === 'parcelado'
+  // Fora da janela buscada pelo contexto não há totais para comparar.
+  const impacto = !hasMonth(year, month0)
+    ? null
+    : form.tipo === 'parcelado'
       ? `As parcelas somam ${short(totals.parcelas + valorNum, false)} no mês. O livre de ${startLabel} cai para ${short(totals.livre - valorNum, false)}.`
       : form.tipo === 'avulso'
         ? `Afeta só ${startLabel}: o livre do mês cai para ${short(totals.livre - valorNum, false)}.`
@@ -76,6 +83,7 @@ export function NovoTab() {
 
   const resetForm = () => {
     setForm((f) => ({ ...f, nome: '', valor: '' }));
+    setStartOffset(0);
     setStep(1);
     setDone(null);
     setError(null);
@@ -91,7 +99,6 @@ export function NovoTab() {
         throw new Error('Recorrência ainda não está disponível');
       }
 
-      const due = dateForDay(year, month0, diaNum);
       const payload: CreateDebtRequest =
         form.tipo === 'parcelado'
           ? {
@@ -136,7 +143,9 @@ export function NovoTab() {
           </div>
         </div>
         <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', marginTop: 16, lineHeight: 1.55 }}>{done.texto}</div>
-        <div style={{ fontSize: 13, color: 'var(--color-accent-200)', marginTop: 10, lineHeight: 1.55 }}>{done.impacto}</div>
+        {done.impacto && (
+          <div style={{ fontSize: 13, color: 'var(--color-accent-200)', marginTop: 10, lineHeight: 1.55 }}>{done.impacto}</div>
+        )}
         <button className="btn btn-primary btn-block" onClick={() => navigate('/')} style={{ marginTop: 20, justifyContent: 'center' }}>
           Ver no mês
         </button>
@@ -273,6 +282,24 @@ export function NovoTab() {
             </div>
           )}
 
+          <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }} className="card">
+            <div>
+              <div style={{ fontSize: 12.5, fontWeight: 500 }}>{form.tipo === 'parcelado' ? 'Mês de início' : 'Mês'}</div>
+              {form.tipo === 'parcelado' && (
+                <div style={{ fontSize: 11.5, color: 'var(--color-neutral-500)', marginTop: 2 }}>Última em {endLabel}</div>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button className="btn btn-secondary btn-icon" onClick={() => setStartOffset((o) => o - 1)} aria-label="Mês anterior" style={{ width: 30, height: 30 }}>
+                <i className="ph ph-caret-left" />
+              </button>
+              <div style={{ fontFamily: 'var(--font-heading)', fontSize: 15, fontWeight: 500, minWidth: 64, textAlign: 'center' }}>{startLabel}</div>
+              <button className="btn btn-secondary btn-icon" onClick={() => setStartOffset((o) => o + 1)} aria-label="Próximo mês" style={{ width: 30, height: 30 }}>
+                <i className="ph ph-caret-right" />
+              </button>
+            </div>
+          </div>
+
           <div className="field" style={{ marginTop: 16, maxWidth: 120 }}>
             <label htmlFor="novo-dia">Dia do mês</label>
             <input className="input" id="novo-dia" type="number" min={1} max={28} value={form.dia} onChange={(e) => setForm((f) => ({ ...f, dia: e.target.value }))} />
@@ -288,7 +315,7 @@ export function NovoTab() {
               { k: 'Tipo', v: TIPO_OPTIONS.find((t) => t.v === form.tipo)?.label ?? form.tipo },
               { k: form.tipo === 'parcelado' ? 'Parcela' : 'Valor', v: money(valorNum, false) + (form.tipo === 'parcelado' ? ` × ${nParc}` : '') },
               { k: 'Categoria', v: DEBT_CATEGORY_OPTIONS.find((c) => c.value === form.categoria)?.label ?? form.categoria },
-              { k: 'Dia', v: `Dia ${diaNum}` },
+              { k: form.tipo === 'parcelado' ? '1º vencimento' : 'Vencimento', v: due.format('DD/MM/YYYY') },
               { k: form.tipo === 'parcelado' ? 'Total' : 'No ano', v: money(valorNum * (form.tipo === 'parcelado' ? nParc : 12), false) },
             ].map((r) => (
               <div key={r.k} className="kv-row">
@@ -298,10 +325,12 @@ export function NovoTab() {
             ))}
           </div>
 
-          <div style={{ marginTop: 18, padding: '13px 14px', borderRadius: 'var(--radius-md)', background: 'var(--color-accent-900)', border: '1px solid var(--color-accent-700)' }}>
-            <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-accent-300)' }}>O que muda</div>
-            <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--color-accent-200)', marginTop: 6 }}>{impacto}</div>
-          </div>
+          {impacto && (
+            <div style={{ marginTop: 18, padding: '13px 14px', borderRadius: 'var(--radius-md)', background: 'var(--color-accent-900)', border: '1px solid var(--color-accent-700)' }}>
+              <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-accent-300)' }}>O que muda</div>
+              <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--color-accent-200)', marginTop: 6 }}>{impacto}</div>
+            </div>
+          )}
 
           {error && (
             <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--color-accent-300)' }}>{error}</div>
