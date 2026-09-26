@@ -15,6 +15,7 @@ export type Debt = z.infer<typeof schemas.Debt>;
 export type DebtFilters = z.infer<typeof schemas.DebtFilters>;
 export type DebtList = z.infer<typeof schemas.DebtList>;
 export type CreateDebtListRequest = z.infer<typeof schemas.CreateDebtListRequest>;
+export type CreateDebtRequest = z.infer<typeof schemas.CreateDebtRequest>;
 export type UpdateDebtRequest = z.infer<typeof schemas.UpdateDebtRequest>;
 export type Payment = z.infer<typeof schemas.Payment>;
 export type CreatePaymentRequest = z.infer<typeof schemas.CreatePaymentRequest>;

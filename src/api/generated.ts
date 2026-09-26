@@ -27,7 +27,6 @@ const RegisterRequest = z
     name: z.string(),
   })
   .passthrough();
-const DebtStatus = z.enum(["OPEN", "SETTLED"]);
 const DebtCategory = z.enum([
   "UNKNOWN",
   "HOME",
@@ -41,20 +40,20 @@ const DebtCategory = z.enum([
   "OBLIGATIONS",
   "PURCHASES",
 ]);
-const DebtFilters = z
-  .object({
-    ids: z.array(z.string().uuid()),
-    statuses: z.array(DebtStatus),
-    startDate: z.string(),
-    endDate: z.string(),
-    categoryNames: z.array(DebtCategory),
-    listId: z.string().uuid(),
-    parentId: z.string().uuid(),
-    includeChildren: z.boolean(),
-  })
-  .partial()
-  .passthrough();
 const ExpenseType = z.enum(["FIXED", "VARIABLE"]);
+const CreateDebtRequest = z
+  .object({
+    category: DebtCategory.optional(),
+    expenseType: ExpenseType.optional(),
+    listId: z.string().uuid().optional(),
+    description: z.string(),
+    dueDate: z.string(),
+    totalAmount: z.string(),
+    paidAmount: z.string().optional(),
+    installmentCount: z.number().int().optional(),
+  })
+  .passthrough();
+const DebtStatus = z.enum(["OPEN", "SETTLED"]);
 const Debt = z
   .object({
     id: z.string().uuid(),
@@ -75,6 +74,19 @@ const Debt = z
     createdAt: z.string(),
     updatedAt: z.string().nullish(),
   })
+  .passthrough();
+const DebtFilters = z
+  .object({
+    ids: z.array(z.string().uuid()),
+    statuses: z.array(DebtStatus),
+    startDate: z.string(),
+    endDate: z.string(),
+    categoryNames: z.array(DebtCategory),
+    listId: z.string().uuid(),
+    parentId: z.string().uuid(),
+    includeChildren: z.boolean(),
+  })
+  .partial()
   .passthrough();
 const UpdateDebtRequest = z
   .object({
@@ -254,11 +266,12 @@ export const schemas = {
   UserResponse,
   AuthResponse,
   RegisterRequest,
-  DebtStatus,
   DebtCategory,
-  DebtFilters,
   ExpenseType,
+  CreateDebtRequest,
+  DebtStatus,
   Debt,
+  DebtFilters,
   UpdateDebtRequest,
   DebtList,
   CreateDebtListRequest,
@@ -343,6 +356,21 @@ const endpoints = makeApi([
         schema: z.void(),
       },
     ],
+  },
+  {
+    method: "post",
+    path: "/finance/debt",
+    alias: "createFinanceDebt",
+    description: `Com installmentCount (&gt;&#x3D; 2) cria uma dívida-pai e as N parcelas mensais a partir de dueDate; o total é dividido entre elas e não aceita paidAmount. Sem installmentCount cria uma dívida comum, e paidAmount &gt; 0 registra um pagamento inicial. O backend responde 400 para totalAmount &lt;&#x3D; 0 ou com mais de 2 casas decimais.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateDebtRequest,
+      },
+    ],
+    response: Debt,
   },
   {
     method: "patch",

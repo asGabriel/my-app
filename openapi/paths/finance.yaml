@@ -1,3 +1,30 @@
+debts:
+  post:
+    operationId: createFinanceDebt
+    summary: Cria uma dívida (módulo finance)
+    description: >-
+      Com installmentCount (>= 2) cria uma dívida-pai e as N parcelas
+      mensais a partir de dueDate; o total é dividido entre elas e não aceita
+      paidAmount. Sem installmentCount cria uma dívida comum, e paidAmount > 0
+      registra um pagamento inicial. O backend responde 400 para totalAmount
+      <= 0 ou com mais de 2 casas decimais.
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/CreateDebtRequest"
+    responses:
+      "200":
+        description: >-
+          Dívida criada (num parcelamento, a dívida-pai).
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/finance.yaml#/Debt"
+
 listDebts:
   post:
     operationId: listFinanceDebts

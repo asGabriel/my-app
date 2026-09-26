@@ -2,22 +2,21 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import dayjs from 'dayjs';
 import {
-  useCreateDebt,
-  useCreateRecurrence,
-  useFinancialInstruments,
+  schemas,
+  useCreateFinanceDebt,
   type CreateDebtRequest,
-  type CreateRecurrenceRequest,
   type ExpenseType,
-} from '../../finance/mock';
+} from '../../api';
 import { useFinanceMonth } from '../../finance/FinanceMonthContext';
 import { money, short } from '../../finance/format';
 import { DEBT_CATEGORY_OPTIONS, type DebtCategory } from '../../utils/constants';
 
 type Tipo = 'parcelado' | 'fixo' | 'avulso';
 
-const TIPO_OPTIONS: { v: Tipo; label: string; desc: string }[] = [
+// `fixo` fica escondido até o módulo `finance` ter recorrência.
+const TIPO_OPTIONS: { v: Tipo; label: string; desc: string; hidden?: boolean }[] = [
   { v: 'parcelado', label: 'Parcelado', desc: 'Tem fim. Ex.: 12x do notebook.' },
-  { v: 'fixo', label: 'Recorrente fixo', desc: 'Mesmo valor todo mês, sem fim.' },
+  { v: 'fixo', label: 'Recorrente fixo', desc: 'Mesmo valor todo mês, sem fim.', hidden: true },
   { v: 'avulso', label: 'Avulso', desc: 'Acontece uma vez só, neste mês.' },
 ];
 
@@ -37,9 +36,7 @@ export function NovoTab() {
   const { year, month0 } = selected;
   const totals = getTotals(year, month0);
 
-  const createDebt = useCreateDebt();
-  const createRecurrence = useCreateRecurrence();
-  const { data: instruments } = useFinancialInstruments({ instrumentTypes: ['CREDIT_CARD'] });
+  const createDebt = useCreateFinanceDebt();
 
   const [step, setStep] = useState(1);
   const [done, setDone] = useState<{ name: string; value: string; texto: string; impacto: string } | null>(null);
@@ -51,17 +48,17 @@ export function NovoTab() {
     tipo: 'parcelado' as Tipo,
     n: '12',
     dia: '10',
-    financialInstrumentId: undefined as string | undefined,
-    expenseType: 'VARIABLE' as ExpenseType,
+    expenseType: schemas.ExpenseType.enum.VARIABLE as ExpenseType,
   });
 
-  const valorNum = parseFloat(form.valor.replace(',', '.')) || 0;
+  // Arredonda para centavos: o backend rejeita valores com mais de 2 casas.
+  const valorNum = Math.round((parseFloat(form.valor.replace(',', '.')) || 0) * 100) / 100;
   const nParc = Math.max(2, Math.min(48, parseInt(form.n, 10) || 12));
   const diaNum = Math.max(1, Math.min(28, parseInt(form.dia, 10) || 10));
   const startLabel = `${dayjs(new Date(year, month0, 1)).format('MMM/YY')}`;
   const endLabel = `${dayjs(new Date(year, month0, 1)).add(nParc - 1, 'month').format('MMM/YY')}`;
 
-  const isPending = createDebt.isPending || createRecurrence.isPending;
+  const isPending = createDebt.isPending;
 
   const previewTexto =
     form.tipo === 'parcelado'
@@ -90,39 +87,28 @@ export function NovoTab() {
 
     setError(null);
     const run = async () => {
-      if (form.tipo === 'parcelado') {
-        const due = dateForDay(year, month0, diaNum);
-        const payload: CreateDebtRequest = {
-          description: form.nome.trim() || 'Nova despesa',
-          dueDate: due.format('YYYY-MM-DD'),
-          totalAmount: (valorNum * nParc).toString(),
-          isPaid: false,
-          category: form.categoria,
-          installmentCount: nParc,
-          financialInstrumentId: form.financialInstrumentId,
-        };
-        await createDebt.mutateAsync(payload);
-      } else if (form.tipo === 'fixo') {
-        const payload: CreateRecurrenceRequest = {
-          description: form.nome.trim() || 'Nova despesa',
-          amount: valorNum.toString(),
-          startDate: dayjs(new Date(year, month0, 1)).format('YYYY-MM-DD'),
-          dayOfMonth: diaNum,
-          category: form.categoria,
-        };
-        await createRecurrence.mutateAsync(payload);
-      } else {
-        const due = dateForDay(year, month0, diaNum);
-        const payload: CreateDebtRequest = {
-          description: form.nome.trim() || 'Nova despesa',
-          dueDate: due.format('YYYY-MM-DD'),
-          totalAmount: valorNum.toString(),
-          isPaid: false,
-          category: form.categoria,
-          expenseType: form.expenseType,
-        };
-        await createDebt.mutateAsync(payload);
+      if (form.tipo === 'fixo') {
+        throw new Error('Recorrência ainda não está disponível');
       }
+
+      const due = dateForDay(year, month0, diaNum);
+      const payload: CreateDebtRequest =
+        form.tipo === 'parcelado'
+          ? {
+              description: form.nome.trim() || 'Nova despesa',
+              dueDate: due.format('YYYY-MM-DD'),
+              totalAmount: (valorNum * nParc).toFixed(2),
+              category: form.categoria,
+              installmentCount: nParc,
+            }
+          : {
+              description: form.nome.trim() || 'Nova despesa',
+              dueDate: due.format('YYYY-MM-DD'),
+              totalAmount: valorNum.toFixed(2),
+              category: form.categoria,
+              expenseType: form.expenseType,
+            };
+      await createDebt.mutateAsync(payload);
       setDone({ name: form.nome.trim() || 'Nova despesa', value: money(valorNum, false), texto: previewTexto, impacto });
     };
 
@@ -232,7 +218,7 @@ export function NovoTab() {
       {step === 2 && (
         <div>
           <div style={{ display: 'grid', gap: 6, marginTop: 20 }}>
-            {TIPO_OPTIONS.map((o) => (
+            {TIPO_OPTIONS.filter((o) => !o.hidden).map((o) => (
               <button
                 key={o.v}
                 onClick={() => setForm((f) => ({ ...f, tipo: o.v }))}
@@ -267,41 +253,22 @@ export function NovoTab() {
             </div>
           )}
 
-          {form.tipo === 'parcelado' && (instruments?.length ?? 0) > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <div className="field-kicker" style={{ paddingBottom: 8 }}>Cartão (opcional)</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                <button
-                  className={pillClass(!form.financialInstrumentId)}
-                  onClick={() => setForm((f) => ({ ...f, financialInstrumentId: undefined }))}
-                >
-                  Nenhum
-                </button>
-                {instruments!.map((inst) => (
-                  <button
-                    key={inst.id}
-                    className={pillClass(form.financialInstrumentId === inst.id)}
-                    onClick={() =>
-                      setForm((f) => ({
-                        ...f,
-                        financialInstrumentId: inst.id,
-                        dia: inst.configuration?.defaultDueDate != null ? String(inst.configuration.defaultDueDate) : f.dia,
-                      }))
-                    }
-                  >
-                    {inst.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {form.tipo === 'avulso' && (
             <div style={{ marginTop: 16 }}>
               <div className="field-kicker" style={{ paddingBottom: 8 }}>Tipo de despesa</div>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button className={pillClass(form.expenseType === 'FIXED')} onClick={() => setForm((f) => ({ ...f, expenseType: 'FIXED' }))}>Fixa pontual</button>
-                <button className={pillClass(form.expenseType === 'VARIABLE')} onClick={() => setForm((f) => ({ ...f, expenseType: 'VARIABLE' }))}>Variável</button>
+                <button
+                  className={pillClass(form.expenseType === schemas.ExpenseType.enum.FIXED)}
+                  onClick={() => setForm((f) => ({ ...f, expenseType: schemas.ExpenseType.enum.FIXED }))}
+                >
+                  Fixa pontual
+                </button>
+                <button
+                  className={pillClass(form.expenseType === schemas.ExpenseType.enum.VARIABLE)}
+                  onClick={() => setForm((f) => ({ ...f, expenseType: schemas.ExpenseType.enum.VARIABLE }))}
+                >
+                  Variável
+                </button>
               </div>
             </div>
           )}

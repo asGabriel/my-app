@@ -21,8 +21,10 @@ paths:
     $ref: "./paths/auth.yaml#/me"
   # financeManager: sem cobertura por hora — backend em reformulação (v2).
   # O novo módulo `finance` (rust-api) volta aos poucos: por ora a listagem
-  # de dívidas, edição de dívida, listas (agrupadores) e pagamentos. Ver openapi/paths/finance.yaml e
+  # de dívidas, criação e edição de dívida, listas (agrupadores) e pagamentos. Ver openapi/paths/finance.yaml e
   # matchmaking.yaml para o padrão.
+  /finance/debt:
+    $ref: "./paths/finance.yaml#/debts"
   /finance/debt/list:
     $ref: "./paths/finance.yaml#/listDebts"
   /finance/debt/{debtId}:
@@ -90,6 +92,8 @@ components:
       $ref: "./schemas/finance.yaml#/DebtList"
     CreateDebtListRequest:
       $ref: "./schemas/finance.yaml#/CreateDebtListRequest"
+    CreateDebtRequest:
+      $ref: "./schemas/finance.yaml#/CreateDebtRequest"
     UpdateDebtRequest:
       $ref: "./schemas/finance.yaml#/UpdateDebtRequest"
     Payment:

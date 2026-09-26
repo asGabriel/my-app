@@ -133,6 +133,42 @@ CreateDebtListRequest:
     name:
       type: string
 
+CreateDebtRequest:
+  type: object
+  required:
+    - description
+    - dueDate
+    - totalAmount
+  properties:
+    category:
+      $ref: "#/DebtCategory"
+    expenseType:
+      $ref: "#/ExpenseType"
+    listId:
+      type: string
+      format: uuid
+      description: Lista (agrupamento) à qual a dívida pertence, se houver.
+    description:
+      type: string
+    dueDate:
+      type: string
+      description: >-
+        Data (YYYY-MM-DD). Num parcelamento, vencimento da 1ª parcela; as
+        demais caem no mesmo dia dos meses seguintes.
+    totalAmount:
+      type: string
+      description: >-
+        Decimal como string, > 0 e no máximo 2 casas. Num parcelamento é o
+        valor cheio (soma das parcelas).
+    paidAmount:
+      type: string
+      description: >-
+        Decimal como string. Valor já pago na criação (gera um pagamento).
+        Não aceito em parcelamento.
+    installmentCount:
+      type: integer
+      description: Número de parcelas (>= 2). Ausente = dívida comum.
+
 UpdateDebtRequest:
   type: object
   description: Todos os campos são opcionais; ausente = mantém o valor atual.
