@@ -1,7 +1,13 @@
 import dayjs from 'dayjs';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useFinanceLists, type Debt } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
+import { DebtDeleteSheet } from '../../components/DebtDeleteSheet';
+import { DebtEditSheet } from '../../components/DebtEditSheet';
+import { SwipeableRow, type SwipeSide } from '../../components/SwipeableRow';
+import { parentOf } from '../../finance/debt';
+import { debtSwipeActions } from '../../finance/debtSwipeActions';
 import { useFinanceMonth, MESES_LONGOS } from '../../finance/FinanceMonthContext';
 import { money, short } from '../../finance/format';
 import { categoryIcon } from '../../finance/categoryIcon';
@@ -38,9 +44,25 @@ function groupOccurrences(occurrences: Occurrence[], isNow: boolean, isPast: boo
   return groups;
 }
 
-function OccRow({ occurrence, onPay, onTap }: { occurrence: Occurrence; onPay: () => void; onTap: () => void }) {
+interface OccRowProps {
+  occurrence: Occurrence;
+  open: SwipeSide | null;
+  onOpenChange: (side: SwipeSide | null) => void;
+  onPay: () => void;
+  onTap: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+/** Tocar abre o detalhe. Só lançamento com débito real tem ações de deslize —
+ * recorrência projetada ainda não existe no backend. */
+function OccRow({ occurrence, open, onOpenChange, onPay, onTap, onEdit, onDelete }: OccRowProps) {
   const { privado } = useFinanceMonth();
   const o = occurrence;
+  const canPay = !o.isPaid && !!o.debtId && o.payable;
+  const { startActions, endActions } = o.debtId
+    ? debtSwipeActions({ canPay, onPay, onEdit, onDelete })
+    : { startActions: [], endActions: [] };
   const parcial = !o.isPaid && o.paidAmount > 0.01;
   const tag = parcial
     ? `falta ${short(o.amount - o.paidAmount, privado)}`
@@ -54,7 +76,7 @@ function OccRow({ occurrence, onPay, onTap }: { occurrence: Occurrence; onPay: (
   const tagColor = parcial || o.installmentId ? 'var(--color-accent-300)' : 'var(--color-neutral-500)';
 
   return (
-    <div style={{ borderTop: '1px solid var(--color-divider)' }}>
+    <SwipeableRow startActions={startActions} endActions={endActions} open={open} onOpenChange={onOpenChange}>
       <div
         onClick={onTap}
         style={{
@@ -83,28 +105,26 @@ function OccRow({ occurrence, onPay, onTap }: { occurrence: Occurrence; onPay: (
             <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em' }}>{money(o.amount, privado)}</div>
             <div style={{ fontSize: 11, color: tagColor, marginTop: 2 }}>{tag}</div>
           </div>
-          {!o.isPaid && o.debtId && o.payable && (
-            <button
-              className="btn btn-primary"
-              onClick={(e) => { e.stopPropagation(); onPay(); }}
-              style={{ flex: '0 0 auto', padding: '4px 9px', fontSize: 11, borderRadius: 999 }}
-            >
-              {parcial ? 'Concluir' : 'Pagar'}
-            </button>
-          )}
           <i className="ph ph-caret-right" style={{ fontSize: 14, color: 'var(--color-neutral-500)' }} />
         </div>
       </div>
-    </div>
+    </SwipeableRow>
   );
 }
 
 export function MesTab() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { selected, getOccurrences, getTotals, privado, togglePrivado, openDetail, openPay, isLoading, isError, error, refetch } =
-    useFinanceMonth();
+  const {
+    selected, getOccurrences, getTotals, privado, togglePrivado, openDetail, openPay, debtsById, isLoading, isError, error, refetch,
+  } = useFinanceMonth();
   const { year, month0 } = selected;
+  const { data: lists } = useFinanceLists();
+  // Uma linha com ações à mostra por vez: abrir outra fecha a anterior.
+  const [swiped, setSwiped] = useState<{ key: string; side: SwipeSide } | null>(null);
+  const [editing, setEditing] = useState<Debt | null>(null);
+  const [deleting, setDeleting] = useState<Debt | null>(null);
+  const debtOf = (o: Occurrence) => (o.debtId ? debtsById.get(o.debtId) : undefined);
 
   const handleLogout = () => {
     logout();
@@ -270,12 +290,34 @@ export function MesTab() {
               <OccRow
                 key={o.key}
                 occurrence={o}
+                open={swiped?.key === o.key ? swiped.side : null}
+                onOpenChange={(side) => setSwiped(side ? { key: o.key, side } : null)}
                 onPay={() => openPay(o, year, month0)}
                 onTap={() => openDetail(o, year, month0)}
+                onEdit={() => setEditing(debtOf(o) ?? null)}
+                onDelete={() => setDeleting(debtOf(o) ?? null)}
               />
             ))}
           </div>
         ))
+      )}
+
+      {editing && (
+        <DebtEditSheet
+          debt={editing}
+          parent={parentOf(editing, debtsById)}
+          lists={lists ?? []}
+          onClose={() => setEditing(null)}
+        />
+      )}
+
+      {deleting && (
+        <DebtDeleteSheet
+          debt={deleting}
+          parent={parentOf(deleting, debtsById)}
+          privado={privado}
+          onClose={() => setDeleting(null)}
+        />
       )}
     </div>
   );

@@ -10,6 +10,7 @@ export * from './hooks/useFinanceLists';
 export * from './hooks/useCreateFinanceList';
 export * from './hooks/useCreateFinanceDebt';
 export * from './hooks/useUpdateFinanceDebt';
+export * from './hooks/useDeleteFinanceDebt';
 export * from './hooks/useFinancePayments';
 export * from './hooks/useCreateFinancePayment';
 export * from './hooks/useRefundFinancePayment';

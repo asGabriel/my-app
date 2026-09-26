@@ -3,10 +3,14 @@ import { useMemo, useState } from 'react';
 import { useFinanceDebtParents, useFinanceDebts, useFinanceLists, type Debt, type DebtFilters, type DebtList } from '../../api';
 import { debtAmounts, installmentCountOf, isInstallment, isOpen, isSettled, parentOf } from '../../finance/debt';
 import { useFinanceMonth, MESES_LONGOS } from '../../finance/FinanceMonthContext';
+import { occurrenceFromDebt } from '../../finance/monthEngine';
 import { money, short } from '../../finance/format';
 import { categoryIcon } from '../../finance/categoryIcon';
 import { EXPENSE_TYPE_LABELS } from '../../utils/constants';
 import { DebtEditSheet } from '../../components/DebtEditSheet';
+import { DebtDeleteSheet } from '../../components/DebtDeleteSheet';
+import { SwipeableRow, type SwipeSide } from '../../components/SwipeableRow';
+import { debtSwipeActions } from '../../finance/debtSwipeActions';
 import { MonthChips } from './MonthChips';
 
 type StatusFilter = 'all' | 'open' | 'settled';
@@ -91,55 +95,67 @@ interface DebtRowProps {
   parent?: Debt;
   listName?: string;
   privado: boolean;
-  onClick: () => void;
+  open: SwipeSide | null;
+  onOpenChange: (side: SwipeSide | null) => void;
+  onEdit: () => void;
+  onPay: () => void;
+  onDelete: () => void;
 }
 
-function DebtRow({ debt, parent, listName, privado, onClick }: DebtRowProps) {
+/** Ações por deslize (ver `debtSwipeActions`); tocar na linha também edita. */
+function DebtRow({ debt, parent, listName, privado, open, onOpenChange, onEdit, onPay, onDelete }: DebtRowProps) {
   const settled = isSettled(debt);
 
+  const { startActions, endActions } = debtSwipeActions({ canPay: !settled, onPay, onEdit, onDelete });
+
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
-      style={{
-        display: 'grid', gridTemplateColumns: '34px minmax(0, 1fr) auto', gap: 12, alignItems: 'center',
-        padding: '11px 0', borderTop: '1px solid var(--color-divider)', opacity: settled ? 0.55 : 1, cursor: 'pointer',
-      }}
-    >
-      <div className="avatar-icon" style={{ width: 34, height: 34, fontSize: 16 }}>
-        <i className={categoryIcon(debt.category)} />
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {debt.description}
+    <SwipeableRow startActions={startActions} endActions={endActions} open={open} onOpenChange={onOpenChange}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onEdit}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onEdit()}
+        style={{
+          display: 'grid', gridTemplateColumns: '34px minmax(0, 1fr) auto', gap: 12, alignItems: 'center',
+          padding: '11px 0', opacity: settled ? 0.55 : 1, cursor: 'pointer',
+        }}
+      >
+        <div className="avatar-icon" style={{ width: 34, height: 34, fontSize: 16 }}>
+          <i className={categoryIcon(debt.category)} />
         </div>
-        <div
-          style={{
-            fontSize: 11.5, color: 'var(--color-neutral-500)', marginTop: 2,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}
-        >
-          {subtitle(debt, parent, listName, privado)}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {debt.description}
+          </div>
+          <div
+            style={{
+              fontSize: 11.5, color: 'var(--color-neutral-500)', marginTop: 2,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}
+          >
+            {subtitle(debt, parent, listName, privado)}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em' }}>
+            {money(debtAmounts(debt).total, privado)}
+          </div>
+          <div style={{ fontSize: 11, marginTop: 2 }}><DebtTag debt={debt} privado={privado} /></div>
         </div>
       </div>
-      <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em' }}>
-          {money(debtAmounts(debt).total, privado)}
-        </div>
-        <div style={{ fontSize: 11, marginTop: 2 }}><DebtTag debt={debt} privado={privado} /></div>
-      </div>
-    </div>
+    </SwipeableRow>
   );
 }
 
 export function DebtsTab() {
-  const { privado, togglePrivado, selected } = useFinanceMonth();
+  const { privado, togglePrivado, selected, openPay } = useFinanceMonth();
   const { year, month0 } = selected;
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [listFilter, setListFilter] = useState<ListFilter>(null);
   const [editing, setEditing] = useState<Debt | null>(null);
+  const [deleting, setDeleting] = useState<Debt | null>(null);
+  // Uma linha com ações à mostra por vez: abrir outra fecha a anterior.
+  const [swiped, setSwiped] = useState<{ id: string; side: SwipeSide } | null>(null);
   const { data, isLoading, isError, error, refetch } = useFinanceDebts(buildFilters(year, month0));
   const { data: allLists } = useFinanceLists();
   const lists = useMemo(() => allLists ?? [], [allLists]);
@@ -239,17 +255,25 @@ export function DebtsTab() {
             Nenhum débito em {MESES_LONGOS[month0]}.
           </div>
         ) : (
-          debts.map((d) => (
-            <DebtRow
-              key={d.id}
-              debt={d}
-              parent={parentOf(d, parentsById)}
-              // Com uma lista filtrada o nome seria redundante em toda linha.
-              listName={activeList === null && d.listId ? listsById.get(d.listId)?.name : undefined}
-              privado={privado}
-              onClick={() => setEditing(d)}
-            />
-          ))
+          debts.map((d) => {
+            const parent = parentOf(d, parentsById);
+            return (
+              <DebtRow
+                key={d.id}
+                debt={d}
+                parent={parent}
+                // Com uma lista filtrada o nome seria redundante em toda linha.
+                listName={activeList === null && d.listId ? listsById.get(d.listId)?.name : undefined}
+                privado={privado}
+                open={swiped?.id === d.id ? swiped.side : null}
+                onOpenChange={(side) => setSwiped(side ? { id: d.id, side } : null)}
+                onEdit={() => setEditing(d)}
+                // O PaySheet é global (MainLayout) e parte da ocorrência do mês.
+                onPay={() => openPay(occurrenceFromDebt(d, parent), year, month0)}
+                onDelete={() => setDeleting(d)}
+              />
+            );
+          })
         )}
       </div>
 
@@ -259,6 +283,15 @@ export function DebtsTab() {
           parent={parentOf(editing, parentsById)}
           lists={lists}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {deleting && (
+        <DebtDeleteSheet
+          debt={deleting}
+          parent={parentOf(deleting, parentsById)}
+          privado={privado}
+          onClose={() => setDeleting(null)}
         />
       )}
     </div>

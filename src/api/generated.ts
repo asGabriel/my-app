@@ -393,6 +393,21 @@ const endpoints = makeApi([
     response: Debt,
   },
   {
+    method: "delete",
+    path: "/finance/debt/:debtId",
+    alias: "deleteFinanceDebt",
+    description: `Soft delete. Numa dívida-pai a exclusão vale para o parcelamento inteiro: as parcelas e os pagamentos delas saem junto, na mesma transação.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "debtId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
     method: "post",
     path: "/finance/debt/list",
     alias: "listFinanceDebts",

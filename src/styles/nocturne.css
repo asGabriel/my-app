@@ -12,6 +12,7 @@
   --color-text: #e9e9ed;
   --color-accent: #9184d9;
   --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
+  --color-danger: #c9566a;
 
   --color-neutral-100: #f3f5fe;
   --color-neutral-200: #e4e7f5;
@@ -341,6 +342,60 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 999px;
   background: var(--color-neutral-700);
   margin: 0 auto 16px;
+}
+
+/* — swipeable row (list rows with actions revealed by a horizontal swipe) — */
+.swipe-row {
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--color-divider);
+}
+.swipe-row-content {
+  position: relative;
+  background: var(--color-bg);
+  /* the browser keeps vertical scrolling; horizontal moves reach the handlers */
+  touch-action: pan-y;
+  user-select: none;
+}
+.swipe-actions {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+}
+.swipe-actions-start {
+  left: 0;
+}
+.swipe-actions-end {
+  right: 0;
+}
+.swipe-action {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.swipe-action i {
+  font-size: 18px;
+}
+.swipe-action-accent {
+  background: var(--color-accent-600);
+  color: var(--color-accent-100);
+}
+.swipe-action-neutral {
+  background: var(--color-neutral-800);
+  color: var(--color-neutral-100);
+}
+.swipe-action-danger {
+  background: var(--color-danger);
+  color: var(--color-neutral-100);
 }
 
 /* — hr fade — */

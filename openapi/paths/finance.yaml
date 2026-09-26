@@ -81,6 +81,25 @@ updateDebt:
           application/json:
             schema:
               $ref: "../schemas/finance.yaml#/Debt"
+  delete:
+    operationId: deleteFinanceDebt
+    summary: Exclui uma dívida (módulo finance)
+    description: >-
+      Soft delete. Numa dívida-pai a exclusão vale para o parcelamento
+      inteiro: as parcelas e os pagamentos delas saem junto, na mesma
+      transação.
+    tags:
+      - Finance
+    parameters:
+      - name: debtId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Dívida excluída
 
 lists:
   get:

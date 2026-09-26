@@ -94,6 +94,34 @@ function isDueIn(dueDate: string | null | undefined, year: number, month0: numbe
 }
 
 /**
+ * Ocorrência de um débito real — comum ou parcela (`parent` = pai do
+ * parcelamento, de onde vem a contagem de parcelas). Base das ocorrências do
+ * mês e também de quem parte de um `Debt` para abrir o `PaySheet` (DebtsTab).
+ */
+export function occurrenceFromDebt(d: Debt, parent?: Debt): Occurrence {
+  const installment = isInstallment(d);
+  const kind: OccKind = installment ? 'parcelado' : d.expenseType === schemas.ExpenseType.enum.FIXED ? 'fixo' : 'variavel';
+  const { total, paid } = debtAmounts(d);
+  return {
+    key: `debt-${d.id}`,
+    kind,
+    name: d.description,
+    category: toCategory(d.category),
+    amount: total,
+    paidAmount: paid,
+    isPaid: isSettled(d),
+    dueDay: dayjs(d.dueDate).date(),
+    debtId: d.id,
+    ...(installment && {
+      installmentId: d.installmentNumber ?? undefined,
+      installmentCount: installmentCountOf(d, parent),
+    }),
+    projected: false,
+    payable: true,
+  };
+}
+
+/**
  * Débitos avulsos/recorrentes-materializados que caem no mês — dívidas de
  * nível-topo (sem `parentId`) e sem parcelamento. As filhas de um
  * parcelamento (`parentId` preenchido) são tratadas à parte, em
@@ -103,19 +131,7 @@ function occurrencesFromDebts(debts: Debt[], year: number, month0: number): Occu
   return debts
     .filter((d) => !isInstallment(d) && !isInstallmentParent(d))
     .filter((d) => isDueIn(d.dueDate, year, month0))
-    .map((d) => ({
-      key: `debt-${d.id}`,
-      kind: (d.expenseType === schemas.ExpenseType.enum.FIXED ? 'fixo' : 'variavel') as OccKind,
-      name: d.description,
-      category: toCategory(d.category),
-      amount: debtAmounts(d).total,
-      paidAmount: debtAmounts(d).paid,
-      isPaid: isSettled(d),
-      dueDay: dayjs(d.dueDate).date(),
-      debtId: d.id,
-      projected: false,
-      payable: true,
-    }));
+    .map((d) => occurrenceFromDebt(d));
 }
 
 /**
@@ -134,21 +150,7 @@ function occurrencesFromInstallments(
 ): Occurrence[] {
   return children
     .filter((d) => isDueIn(d.dueDate, year, month0))
-    .map((d) => ({
-      key: `debt-${d.id}`,
-      kind: 'parcelado' as OccKind,
-      name: d.description,
-      category: toCategory(d.category),
-      amount: debtAmounts(d).total,
-      paidAmount: debtAmounts(d).paid,
-      isPaid: isSettled(d),
-      dueDay: dayjs(d.dueDate).date(),
-      debtId: d.id,
-      installmentId: d.installmentNumber ?? undefined,
-      installmentCount: installmentCountOf(d, parentOf(d, parentsById)),
-      projected: false,
-      payable: true,
-    }));
+    .map((d) => occurrenceFromDebt(d, parentOf(d, parentsById)));
 }
 
 /**
