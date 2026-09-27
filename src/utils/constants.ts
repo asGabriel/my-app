@@ -1,4 +1,4 @@
-import type { ExpenseType, DebtStatus, DebtCategory } from '../api';
+import type { ExpenseType, DebtStatus, DebtCategory, IncomeCategory } from '../api';
 // Instrumentos financeiros ainda não existem no módulo `finance` — tipo vem do mock.
 import type { FinancialInstrumentType } from '../finance/mock';
 
@@ -29,6 +29,22 @@ export const DEBT_CATEGORY_OPTIONS: { label: string; value: DebtCategory }[] = [
     { label: 'Assinaturas', value: 'SUBSCRIPTIONS' },
     { label: 'Obrigações', value: 'OBLIGATIONS' },
     { label: 'Compras', value: 'PURCHASES' },
+    { label: 'Outros', value: 'UNKNOWN' },
+];
+
+export const INCOME_CATEGORY_LABELS: Record<IncomeCategory, string> = {
+    SALARY: 'Salário',
+    FREELANCE: 'Freela',
+    INVESTMENT: 'Investimento',
+    REFUND: 'Reembolso',
+    UNKNOWN: 'Outros',
+};
+
+export const INCOME_CATEGORY_OPTIONS: { label: string; value: IncomeCategory }[] = [
+    { label: 'Salário', value: 'SALARY' },
+    { label: 'Freela', value: 'FREELANCE' },
+    { label: 'Investimento', value: 'INVESTMENT' },
+    { label: 'Reembolso', value: 'REFUND' },
     { label: 'Outros', value: 'UNKNOWN' },
 ];
 

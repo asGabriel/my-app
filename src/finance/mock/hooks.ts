@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as store from './store';
 import type {
   CreateDebtRequest, CreatePaymentRequest, Debt, DebtFilters,
-  FinancialInstrument, FinancialInstrumentListFilters, Income, IncomeFilters, Installment,
+  FinancialInstrument, FinancialInstrumentListFilters, Installment,
   InstallmentFilters,
 } from './types';
 
@@ -44,16 +44,6 @@ export function useInstallments(filters: InstallmentFilters = {}) {
           .filter((i) => filters.isPaid === undefined || i.isPaid === filters.isPaid)
           .filter((i) => inRange(i.dueDate, filters.startDate, filters.endDate))
           .map((i) => ({ ...i }))
-      ),
-  });
-}
-
-export function useIncomes(filters: IncomeFilters = {}) {
-  return useQuery({
-    queryKey: ['incomes', filters],
-    queryFn: () =>
-      delay<Income[]>(() =>
-        store.incomes.filter((i) => inRange(i.reference, filters.startDate, filters.endDate)).map((i) => ({ ...i }))
       ),
   });
 }

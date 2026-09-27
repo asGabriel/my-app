@@ -21,7 +21,7 @@ paths:
     $ref: "./paths/auth.yaml#/me"
   # financeManager: sem cobertura por hora — backend em reformulação (v2).
   # O novo módulo `finance` (rust-api) volta aos poucos: por ora a listagem
-  # de dívidas, criação, edição e exclusão de dívida, listas (agrupadores) e pagamentos. Ver openapi/paths/finance.yaml e
+  # de dívidas, criação, edição e exclusão de dívida, listas (agrupadores), pagamentos e receitas. Ver openapi/paths/finance.yaml e
   # matchmaking.yaml para o padrão.
   /finance/debt:
     $ref: "./paths/finance.yaml#/debts"
@@ -37,6 +37,12 @@ paths:
     $ref: "./paths/finance.yaml#/listPayments"
   /finance/payment/{paymentId}:
     $ref: "./paths/finance.yaml#/refundPayment"
+  /finance/income:
+    $ref: "./paths/finance.yaml#/incomes"
+  /finance/income/list:
+    $ref: "./paths/finance.yaml#/listIncomes"
+  /finance/income/{incomeId}:
+    $ref: "./paths/finance.yaml#/income"
   /matchmaking/players/:
     $ref: "./paths/matchmaking.yaml#/players"
   /matchmaking/players/{playerId}:
@@ -102,6 +108,16 @@ components:
       $ref: "./schemas/finance.yaml#/CreatePaymentRequest"
     PaymentFilters:
       $ref: "./schemas/finance.yaml#/PaymentFilters"
+    IncomeCategory:
+      $ref: "./schemas/finance.yaml#/IncomeCategory"
+    Income:
+      $ref: "./schemas/finance.yaml#/Income"
+    CreateIncomeRequest:
+      $ref: "./schemas/finance.yaml#/CreateIncomeRequest"
+    UpdateIncomeRequest:
+      $ref: "./schemas/finance.yaml#/UpdateIncomeRequest"
+    IncomeFilters:
+      $ref: "./schemas/finance.yaml#/IncomeFilters"
     Gender:
       $ref: "./schemas/matchmaking.yaml#/Gender"
     GameMode:

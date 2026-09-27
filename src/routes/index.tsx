@@ -5,6 +5,7 @@ import { MesTab } from '../pages/controle-mensal/MesTab';
 import { ParcelasTab } from '../pages/controle-mensal/ParcelasTab';
 import { PainelTab } from '../pages/controle-mensal/PainelTab';
 import { DebtsTab } from '../pages/controle-mensal/DebtsTab';
+import { ReceitasTab } from '../pages/controle-mensal/ReceitasTab';
 import { NovoTab } from '../pages/controle-mensal/NovoTab';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 
@@ -27,9 +28,10 @@ export function AppRouter() {
           <Route path="parcelas" element={<ParcelasTab />} />
           <Route path="painel" element={<PainelTab />} />
           <Route path="debitos" element={<DebtsTab />} />
+          <Route path="receitas" element={<ReceitasTab />} />
           <Route path="novo" element={<NovoTab />} />
 
-          {/* Receitas, Extrato, Cadastros e Configurações removidos das rotas
+          {/* Extrato, Cadastros e Configurações removidos das rotas
               por hora (a pedido do Gabriel) — telas continuam no repo,
               intactas, só não estão mais no menu/roteamento. */}
         </Route>

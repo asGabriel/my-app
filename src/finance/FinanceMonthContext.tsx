@@ -1,7 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import dayjs from 'dayjs';
-import { useFinanceDebtParents, useFinanceDebts, type Debt } from '../api';
-import { useIncomes } from './mock';
+import { useFinanceDebtParents, useFinanceDebts, useFinanceIncomes, type Debt } from '../api';
 import {
   buildMonthOccurrences,
   computeIncomeForMonth,
@@ -42,8 +41,7 @@ interface FinanceMonthContextValue {
   privado: boolean;
   togglePrivado: () => void;
   isLoading: boolean;
-  /** Erro ao buscar os débitos reais (módulo `finance`) — a renda segue no
-   * mock e não falha. */
+  /** Erro ao buscar os débitos ou as receitas (módulo `finance`). */
   isError: boolean;
   error: unknown;
   refetch: () => void;
@@ -99,7 +97,9 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
   const monthFilters = useMemo(() => ({ includeChildren: true, ...dateFilters }), [dateFilters]);
   const { data: windowDebts, isLoading: isLoadingDebts, isError: isDebtsError, error: debtsError, refetch: refetchDebts } =
     useFinanceDebts(monthFilters);
-  const { data: incomes, isLoading: isLoadingIncomes } = useIncomes(dateFilters);
+  const {
+    data: incomes, isLoading: isLoadingIncomes, isError: isIncomesError, error: incomesError, refetch: refetchIncomes,
+  } = useFinanceIncomes(dateFilters);
 
   const { parents } = useFinanceDebtParents(windowDebts);
 
@@ -136,14 +136,16 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
     while (cursor.isBefore(windowEnd) || cursor.isSame(windowEnd, 'month')) {
       const key = monthKey(cursor.year(), cursor.month());
       const value = computeIncomeForMonth(incomes, cursor.year(), cursor.month());
-      // meses futuros sem receita lançada assumem a última renda mensal conhecida
-      // (não há conceito de "receita recorrente" no backend hoje).
+      // O mês corrente e os futuros sem receita lançada assumem a última renda
+      // mensal conhecida (receita só existe depois de recebida, não há
+      // "receita prevista" no backend). Meses passados mostram só o que entrou.
+      const projectable = !cursor.isBefore(today, 'month');
       if (value > 0) lastKnown = value;
-      map.set(key, value > 0 ? value : lastKnown);
+      map.set(key, value > 0 || !projectable ? value : lastKnown);
       cursor = cursor.add(1, 'month');
     }
     return map;
-  }, [incomes, windowStart, windowEnd]);
+  }, [incomes, windowStart, windowEnd, today]);
 
   const getOccurrences = (year: number, month0: number) => occurrencesByMonth.get(monthKey(year, month0)) ?? [];
   const getTotals = (year: number, month0: number) => {
@@ -160,9 +162,12 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
     privado,
     togglePrivado: () => setPrivado((p) => !p),
     isLoading: isLoadingDebts || isLoadingIncomes,
-    isError: isDebtsError,
-    error: debtsError,
-    refetch: () => void refetchDebts(),
+    isError: isDebtsError || isIncomesError,
+    error: debtsError ?? incomesError,
+    refetch: () => {
+      void refetchDebts();
+      void refetchIncomes();
+    },
     getOccurrences,
     getTotals,
     hasMonth: (year, month0) => occurrencesByMonth.has(monthKey(year, month0)),
