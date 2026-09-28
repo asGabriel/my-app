@@ -103,7 +103,7 @@ export function IncomesSheet({ year, month0, privado, onClose }: IncomesSheetPro
             {money(total, privado)}
           </div>
 
-          <div style={{ marginTop: 10 }}>
+          <div style={{ marginTop: 14 }}>
             {isLoading ? (
               <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', textAlign: 'center', padding: '20px 0' }}>Carregando…</div>
             ) : isError ? (

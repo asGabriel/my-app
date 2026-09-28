@@ -357,6 +357,19 @@ h1, h2, h3, h4, h5, h6 {
   touch-action: pan-y;
   user-select: none;
 }
+/* inside a sheet (surface background) each row is its own rounded card
+   instead of a page-colored strip; rounding also clips the revealed actions */
+.sheet .swipe-row {
+  border-top: 0;
+  border-radius: var(--radius-lg);
+}
+.sheet .swipe-row + .swipe-row {
+  margin-top: 8px;
+}
+.sheet .swipe-row-content {
+  background: var(--color-surface-raised);
+  padding: 0 14px;
+}
 .swipe-actions {
   position: absolute;
   top: 0;
