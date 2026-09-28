@@ -291,3 +291,98 @@ PaymentFilters:
     endDate:
       type: string
       description: "Data (YYYY-MM-DD)"
+
+IncomeCategory:
+  type: string
+  enum:
+    - UNKNOWN
+    - SALARY
+    - FREELANCE
+    - INVESTMENT
+    - REFUND
+
+Income:
+  type: object
+  description: >-
+    Receita do módulo finance — dinheiro que já entrou. O mês em que conta vem
+    de receivedDate.
+  required:
+    - id
+    - clientId
+    - category
+    - description
+    - amount
+    - receivedDate
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    clientId:
+      type: string
+      format: uuid
+    category:
+      $ref: "#/IncomeCategory"
+    description:
+      type: string
+    amount:
+      type: string
+      description: "Decimal serializado como string (ex.: \"8500.00\")"
+    receivedDate:
+      type: string
+      description: "Data (YYYY-MM-DD) em que o dinheiro entrou"
+    createdAt:
+      type: string
+      description: "DateTime string (RFC3339)"
+    updatedAt:
+      type: string
+      nullable: true
+      description: "DateTime string (RFC3339)"
+
+CreateIncomeRequest:
+  type: object
+  required:
+    - description
+    - amount
+    - receivedDate
+  properties:
+    category:
+      $ref: "#/IncomeCategory"
+    description:
+      type: string
+    amount:
+      type: string
+      description: Decimal como string, > 0 e no máximo 2 casas.
+    receivedDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+
+UpdateIncomeRequest:
+  type: object
+  description: Todos os campos são opcionais; ausente = mantém o valor atual.
+  properties:
+    category:
+      $ref: "#/IncomeCategory"
+    description:
+      type: string
+    amount:
+      type: string
+      description: Decimal como string, > 0 e no máximo 2 casas.
+    receivedDate:
+      type: string
+      description: "Data (YYYY-MM-DD)"
+
+IncomeFilters:
+  type: object
+  description: Todos os campos são opcionais.
+  properties:
+    categories:
+      type: array
+      items:
+        $ref: "#/IncomeCategory"
+    startDate:
+      type: string
+      description: "Data (YYYY-MM-DD) — filtra por receivedDate"
+    endDate:
+      type: string
+      description: "Data (YYYY-MM-DD) — filtra por receivedDate"

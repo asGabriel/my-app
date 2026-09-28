@@ -5,7 +5,7 @@
  */
 import dayjs from 'dayjs';
 import type {
-  Debt, Installment, Income, FinancialInstrument, Payment,
+  Debt, Installment, FinancialInstrument, Payment,
   CreateDebtRequest, CreatePaymentRequest,
 } from './types';
 
@@ -38,7 +38,6 @@ export const instruments: FinancialInstrument[] = [
 
 export const debts: Debt[] = [];
 export const installments: Installment[] = [];
-export const incomes: Income[] = [];
 export const payments: Payment[] = [];
 
 function makeDebt(p: {
@@ -81,20 +80,6 @@ function addInstallmentDebt(description: string, category: string, perInstallmen
 }
 
 function seed() {
-  // Renda: salário todo mês + um freela de vez em quando.
-  for (let o = -12; o <= 0; o++) {
-    incomes.push({
-      id: uuid(), clientId: CLIENT_ID, financialInstrumentId: ACCOUNT_ID, description: 'Salário',
-      amount: money(8500), reference: monthStart(o).format(FMT), createdAt: NOW,
-    });
-    if (o % 4 === 0) {
-      incomes.push({
-        id: uuid(), clientId: CLIENT_ID, financialInstrumentId: ACCOUNT_ID, description: 'Freela',
-        amount: money(1200), reference: monthStart(o).format(FMT), createdAt: NOW,
-      });
-    }
-  }
-
   // Débitos fixos mensais, já gerados como Debt até o mês corrente.
   const fixed: [string, string, number, number][] = [
     ['Aluguel', 'HOME', 1800, 5],

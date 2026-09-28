@@ -29,7 +29,7 @@ export function AppRouter() {
           <Route path="debitos" element={<DebtsTab />} />
           <Route path="novo" element={<NovoTab />} />
 
-          {/* Receitas, Extrato, Cadastros e Configurações removidos das rotas
+          {/* Extrato, Cadastros e Configurações removidos das rotas
               por hora (a pedido do Gabriel) — telas continuam no repo,
               intactas, só não estão mais no menu/roteamento. */}
         </Route>

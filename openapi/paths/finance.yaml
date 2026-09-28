@@ -204,3 +204,92 @@ refundPayment:
     responses:
       "200":
         description: Pagamento estornado
+
+incomes:
+  post:
+    operationId: createFinanceIncome
+    summary: Registra uma receita (módulo finance)
+    description: >-
+      Receita é dinheiro que já entrou: não existe receita prevista/pendente.
+      O mês em que conta vem de receivedDate. O backend responde 400 para
+      amount <= 0 ou com mais de 2 casas decimais.
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/CreateIncomeRequest"
+    responses:
+      "200":
+        description: Receita registrada
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/finance.yaml#/Income"
+
+listIncomes:
+  post:
+    operationId: listFinanceIncomes
+    summary: Lista receitas ativas (não excluídas) do cliente
+    tags:
+      - Finance
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/IncomeFilters"
+    responses:
+      "200":
+        description: Lista de receitas
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/finance.yaml#/Income"
+
+income:
+  patch:
+    operationId: updateFinanceIncome
+    summary: Atualiza uma receita (módulo finance)
+    tags:
+      - Finance
+    parameters:
+      - name: incomeId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/finance.yaml#/UpdateIncomeRequest"
+    responses:
+      "200":
+        description: Receita atualizada
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/finance.yaml#/Income"
+  delete:
+    operationId: deleteFinanceIncome
+    summary: Exclui uma receita (módulo finance)
+    description: Soft delete.
+    tags:
+      - Finance
+    parameters:
+      - name: incomeId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Receita excluída

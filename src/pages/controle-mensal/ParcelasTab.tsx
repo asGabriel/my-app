@@ -26,7 +26,6 @@ export function ParcelasTab() {
 
   const { parentIds, parentsById } = useFinanceDebtParents(parcelas);
 
-  // A renda ainda vem do mock (não existe no módulo `finance`).
   const renda = getTotals(year, month0).renda;
   const totalParcelas = parcelas.reduce((sum, d) => sum + debtAmounts(d).total, 0);
   const pctRenda = renda > 0 ? Math.round((totalParcelas / renda) * 100) : 0;

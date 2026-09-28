@@ -18,7 +18,7 @@ const PRIMARY_NAV: NavItem[] = [
   { path: '/novo', label: 'Novo', icon: 'ph ph-plus-circle' },
 ];
 
-// Receitas, Extrato, Cadastros e Configurações removidos do menu por hora
+// Extrato, Cadastros e Configurações removidos do menu por hora
 // (a pedido do Gabriel) — as telas continuam no repo, só não estão roteadas
 // (ver routes/index.tsx). Para trazer de volta, restaurar os itens aqui e
 // as rotas correspondentes.

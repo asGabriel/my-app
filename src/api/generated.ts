@@ -134,6 +134,50 @@ const PaymentFilters = z
   })
   .partial()
   .passthrough();
+const IncomeCategory = z.enum([
+  "UNKNOWN",
+  "SALARY",
+  "FREELANCE",
+  "INVESTMENT",
+  "REFUND",
+]);
+const CreateIncomeRequest = z
+  .object({
+    category: IncomeCategory.optional(),
+    description: z.string(),
+    amount: z.string(),
+    receivedDate: z.string(),
+  })
+  .passthrough();
+const Income = z
+  .object({
+    id: z.string().uuid(),
+    clientId: z.string().uuid(),
+    category: IncomeCategory,
+    description: z.string(),
+    amount: z.string(),
+    receivedDate: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string().nullish(),
+  })
+  .passthrough();
+const IncomeFilters = z
+  .object({
+    categories: z.array(IncomeCategory),
+    startDate: z.string(),
+    endDate: z.string(),
+  })
+  .partial()
+  .passthrough();
+const UpdateIncomeRequest = z
+  .object({
+    category: IncomeCategory,
+    description: z.string(),
+    amount: z.string(),
+    receivedDate: z.string(),
+  })
+  .partial()
+  .passthrough();
 const Gender = z.enum(["male", "female"]);
 const CreatePlayerRequest = z
   .object({ name: z.string(), gender: Gender })
@@ -278,6 +322,11 @@ export const schemas = {
   CreatePaymentRequest,
   Payment,
   PaymentFilters,
+  IncomeCategory,
+  CreateIncomeRequest,
+  Income,
+  IncomeFilters,
+  UpdateIncomeRequest,
   Gender,
   CreatePlayerRequest,
   Player,
@@ -421,6 +470,69 @@ const endpoints = makeApi([
       },
     ],
     response: z.array(Debt),
+  },
+  {
+    method: "post",
+    path: "/finance/income",
+    alias: "createFinanceIncome",
+    description: `Receita é dinheiro que já entrou: não existe receita prevista/pendente. O mês em que conta vem de receivedDate. O backend responde 400 para amount &lt;&#x3D; 0 ou com mais de 2 casas decimais.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateIncomeRequest,
+      },
+    ],
+    response: Income,
+  },
+  {
+    method: "patch",
+    path: "/finance/income/:incomeId",
+    alias: "updateFinanceIncome",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateIncomeRequest,
+      },
+      {
+        name: "incomeId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: Income,
+  },
+  {
+    method: "delete",
+    path: "/finance/income/:incomeId",
+    alias: "deleteFinanceIncome",
+    description: `Soft delete.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "incomeId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/finance/income/list",
+    alias: "listFinanceIncomes",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: IncomeFilters,
+      },
+    ],
+    response: z.array(Income),
   },
   {
     method: "get",

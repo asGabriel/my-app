@@ -8,8 +8,8 @@
  * As ocorrências do mês são só os `Debt` reais (avulsos e parcelas) do módulo
  * `finance` (rust-api), via `useFinanceDebts` — débitos mensais fixos são
  * criados no backend por rotina própria, então nada é projetado aqui a partir
- * de regra de recorrência. `Income` ainda não tem rota no backend e segue
- * vindo do mock (ver `FinanceMonthContext`).
+ * de regra de recorrência. A renda do mês soma os `Income` reais (via
+ * `useFinanceIncomes`) pelo mês de `receivedDate`.
  *
  * Limitações conhecidas do modelo de dados (ver rust-api):
  * - O módulo `finance` não tem instrumento financeiro (cartão/conta) — nem
@@ -20,8 +20,7 @@
  *   que são as pagáveis (`POST /finance/payment`).
  */
 import dayjs from 'dayjs';
-import { schemas, type Debt } from '../api';
-import type { Income } from './mock';
+import { schemas, type Debt, type Income } from '../api';
 import type { DebtCategory } from '../utils/constants';
 import { debtAmounts, installmentCountOf, isInstallment, isInstallmentParent, isSettled, parentOf } from './debt';
 
@@ -156,7 +155,7 @@ export function buildMonthOccurrences(
 export function computeIncomeForMonth(incomes: Income[], year: number, month0: number): number {
   return incomes
     .filter((i) => {
-      const ref = dayjs(i.reference);
+      const ref = dayjs(i.receivedDate);
       return ref.year() === year && ref.month() === month0;
     })
     .reduce((sum, i) => sum + parseFloat(i.amount), 0);
