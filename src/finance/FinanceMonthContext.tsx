@@ -132,20 +132,14 @@ export function FinanceMonthProvider({ children }: { children: ReactNode }) {
     const map = new Map<string, number>();
     if (!incomes) return map;
     let cursor = windowStart;
-    let lastKnown = 0;
+    // Só o que entrou de fato: mês sem receita registrada tem renda zero, sem
+    // projeção a partir de meses anteriores.
     while (cursor.isBefore(windowEnd) || cursor.isSame(windowEnd, 'month')) {
-      const key = monthKey(cursor.year(), cursor.month());
-      const value = computeIncomeForMonth(incomes, cursor.year(), cursor.month());
-      // O mês corrente e os futuros sem receita lançada assumem a última renda
-      // mensal conhecida (receita só existe depois de recebida, não há
-      // "receita prevista" no backend). Meses passados mostram só o que entrou.
-      const projectable = !cursor.isBefore(today, 'month');
-      if (value > 0) lastKnown = value;
-      map.set(key, value > 0 || !projectable ? value : lastKnown);
+      map.set(monthKey(cursor.year(), cursor.month()), computeIncomeForMonth(incomes, cursor.year(), cursor.month()));
       cursor = cursor.add(1, 'month');
     }
     return map;
-  }, [incomes, windowStart, windowEnd, today]);
+  }, [incomes, windowStart, windowEnd]);
 
   const getOccurrences = (year: number, month0: number) => occurrencesByMonth.get(monthKey(year, month0)) ?? [];
   const getTotals = (year: number, month0: number) => {

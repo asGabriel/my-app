@@ -1,10 +1,11 @@
 import dayjs from 'dayjs';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useFinanceLists, type Debt } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import { DebtDeleteSheet } from '../../components/DebtDeleteSheet';
 import { DebtEditSheet } from '../../components/DebtEditSheet';
+import { IncomesSheet } from '../../components/IncomesSheet';
 import { SwipeableRow, type SwipeSide } from '../../components/SwipeableRow';
 import { parentOf } from '../../finance/debt';
 import { debtSwipeActions } from '../../finance/debtSwipeActions';
@@ -119,6 +120,7 @@ export function MesTab() {
   const [swiped, setSwiped] = useState<{ key: string; side: SwipeSide } | null>(null);
   const [editing, setEditing] = useState<Debt | null>(null);
   const [deleting, setDeleting] = useState<Debt | null>(null);
+  const [showIncomes, setShowIncomes] = useState(false);
   const debtOf = (o: Occurrence) => debtsById.get(o.debtId);
 
   const handleLogout = () => {
@@ -146,6 +148,12 @@ export function MesTab() {
   const pctParcelasRenda = totals.renda > 0 ? Math.round((totals.parcelas / totals.renda) * 100) : 0;
 
   const alerta = useMemo(() => {
+    if (totals.renda <= 0) {
+      return {
+        icon: 'ph ph-warning-circle',
+        text: `Nenhuma receita registrada em ${MESES_LONGOS[month0]} — sem ela o livre fica no negativo. Toque em Renda para registrar o que entrou.`,
+      };
+    }
     if (totals.livre < 0) {
       return {
         icon: 'ph ph-warning-circle',
@@ -162,7 +170,7 @@ export function MesTab() {
       icon: 'ph ph-sparkle',
       text: `Dá pra respirar: sobram ${short(totals.livre, privado)} depois de tudo que já tem destino, e as parcelas ocupam só ${pctParcelasRenda}% da renda.`,
     };
-  }, [totals, pctParcelasRenda, privado]);
+  }, [totals, pctParcelasRenda, privado, month0]);
 
   const daysInMonth = dayjs(new Date(year, month0, 1)).daysInMonth();
 
@@ -239,10 +247,24 @@ export function MesTab() {
           { label: 'Custo fixo', value: short(totals.fixos, privado), note: `${totals.nFix} regras sem fim` },
           { label: 'Variáveis', value: short(totals.variaveis, privado), note: `${totals.nVar} contas que oscilam` },
           { label: 'Parcelas', value: short(totals.parcelas, privado), note: `${totals.nParc} com fim marcado` },
-          { label: 'Renda', value: short(totals.renda, privado), note: 'entradas do mês' },
+          // Abre as receitas do mês (lista, edição e exclusão).
+          { label: 'Renda', value: short(totals.renda, privado), note: 'entradas do mês', onClick: () => setShowIncomes(true) },
         ].map((b) => (
-          <div key={b.label} className="card" style={{ padding: '11px 12px 12px' }}>
-            <div className="card-kicker">{b.label}</div>
+          <div
+            key={b.label}
+            className="card"
+            {...(b.onClick && {
+              role: 'button',
+              tabIndex: 0,
+              onClick: b.onClick,
+              onKeyDown: (e: KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && b.onClick(),
+            })}
+            style={{ padding: '11px 12px 12px', cursor: b.onClick ? 'pointer' : undefined }}
+          >
+            <div className="card-kicker" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {b.label}
+              {b.onClick && <i className="ph ph-caret-right" style={{ fontSize: 12 }} />}
+            </div>
             <div style={{ fontSize: 16, fontWeight: 500, marginTop: 5, letterSpacing: '-0.015em' }}>{b.value}</div>
             <div style={{ fontSize: 11, color: 'var(--color-neutral-500)', marginTop: 3 }}>{b.note}</div>
           </div>
@@ -314,6 +336,8 @@ export function MesTab() {
           onClose={() => setDeleting(null)}
         />
       )}
+
+      {showIncomes && <IncomesSheet year={year} month0={month0} privado={privado} onClose={() => setShowIncomes(false)} />}
     </div>
   );
 }

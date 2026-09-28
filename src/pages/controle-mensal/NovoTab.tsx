@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import dayjs from 'dayjs';
 import { Radio } from 'antd';
 import {
@@ -46,7 +46,11 @@ export function NovoTab() {
 
   const createDebt = useCreateFinanceDebt();
 
-  const [kind, setKind] = useState<Kind>('debito');
+  const location = useLocation();
+  // Quem navega para cá pode pedir o modo receita (ex.: sheet de receitas do mês).
+  const [kind, setKind] = useState<Kind>(() =>
+    (location.state as { kind?: Kind } | null)?.kind === 'receita' ? 'receita' : 'debito'
+  );
   const [step, setStep] = useState(1);
   /** Mês de início, em meses a partir do mês selecionado no Controle Mensal. */
   const [startOffset, setStartOffset] = useState(0);
