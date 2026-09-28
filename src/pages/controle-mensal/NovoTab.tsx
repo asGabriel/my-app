@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import dayjs from 'dayjs';
+import { Radio } from 'antd';
 import {
   schemas,
   useCreateFinanceDebt,
@@ -10,6 +11,15 @@ import {
 import { useFinanceMonth } from '../../finance/FinanceMonthContext';
 import { money, short } from '../../finance/format';
 import { DEBT_CATEGORY_OPTIONS, type DebtCategory } from '../../utils/constants';
+import { NovaReceitaForm } from './NovaReceitaForm';
+
+/** O que a aba Novo registra: um débito (wizard de 3 passos) ou uma receita. */
+type Kind = 'debito' | 'receita';
+
+const KIND_OPTIONS: { value: Kind; label: string }[] = [
+  { value: 'debito', label: 'Débito' },
+  { value: 'receita', label: 'Receita' },
+];
 
 type Tipo = 'parcelado' | 'fixo' | 'avulso';
 
@@ -36,6 +46,7 @@ export function NovoTab() {
 
   const createDebt = useCreateFinanceDebt();
 
+  const [kind, setKind] = useState<Kind>('debito');
   const [step, setStep] = useState(1);
   /** Mês de início, em meses a partir do mês selecionado no Controle Mensal. */
   const [startOffset, setStartOffset] = useState(0);
@@ -127,6 +138,21 @@ export function NovoTab() {
     if (step > 1) return setStep(step - 1);
   };
 
+  // Só no começo do fluxo: trocar de débito para receita no meio do wizard
+  // descartaria os passos já preenchidos.
+  const kindToggle = (
+    <Radio.Group
+      block
+      optionType="button"
+      options={KIND_OPTIONS}
+      value={kind}
+      onChange={(e) => setKind(e.target.value)}
+      style={{ marginTop: 8 }}
+    />
+  );
+
+  if (kind === 'receita') return <NovaReceitaForm header={kindToggle} />;
+
   if (done) {
     return (
       <div>
@@ -158,7 +184,8 @@ export function NovoTab() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+      {step === 1 && kindToggle}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: step === 1 ? 16 : 8 }}>
         <button className="btn btn-ghost btn-icon" onClick={handleVoltar} aria-label="Voltar" style={{ width: 30, height: 30, fontSize: 15, flex: '0 0 auto' }} disabled={step === 1}>
           <i className="ph ph-arrow-left" />
         </button>

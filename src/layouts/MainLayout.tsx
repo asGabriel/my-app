@@ -15,7 +15,6 @@ const PRIMARY_NAV: NavItem[] = [
   { path: '/parcelas', label: 'Parcelas', icon: 'ph ph-chart-donut' },
   { path: '/painel', label: 'Painel', icon: 'ph ph-chart-bar' },
   { path: '/debitos', label: 'Débitos', icon: 'ph ph-list-bullets' },
-  { path: '/receitas', label: 'Receitas', icon: 'ph ph-arrow-circle-down' },
   { path: '/novo', label: 'Novo', icon: 'ph ph-plus-circle' },
 ];
 
