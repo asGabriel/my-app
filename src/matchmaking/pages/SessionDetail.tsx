@@ -1,17 +1,15 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { useParams, useNavigate } from 'react-router';
-import { Typography, Tag, Tabs, Button, App, Empty, Spin, Popconfirm, Select, Switch } from 'antd';
+import { useMemo, useState } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router';
+import { App, Empty, Spin } from 'antd';
 import {
   ArrowLeftOutlined,
-  PlusOutlined,
-  PlayCircleOutlined,
-  TrophyOutlined,
-  UserOutlined,
+  BorderInnerOutlined,
   EditOutlined,
-  DeleteOutlined,
-  PushpinOutlined,
-  PushpinFilled,
+  OrderedListOutlined,
+  PlusOutlined,
   ReloadOutlined,
+  TrophyOutlined,
+  UserAddOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -36,57 +34,46 @@ import {
 import { MatchFormSheet } from '../components/MatchFormSheet';
 import { TeamFormSheet } from '../components/TeamFormSheet';
 import { RosterSheet } from '../components/RosterSheet';
-import { gameModeLabel, genderLabel, teamStatusLabel, teamStatusColor } from '../shared/labels';
+import { WinnerSheet } from '../components/WinnerSheet';
+import { CheckInSheet } from '../components/CheckInSheet';
+import { BottomNav } from '../components/BottomNav';
+import { CourtsView } from './session/CourtsView';
+import { QueueView, type QueueRow } from './session/QueueView';
+import { AttendanceView } from './session/AttendanceView';
+import { RankingView } from './session/RankingView';
+import { gameModeLabel } from '../shared/labels';
+import {
+  CONTENT_MAX_WIDTH,
+  NAV_HEIGHT,
+  color,
+  disabledButton,
+  displayTitle,
+  fixedBar,
+  iconButton,
+  plural,
+  secondaryButton,
+} from '../shared/theme';
 
 const { draft: DRAFT, disbanded: DISBANDED, holding: HOLDING } = schemas.TeamStatus.enum;
 
-const { Title, Text } = Typography;
+type SessionTab = 'quadras' | 'fila' | 'presenca' | 'ranking';
+const SESSION_TABS: SessionTab[] = ['quadras', 'fila', 'presenca', 'ranking'];
 
-function Section({ title, extra, children }: { title: string; extra?: ReactNode; children: ReactNode }) {
-  return (
-    <section
-      style={{
-        background: '#fff',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 12,
-        }}
-      >
-        <Text strong>{title}</Text>
-        {extra}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-const card: React.CSSProperties = {
-  background: '#fafafa',
-  borderRadius: 10,
-  padding: 14,
-  border: '1px solid #f0f0f0',
-};
-const row: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 };
-// A player/team name in a flex row: takes the leftover space, is allowed to
-// shrink to nothing and wrap so it never pushes the trailing buttons/tags
-// off a narrow phone screen.
-const nameText: React.CSSProperties = { flex: 1, minWidth: 0, overflowWrap: 'anywhere' };
-// Trailing action cluster (tags + icon buttons): never shrinks.
-const actions: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 };
+/** Altura da barra de ações fixa da aba Quadras (Preencher / Abrir quadra). */
+const ACTION_BAR_HEIGHT = 73;
 
 export function SessionDetail() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
+  // A aba fica na URL: voltar do navegador e recarregar mantêm a tela.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('aba') as SessionTab | null;
+  const activeTab: SessionTab = tabParam && SESSION_TABS.includes(tabParam) ? tabParam : 'quadras';
+  const setActiveTab = (tab: SessionTab) => {
+    setSearchParams(tab === 'quadras' ? {} : { aba: tab }, { replace: true });
+    window.scrollTo({ top: 0 });
+  };
 
   const { data: session, isLoading: isLoadingSession } = useSession(sessionId);
   const { data: players, isLoading: isLoadingPlayers } = usePlayers();
@@ -103,12 +90,13 @@ export function SessionDetail() {
   const createMatch = useCreateMatch();
   const reportMatchResult = useReportMatchResult();
 
-  const [activeTab, setActiveTab] = useState('overview');
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false);
   const [rosterSelection, setRosterSelection] = useState<string[]>([]);
   const [matchSheetOpen, setMatchSheetOpen] = useState(false);
   const [teamSheetOpen, setTeamSheetOpen] = useState(false);
+  const [checkInSheetOpen, setCheckInSheetOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [winnerPick, setWinnerPick] = useState<{ match: Match; teamId: string } | null>(null);
 
   const playerNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -134,8 +122,6 @@ export function SessionDetail() {
     const team = teamById.get(id);
     return team ? teamLabel(team) : id;
   };
-
-  const playersPerTeam = session?.settings.playersPerTeam ?? Infinity;
 
   const activeTeams = useMemo(
     () => (teams ?? []).filter((team) => team.status !== DISBANDED),
@@ -261,6 +247,20 @@ export function SessionDetail() {
     });
   }, [session, teams, matches, playerNameById]);
 
+  // Prévia dos próximos a entrar: os primeiros da fila, em grupos do tamanho
+  // de um time. É uma projeção — quem monta os times de fato é o backend
+  // (fill-courts / sugestão pós-resultado), que pode reordenar por gênero.
+  const nextUp = useMemo(() => {
+    const size = session?.settings.playersPerTeam ?? 0;
+    if (!size) return [];
+    const ids = orderedQueue.map((entry) => entry.playerId);
+    const groups: string[][] = [];
+    for (let i = 0; i + size <= ids.length && groups.length < 2; i += size) {
+      groups.push(ids.slice(i, i + size));
+    }
+    return groups;
+  }, [orderedQueue, session]);
+
   if (isLoadingSession) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
@@ -270,35 +270,36 @@ export function SessionDetail() {
   }
 
   if (!session) {
-    return <Empty description="Sessão não encontrada" />;
+    return (
+      <div style={{ padding: 32 }}>
+        <Empty description="Sessão não encontrada" />
+      </div>
+    );
   }
 
-  const confirmedPlayers = session.playerIds
-    .map((id) => playerById.get(id))
-    .filter((player): player is NonNullable<typeof player> => player != null)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const playerName = (id: string) => playerNameById.get(id) ?? id;
+  const checkedInIds = new Set(session.playerIds);
 
-  // The session roster (players selected for the day). Check-in toggles happen
-  // within this list; someone not on the roster has to be added via RosterSheet
-  // first.
+  // O roster da sessão (quem foi convocado pro dia). O check-in liga/desliga
+  // dentro dessa lista; quem não está no roster entra via RosterSheet.
   const rosterPlayers = session.rosterPlayerIds
     .map((id) => playerById.get(id))
-    .filter((player): player is NonNullable<typeof player> => player != null)
+    .filter((player): player is Player => player != null)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const rosteredNotCheckedIn = rosterPlayers
-    .filter((player) => !session.playerIds.includes(player.id))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const rosteredNotCheckedIn = rosterPlayers.filter((player) => !checkedInIds.has(player.id));
 
-  const hasMatches = !!matches?.length;
   const idleCourtCount = courtStates.filter((c) => !c.running).length;
+  const canOpenCourt = availablePlayersForTeam.length >= session.settings.playersPerTeam * 2;
 
   const runMutation = async (fn: () => Promise<unknown>, ok: string) => {
     try {
       await fn();
       message.success(ok);
+      return true;
     } catch (error) {
       if (error instanceof Error) message.error(error.message);
+      return false;
     }
   };
 
@@ -309,32 +310,38 @@ export function SessionDetail() {
 
   const handleSaveRoster = async () => {
     if (!sessionId) return;
-    try {
-      await updateSession.mutateAsync({
-        sessionId,
-        data: { rosterPlayerIds: rosterSelection },
-      });
-      message.success('Roster da sessão atualizado!');
-      setRosterSheetOpen(false);
-    } catch (error) {
-      if (error instanceof Error) message.error(error.message);
-    }
+    const ok = await runMutation(
+      () => updateSession.mutateAsync({ sessionId, data: { rosterPlayerIds: rosterSelection } }),
+      'Roster da sessão atualizado!',
+    );
+    if (ok) setRosterSheetOpen(false);
   };
 
   const handleFill = () =>
-    runMutation(() => fillCourts.mutateAsync(session.id), 'Quadras ociosas revisadas.');
+    runMutation(() => fillCourts.mutateAsync(session.id), 'Quadras livres revisadas.');
 
-  const handleReportResult = (matchId: string, winnerTeamId: string) =>
-    runMutation(
+  const handleReportResult = async (matchId: string, winnerTeamId: string) => {
+    const ok = await runMutation(
       () => reportMatchResult.mutateAsync({ matchId, winnerTeamId }),
       'Resultado registrado — confira as sugestões por quadra.',
     );
+    if (ok) setWinnerPick(null);
+  };
 
-  const handleDiscard = (teamId: string) =>
-    runMutation(
-      () => discardDraft.mutateAsync({ teamId, sessionId: session.id }),
-      'Rascunho descartado; jogadores voltaram pra fila.',
-    );
+  const confirmDiscard = (team: Team) =>
+    modal.confirm({
+      title: 'Descartar rascunho?',
+      content: `${teamLabel(team)} volta pra fila.`,
+      okText: 'Descartar',
+      okButtonProps: { danger: true },
+      cancelText: 'Cancelar',
+      centered: true,
+      onOk: () =>
+        runMutation(
+          () => discardDraft.mutateAsync({ teamId: team.id, sessionId: session.id }),
+          'Rascunho descartado; jogadores voltaram pra fila.',
+        ),
+    });
 
   const handlePin = (playerId: string, pinned: boolean) =>
     runMutation(
@@ -342,13 +349,11 @@ export function SessionDetail() {
       pinned ? 'Jogador fixado no topo da fila.' : 'Jogador desafixado.',
     );
 
-  // Check-in / check-out of a rostered player, from the "Jogadores" toggles or
-  // the queue view: someone gives up mid-session, or a latecomer arrives. The
-  // single-player check-in/out endpoints sync session_queue too — checked out
-  // leaves the list; checked in joins the queue with gamesPlayed derived from
-  // the match record, so a re-check-in keeps the fair (games-played) ordering
-  // instead of jumping the front. Only players already on the roster can be
-  // checked in (backend returns 409 otherwise).
+  // Check-in / check-out de um jogador do roster: alguém desiste no meio da
+  // sessão ou um atrasado chega. Os endpoints individuais sincronizam a fila
+  // — check-out sai da lista; check-in entra com gamesPlayed derivado das
+  // partidas, então um re-check-in mantém a ordem justa em vez de furar a fila.
+  // Só quem já está no roster pode fazer check-in (backend devolve 409).
   const handleLeaveSession = (playerId: string) =>
     runMutation(
       () => checkOutPlayer.mutateAsync({ sessionId: session.id, playerId }),
@@ -361,587 +366,218 @@ export function SessionDetail() {
       'Check-in feito; jogador entrou na fila.',
     );
 
+  const confirmCheckOut = (row: QueueRow) =>
+    modal.confirm({
+      title: `Check-out de ${row.name}?`,
+      content: 'Sai da fila, mas continua no roster da sessão.',
+      okText: 'Check-out',
+      okButtonProps: { danger: true },
+      cancelText: 'Cancelar',
+      centered: true,
+      onOk: () => handleLeaveSession(row.playerId),
+    });
+
   const startCourt = (court: number, teamAId: string, teamBId: string) =>
     runMutation(
       () => createMatch.mutateAsync({ sessionId: session.id, court, teamAId, teamBId }),
       `Partida iniciada na quadra ${court}!`,
     );
 
-  return (
-    <div>
+  const pendingPlayerId = <T extends { playerId: string }>(mutation: { isPending: boolean; variables?: T }) =>
+    mutation.isPending ? (mutation.variables?.playerId ?? null) : null;
+  const pendingAttendanceId = pendingPlayerId(checkInPlayer) ?? pendingPlayerId(checkOutPlayer);
+
+  const { playersPerTeam: teamSize, setsToWin, pointsPerSet } = session.settings;
+  const headerAction =
+    activeTab === 'fila' ? (
       <button
-        onClick={() => navigate('/')}
+        onClick={() => setCheckInSheetOpen(true)}
         style={{
-          border: 'none',
-          background: 'none',
-          color: '#fa8c16',
-          fontWeight: 600,
-          padding: 0,
-          marginBottom: 12,
-          display: 'flex',
-          alignItems: 'center',
+          ...iconButton,
+          width: 'auto',
           gap: 6,
-          cursor: 'pointer',
+          padding: '0 14px',
+          background: color.ink,
+          color: '#FFFFFF',
+          fontFamily: 'inherit',
+          fontSize: 14,
+          fontWeight: 600,
         }}
       >
-        <ArrowLeftOutlined /> Sessões
+        <UserAddOutlined /> Check-in
       </button>
+    ) : activeTab === 'presenca' ? (
+      <button
+        onClick={openRosterSheet}
+        disabled={isLoadingPlayers}
+        style={{
+          ...iconButton,
+          width: 'auto',
+          gap: 6,
+          padding: '0 14px',
+          border: `1.5px solid ${color.lineStrong}`,
+          background: color.surface,
+          fontFamily: 'inherit',
+          fontSize: 14,
+          fontWeight: 600,
+        }}
+      >
+        <EditOutlined /> Roster
+      </button>
+    ) : activeTab === 'quadras' ? (
+      <button
+        aria-label="Nova dupla manual"
+        onClick={() => setTeamSheetOpen(true)}
+        disabled={!availablePlayersForTeam.length}
+        style={{ ...iconButton, ...(!availablePlayersForTeam.length ? disabledButton : {}) }}
+      >
+        <PlusOutlined />
+      </button>
+    ) : null;
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <div>
-          <Title level={4} style={{ margin: 0 }}>
+  const bottomPadding = NAV_HEIGHT + (activeTab === 'quadras' ? ACTION_BAR_HEIGHT : 0) + 24;
+
+  return (
+    <div style={{ maxWidth: CONTENT_MAX_WIDTH, margin: '0 auto' }}>
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '12px 8px 8px',
+          background: color.ground,
+        }}
+      >
+        <button aria-label="Voltar para sessões" onClick={() => navigate('/')} style={iconButton}>
+          <ArrowLeftOutlined />
+        </button>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          <h1 style={{ ...displayTitle, fontSize: 24, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {session.description || dayjs(session.date).format('DD/MM/YYYY')}
-          </Title>
-          {session.description && (
-            <Text type="secondary" style={{ fontSize: 13 }}>
-              {dayjs(session.date).format('DD/MM/YYYY')}
-            </Text>
-          )}
+          </h1>
+          <span style={{ fontSize: 13, color: color.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {dayjs(session.date).format('DD/MM')} · {gameModeLabel[session.gameMode]} · {teamSize} por time ·{' '}
+            {plural(setsToWin, 'set')} de {pointsPerSet}
+          </span>
         </div>
-        <Tag color="purple">{gameModeLabel[session.gameMode]}</Tag>
-      </div>
+        {headerAction}
+      </header>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-        <Tag>{session.availableCourts} quadras</Tag>
-        <Tag>{session.settings.playersPerTeam} por time</Tag>
-        <Tag>{session.settings.setsToWin} sets p/ vencer</Tag>
-        <Tag>{session.settings.pointsPerSet} pts/set</Tag>
-      </div>
+      <main style={{ padding: `4px 16px calc(${bottomPadding}px + env(safe-area-inset-bottom))` }}>
+        {activeTab === 'quadras' && (
+          <CourtsView
+            courtStates={courtStates}
+            looseDrafts={looseDrafts}
+            activeTeams={activeTeams}
+            disbandedTeams={disbandedTeams}
+            matchHistory={matchHistory}
+            nextUp={nextUp}
+            playersPerTeam={teamSize}
+            isLoading={isLoadingMatches || isLoadingTeams}
+            isStarting={createMatch.isPending}
+            teamLabel={teamLabel}
+            teamLabelById={teamLabelById}
+            playerName={playerName}
+            onPickWinner={(match, teamId) => setWinnerPick({ match, teamId })}
+            onEditDraft={setEditingTeam}
+            onDiscardDraft={confirmDiscard}
+            onStart={startCourt}
+            onOpenQueue={() => setActiveTab('fila')}
+          />
+        )}
 
-      <Tabs
+        {activeTab === 'fila' && (
+          <QueueView
+            queue={orderedQueue}
+            isLoading={isLoadingQueue}
+            pendingPinPlayerId={pendingPlayerId(pinPlayer)}
+            pendingCheckOutPlayerId={pendingPlayerId(checkOutPlayer)}
+            onTogglePin={handlePin}
+            onCheckOut={confirmCheckOut}
+          />
+        )}
+
+        {activeTab === 'presenca' && (
+          <AttendanceView
+            rosterPlayers={rosterPlayers}
+            checkedInIds={checkedInIds}
+            isLoading={isLoadingPlayers}
+            pendingPlayerId={pendingAttendanceId}
+            onToggle={(playerId, checkIn) => (checkIn ? handleJoinSession(playerId) : handleLeaveSession(playerId))}
+          />
+        )}
+
+        {activeTab === 'ranking' && <RankingView standings={playerStandings} playerName={playerName} />}
+      </main>
+
+      {activeTab === 'quadras' && (
+        <div
+          style={{
+            ...fixedBar,
+            bottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom))`,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 8,
+            padding: '12px 16px',
+            background: color.ground,
+            borderTop: `1px solid ${color.line}`,
+          }}
+        >
+          <button
+            onClick={handleFill}
+            disabled={!idleCourtCount || fillCourts.isPending}
+            style={{ ...secondaryButton, ...(!idleCourtCount || fillCourts.isPending ? disabledButton : {}) }}
+          >
+            {fillCourts.isPending ? <Spin size="small" /> : <ReloadOutlined />}
+            Preencher
+          </button>
+          <button
+            onClick={() => setMatchSheetOpen(true)}
+            disabled={!canOpenCourt}
+            style={{ ...secondaryButton, ...(!canOpenCourt ? disabledButton : {}) }}
+          >
+            <PlusOutlined /> Abrir quadra
+          </button>
+        </div>
+      )}
+
+      <BottomNav
+        ariaLabel="Sessão"
         activeKey={activeTab}
-        onChange={setActiveTab}
-        size="small"
-        tabBarGutter={8}
+        onSelect={(key) => setActiveTab(key as SessionTab)}
         items={[
-          {
-            key: 'overview',
-            label: 'Quadras',
-            children: (
-              <>
-                <Section
-                  title="Quadras"
-                  extra={
-                    idleCourtCount > 0 && (
-                      <Button
-                        size="small"
-                        icon={<ReloadOutlined />}
-                        loading={fillCourts.isPending}
-                        onClick={handleFill}
-                      >
-                        Preencher
-                      </Button>
-                    )
-                  }
-                >
-                  {(isLoadingMatches || isLoadingTeams) && (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
-                      <Spin />
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {courtStates.map(({ court, running, holding, drafts }) => {
-                      if (running) {
-                        return (
-                          <div key={court} style={card}>
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: 10,
-                              }}
-                            >
-                              <Text strong style={{ fontSize: 13 }}>
-                                Quadra {court}
-                              </Text>
-                              <Tag color="processing" style={{ marginRight: 0 }}>
-                                Em andamento
-                              </Tag>
-                            </div>
-                            {[running.teamAId, running.teamBId].map((teamId, idx) => (
-                              <div key={teamId}>
-                                {idx === 1 && (
-                                  <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12, margin: '8px 0' }}>
-                                    vs
-                                  </div>
-                                )}
-                                <div style={{ ...row, padding: '3px 0' }}>
-                                  <Text strong style={nameText}>
-                                    {teamLabelById(teamId)}
-                                  </Text>
-                                  <Popconfirm
-                                    title="Confirmar vencedor"
-                                    description={`${teamLabelById(teamId)} venceu?`}
-                                    okText="Confirmar"
-                                    cancelText="Cancelar"
-                                    onConfirm={() => handleReportResult(running.id, teamId)}
-                                  >
-                                    <Button style={{ flexShrink: 0 }} loading={reportMatchResult.isPending}>
-                                      Venceu
-                                    </Button>
-                                  </Popconfirm>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-
-                      const teamAId = holding?.id ?? drafts[0]?.id;
-                      const teamBId = holding ? drafts[0]?.id : drafts[1]?.id;
-                      const canStart = !!teamAId && !!teamBId;
-
-                      return (
-                        <div key={court} style={card}>
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: 8,
-                            }}
-                          >
-                            <Text strong style={{ fontSize: 13 }}>
-                              Quadra {court}
-                            </Text>
-                            <Tag style={{ marginRight: 0 }}>Ociosa</Tag>
-                          </div>
-
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {holding && (
-                              <div style={row}>
-                                <Tag color="gold" style={{ marginRight: 0, flexShrink: 0 }}>
-                                  Segurando
-                                </Tag>
-                                <Text style={nameText}>{teamLabel(holding)}</Text>
-                              </div>
-                            )}
-
-                            {holding && !!drafts.length && (
-                              <div style={{ color: '#bfbfbf', fontSize: 12, paddingLeft: 2 }}>vs</div>
-                            )}
-
-                            {!drafts.length && (
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                Sem desafiante sugerido. Use “Preencher” ou “Abrir quadra”.
-                              </Text>
-                            )}
-
-                            {drafts.map((d) => (
-                              <div
-                                key={d.id}
-                                style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, rowGap: 8 }}
-                              >
-                                <Tag color="blue" style={{ marginRight: 0, flexShrink: 0 }}>
-                                  Rascunho
-                                </Tag>
-                                <Text style={{ ...nameText, minWidth: 100 }}>{teamLabel(d)}</Text>
-                                <div style={actions}>
-                                  <Button size="small" icon={<EditOutlined />} onClick={() => setEditingTeam(d)} />
-                                  <Popconfirm
-                                    title="Descartar rascunho?"
-                                    okText="Descartar"
-                                    cancelText="Cancelar"
-                                    onConfirm={() => handleDiscard(d.id)}
-                                  >
-                                    <Button size="small" danger icon={<DeleteOutlined />} loading={discardDraft.isPending} />
-                                  </Popconfirm>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-
-                          <Button
-                            block
-                            type="primary"
-                            icon={<PlayCircleOutlined />}
-                            disabled={!canStart}
-                            loading={createMatch.isPending}
-                            onClick={() => canStart && startCourt(court, teamAId!, teamBId!)}
-                            style={{ marginTop: 12 }}
-                          >
-                            Iniciar partida
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <Button
-                    block
-                    type={hasMatches ? 'default' : 'primary'}
-                    icon={<PlayCircleOutlined />}
-                    onClick={() => setMatchSheetOpen(true)}
-                    disabled={availablePlayersForTeam.length < session.settings.playersPerTeam * 2}
-                    style={{ marginTop: 12 }}
-                  >
-                    Abrir quadra
-                  </Button>
-                </Section>
-
-                {!!looseDrafts.length && (
-                  <Section title="Rascunhos sem quadra">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {looseDrafts.map((d) => (
-                        <div
-                          key={d.id}
-                          style={{ ...card, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}
-                        >
-                          <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(d)}</Text>
-                          <div style={actions}>
-                            <Button size="small" icon={<EditOutlined />} onClick={() => setEditingTeam(d)} />
-                            <Popconfirm
-                              title="Descartar rascunho?"
-                              okText="Descartar"
-                              cancelText="Cancelar"
-                              onConfirm={() => handleDiscard(d.id)}
-                            >
-                              <Button size="small" danger icon={<DeleteOutlined />} />
-                            </Popconfirm>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
-                      Use “Abrir quadra manualmente” pra colocar em jogo.
-                    </Text>
-                  </Section>
-                )}
-
-                <Section title="Histórico de partidas">
-                  {isLoadingMatches && (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
-                      <Spin />
-                    </div>
-                  )}
-                  {!isLoadingMatches && !matchHistory.length && (
-                    <Text type="secondary">Nenhuma partida finalizada ainda.</Text>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {matchHistory.map((match) => {
-                      const teamAWon = match.winnerTeamId === match.teamAId;
-                      return (
-                        <div key={match.id} style={card}>
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: 10,
-                            }}
-                          >
-                            <Text strong style={{ fontSize: 13 }}>
-                              Quadra {match.court}
-                            </Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {match.playedAt ? dayjs(match.playedAt).format('HH:mm') : ''}
-                            </Text>
-                          </div>
-                          {[
-                            { id: match.teamAId, won: teamAWon },
-                            { id: match.teamBId, won: !teamAWon },
-                          ].map(({ id, won }, idx) => (
-                            <div key={id}>
-                              {idx === 1 && (
-                                <div style={{ textAlign: 'center', color: '#bfbfbf', fontSize: 12, margin: '4px 0' }}>
-                                  vs
-                                </div>
-                              )}
-                              <div style={{ ...row, gap: 6 }}>
-                                <span
-                                  style={{ width: 16, flexShrink: 0, display: 'flex', justifyContent: 'center', color: '#389e0d' }}
-                                >
-                                  {won && <TrophyOutlined />}
-                                </span>
-                                <Text strong={won} style={{ ...nameText, color: won ? '#389e0d' : '#8c8c8c' }}>
-                                  {teamLabelById(id)}
-                                </Text>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </Section>
-              </>
-            ),
-          },
-          {
-            key: 'fila',
-            label: `Fila (${orderedQueue.length})`,
-            children: (
-              <div>
-                <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>
-                  Ordem de quem entra primeiro: fixados, depois quem jogou menos, depois quem espera há mais tempo.
-                </Text>
-
-                <Select
-                  showSearch
-                  value={null}
-                  placeholder="Check-in de jogador do roster…"
-                  optionFilterProp="label"
-                  style={{ width: '100%', marginBottom: 12 }}
-                  loading={checkInPlayer.isPending}
-                  disabled={!rosteredNotCheckedIn.length}
-                  onChange={(playerId: string) => handleJoinSession(playerId)}
-                  options={rosteredNotCheckedIn.map((player) => ({ label: player.name, value: player.id }))}
-                />
-
-                {isLoadingQueue && (
-                  <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
-                    <Spin />
-                  </div>
-                )}
-                {!isLoadingQueue && !orderedQueue.length && <Empty description="Fila vazia." />}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {orderedQueue.map((entry, index) => (
-                    <div key={entry.id} style={{ ...card, ...row }}>
-                      <Text strong style={{ width: 24, flexShrink: 0 }}>
-                        {index + 1}º
-                      </Text>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={{ display: 'block', overflowWrap: 'anywhere' }}>{entry.name}</Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {entry.gamesPlayed} jogo{entry.gamesPlayed === 1 ? '' : 's'}
-                        </Text>
-                      </div>
-                      <div style={actions}>
-                        <Button
-                          size="small"
-                          type={entry.pinned ? 'primary' : 'default'}
-                          icon={entry.pinned ? <PushpinFilled /> : <PushpinOutlined />}
-                          loading={pinPlayer.isPending}
-                          onClick={() => handlePin(entry.playerId, !entry.pinned)}
-                        />
-                        <Popconfirm
-                          title="Fazer check-out?"
-                          description={`${entry.name} sai da fila. Continua no roster da sessão.`}
-                          okText="Check-out"
-                          cancelText="Cancelar"
-                          onConfirm={() => handleLeaveSession(entry.playerId)}
-                        >
-                          <Button size="small" danger icon={<DeleteOutlined />} loading={checkOutPlayer.isPending} />
-                        </Popconfirm>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ),
-          },
-          {
-            key: 'ranking',
-            label: 'Ranking',
-            children: (
-              <div>
-                {!playerStandings.length && <Empty description="Nenhum jogador confirmado ainda." />}
-                {!!playerStandings.length && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {playerStandings.map((standing, index) => (
-                      <div key={standing.playerId} style={{ ...card, ...row }}>
-                        <Text strong style={{ width: 28 }}>
-                          {index + 1}º
-                        </Text>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={{ display: 'block' }}>
-                            {playerNameById.get(standing.playerId) ?? standing.playerId}
-                          </Text>
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            {standing.games} jogo{standing.games !== 1 ? 's' : ''}
-                          </Text>
-                        </div>
-                        <Tag color="green" style={{ marginRight: 0 }}>
-                          {standing.wins}V
-                        </Tag>
-                        <Tag color="red" style={{ marginRight: 0 }}>
-                          {standing.losses}D
-                        </Tag>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ),
-          },
-          {
-            key: 'players',
-            label: `Jogadores (${confirmedPlayers.length}/${rosterPlayers.length})`,
-            children: (
-              <div>
-                <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>
-                  Marque o check-in de quem está presente e disponível para jogar — quem está marcado
-                  entra na fila para os sorteios. Para incluir ou remover jogadores da sessão, edite o
-                  roster.
-                </Text>
-
-                <Button
-                  block
-                  icon={<EditOutlined />}
-                  loading={isLoadingPlayers || updateSession.isPending}
-                  onClick={openRosterSheet}
-                  style={{ marginBottom: 16 }}
-                >
-                  Editar roster da sessão
-                </Button>
-
-                {isLoadingPlayers && (
-                  <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
-                    <Spin />
-                  </div>
-                )}
-                {!isLoadingPlayers && !rosterPlayers.length && (
-                  <Empty description="Nenhum jogador no roster ainda." />
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {rosterPlayers.map((player) => {
-                    const checkedIn = session.playerIds.includes(player.id);
-                    return (
-                      <div
-                        key={player.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 12,
-                          background: '#fff',
-                          borderRadius: 12,
-                          padding: '14px 16px',
-                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
-                          opacity: checkedIn ? 1 : 0.55,
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: '50%',
-                            background: player.gender === 'male' ? '#e6f4ff' : '#fff0f6',
-                            color: player.gender === 'male' ? '#1677ff' : '#eb2f96',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 18,
-                            flexShrink: 0,
-                          }}
-                        >
-                          <UserOutlined />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <Text strong style={{ display: 'block' }}>
-                            {player.name}
-                          </Text>
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            {genderLabel[player.gender]}
-                          </Text>
-                        </div>
-                        <Switch
-                          checked={checkedIn}
-                          loading={checkInPlayer.isPending || checkOutPlayer.isPending}
-                          onChange={(next) =>
-                            next ? handleJoinSession(player.id) : handleLeaveSession(player.id)
-                          }
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ),
-          },
-          {
-            key: 'times',
-            label: `Times (${activeTeams.length})`,
-            children: (
-              <div>
-                <Button
-                  block
-                  icon={<PlusOutlined />}
-                  onClick={() => setTeamSheetOpen(true)}
-                  disabled={!availablePlayersForTeam.length}
-                  style={{ marginBottom: 16 }}
-                >
-                  Nova dupla (manual)
-                </Button>
-
-                {isLoadingTeams && (
-                  <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
-                    <Spin />
-                  </div>
-                )}
-                {!isLoadingTeams && !activeTeams.length && (
-                  <Empty description="Nenhum time ativo. Abra uma quadra (aba Quadras) ou reporte um resultado." />
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {activeTeams.map((team) => (
-                    <div key={team.id} style={{ ...card }}>
-                      <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap', rowGap: 6 }}>
-                        <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(team)}</Text>
-                        <div style={actions}>
-                          {team.court != null && <Tag style={{ marginRight: 0 }}>Q{team.court}</Tag>}
-                          <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0 }}>
-                            {teamStatusLabel[team.status]}
-                          </Tag>
-                          {team.status === DRAFT && (
-                            <Button size="small" icon={<EditOutlined />} onClick={() => setEditingTeam(team)} />
-                          )}
-                        </div>
-                      </div>
-                      {(team.playerIds.length !== playersPerTeam || team.consecutiveWins > 0) && (
-                        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
-                          {team.playerIds.length !== playersPerTeam && 'Roster incompleto'}
-                          {team.playerIds.length !== playersPerTeam && team.consecutiveWins > 0 && ' · '}
-                          {team.consecutiveWins > 0 &&
-                            `${team.consecutiveWins} vitória${team.consecutiveWins > 1 ? 's' : ''} seguida${team.consecutiveWins > 1 ? 's' : ''}`}
-                        </Text>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {!!disbandedTeams.length && (
-                  <>
-                    <Text
-                      type="secondary"
-                      style={{ display: 'block', margin: '20px 0 8px', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}
-                    >
-                      Encerrados ({disbandedTeams.length})
-                    </Text>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {disbandedTeams.map((team) => (
-                        <div key={team.id} style={{ ...card, opacity: 0.7 }}>
-                          <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap', rowGap: 6 }}>
-                            <Text style={{ ...nameText, minWidth: 120 }}>{teamLabel(team)}</Text>
-                            <Tag color={teamStatusColor[team.status]} style={{ marginRight: 0, flexShrink: 0 }}>
-                              {teamStatusLabel[team.status]}
-                            </Tag>
-                          </div>
-                          {team.consecutiveWins > 0 && (
-                            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
-                              {team.consecutiveWins} vitória{team.consecutiveWins > 1 ? 's' : ''} seguida
-                              {team.consecutiveWins > 1 ? 's' : ''}
-                            </Text>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            ),
-          },
+          { key: 'quadras', label: 'Quadras', icon: <BorderInnerOutlined /> },
+          { key: 'fila', label: 'Fila', icon: <OrderedListOutlined />, badge: orderedQueue.length },
+          { key: 'presenca', label: 'Presença', icon: <UserAddOutlined /> },
+          { key: 'ranking', label: 'Ranking', icon: <TrophyOutlined /> },
         ]}
+      />
+
+      <WinnerSheet
+        match={winnerPick?.match ?? null}
+        initialWinnerId={winnerPick?.teamId ?? null}
+        teamLabelById={teamLabelById}
+        loading={reportMatchResult.isPending}
+        onClose={() => setWinnerPick(null)}
+        onConfirm={handleReportResult}
+      />
+
+      <CheckInSheet
+        open={checkInSheetOpen}
+        players={rosteredNotCheckedIn}
+        pendingPlayerId={pendingPlayerId(checkInPlayer)}
+        onCheckIn={handleJoinSession}
+        onClose={() => setCheckInSheetOpen(false)}
       />
 
       {sessionId && (
         <MatchFormSheet
           open={matchSheetOpen}
           sessionId={sessionId}
-          playersPerTeam={session.settings.playersPerTeam}
+          playersPerTeam={teamSize}
           availablePlayers={availablePlayersForTeam}
           defaultCourt={courtStates.find((c) => !c.running)?.court ?? 1}
           onClose={() => setMatchSheetOpen(false)}
@@ -953,7 +589,7 @@ export function SessionDetail() {
         <TeamFormSheet
           open={teamSheetOpen}
           sessionId={sessionId}
-          playersPerTeam={session.settings.playersPerTeam}
+          playersPerTeam={teamSize}
           availablePlayers={availablePlayersForTeam}
           playerNameById={playerNameById}
           onClose={() => setTeamSheetOpen(false)}
@@ -965,10 +601,10 @@ export function SessionDetail() {
         <TeamFormSheet
           open={!!editingTeam}
           sessionId={sessionId}
-          playersPerTeam={session.settings.playersPerTeam}
+          playersPerTeam={teamSize}
           availablePlayers={[
             ...availablePlayersForTeam,
-            ...editingTeam.playerIds.map((id) => ({ id, label: playerNameById.get(id) ?? id })),
+            ...editingTeam.playerIds.map((id) => ({ id, label: playerName(id) })),
           ]}
           playerNameById={playerNameById}
           team={editingTeam}

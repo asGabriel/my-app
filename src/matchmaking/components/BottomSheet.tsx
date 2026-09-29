@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Drawer, Button, Space } from 'antd';
+import { Drawer, Button } from 'antd';
 
 interface BottomSheetProps {
   open: boolean;
@@ -8,6 +8,9 @@ interface BottomSheetProps {
   onSubmit: () => void;
   submitText: string;
   loading?: boolean;
+  submitDisabled?: boolean;
+  /** Altura do painel; o padrão cabe um formulário inteiro. */
+  height?: string | number;
   children: ReactNode;
 }
 
@@ -18,6 +21,8 @@ export function BottomSheet({
   onSubmit,
   submitText,
   loading,
+  submitDisabled,
+  height = 'min(86vh, 640px)',
   children,
 }: BottomSheetProps) {
   return (
@@ -26,19 +31,23 @@ export function BottomSheet({
       placement="bottom"
       open={open}
       onClose={onClose}
-      height="min(86vh, 640px)"
+      height={height}
       destroyOnClose
       styles={{
         content: { borderRadius: '20px 20px 0 0' },
         body: { paddingBottom: 8 },
+        footer: { padding: '12px 16px calc(12px + env(safe-area-inset-bottom))' },
       }}
       footer={
-        <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button type="primary" loading={loading} onClick={onSubmit}>
+        // Botões largos, lado a lado: alvo de toque confortável no celular.
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8 }}>
+          <Button size="large" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button size="large" type="primary" loading={loading} disabled={submitDisabled} onClick={onSubmit}>
             {submitText}
           </Button>
-        </Space>
+        </div>
       }
     >
       {children}

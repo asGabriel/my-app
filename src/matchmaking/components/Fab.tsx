@@ -1,35 +1,53 @@
 import { PlusOutlined } from '@ant-design/icons';
+import { CONTENT_MAX_WIDTH, NAV_HEIGHT, color } from '../shared/theme';
 
 interface FabProps {
   onClick: () => void;
   label?: string;
 }
 
+/** Botão flutuante estendido (ícone + texto), acima da barra inferior e ao
+ * alcance do polegar. Alinhado à coluna de conteúdo no desktop. */
 export function Fab({ onClick, label = 'Adicionar' }: FabProps) {
   return (
-    <button
-      onClick={onClick}
-      aria-label={label}
+    <div
       style={{
         position: 'fixed',
-        right: 20,
-        bottom: 'calc(76px + env(safe-area-inset-bottom))',
+        left: 0,
+        right: 0,
+        bottom: `calc(${NAV_HEIGHT + 16}px + env(safe-area-inset-bottom))`,
         zIndex: 9,
-        width: 56,
-        height: 56,
-        borderRadius: '50%',
-        border: 'none',
-        background: '#fa8c16',
-        color: '#fff',
-        fontSize: 22,
+        maxWidth: CONTENT_MAX_WIDTH,
+        margin: '0 auto',
+        padding: '0 16px',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0 4px 12px rgba(250, 140, 22, 0.45)',
-        cursor: 'pointer',
+        justifyContent: 'flex-end',
+        pointerEvents: 'none',
       }}
     >
-      <PlusOutlined />
-    </button>
+      <button
+        onClick={onClick}
+        style={{
+          pointerEvents: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          height: 56,
+          padding: '0 22px 0 18px',
+          border: 'none',
+          borderRadius: 18,
+          background: color.accent,
+          color: '#FFFFFF',
+          fontFamily: 'inherit',
+          fontSize: 16,
+          fontWeight: 600,
+          boxShadow: '0 8px 20px rgba(154, 52, 18, 0.35)',
+          cursor: 'pointer',
+        }}
+      >
+        <PlusOutlined style={{ fontSize: 20 }} />
+        {label}
+      </button>
+    </div>
   );
 }

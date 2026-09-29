@@ -17,11 +17,12 @@ export const gameModeLabel: Record<GameMode, string> = {
   open: 'Aberto',
 };
 
-export const gameModeColor: Record<GameMode, string> = {
-  male: 'blue',
-  female: 'magenta',
-  mixed: 'purple',
-  open: 'green',
+/** Cores de "etiqueta" (fundo claro + texto escuro, contraste ≥ 4.5:1). */
+export const gameModeTagColors: Record<GameMode, { bg: string; fg: string }> = {
+  male: { bg: '#DBEAFE', fg: '#1E40AF' },
+  female: { bg: '#FCE7F3', fg: '#9D174D' },
+  mixed: { bg: '#F3E8FF', fg: '#6B21A8' },
+  open: { bg: '#DCFCE7', fg: '#166534' },
 };
 
 export const teamStatusLabel: Record<TeamStatus, string> = {
@@ -31,9 +32,9 @@ export const teamStatusLabel: Record<TeamStatus, string> = {
   disbanded: 'Encerrado',
 };
 
-export const teamStatusColor: Record<TeamStatus, string> = {
-  draft: 'blue',
-  holding: 'gold',
-  playing: 'green',
-  disbanded: 'default',
+export const teamStatusTagColors: Record<TeamStatus, { bg: string; fg: string }> = {
+  draft: { bg: '#DBEAFE', fg: '#1E40AF' },
+  holding: { bg: '#FEF3C7', fg: '#854D0E' },
+  playing: { bg: '#DCFCE7', fg: '#166534' },
+  disbanded: { bg: '#EDE7DD', fg: '#57534E' },
 };

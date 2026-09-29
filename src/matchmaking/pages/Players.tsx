@@ -1,18 +1,21 @@
 import { useState } from 'react';
-import { Typography, Tag, App, Spin, Empty } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
+import { App, Spin, Empty } from 'antd';
+import { RightOutlined } from '@ant-design/icons';
 import { usePlayers, type Player } from '../../api';
 import { PlayerFormSheet } from '../components/PlayerFormSheet';
 import { Fab } from '../components/Fab';
+import { PageHeader } from '../components/PageHeader';
+import { PlayerAvatar } from '../components/PlayerAvatar';
 import { genderLabel } from '../shared/labels';
-
-const { Title, Text } = Typography;
+import { color } from '../shared/theme';
 
 export function Players() {
   const { data: players, isLoading } = usePlayers();
   const { message } = App.useApp();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+
+  const sorted = players ? [...players].sort((a, b) => a.name.localeCompare(b.name)) : [];
 
   const openCreate = () => {
     setEditingPlayer(null);
@@ -26,9 +29,7 @@ export function Players() {
 
   return (
     <div>
-      <Title level={4} style={{ margin: '0 0 16px' }}>
-        Jogadores
-      </Title>
+      <PageHeader title="Jogadores" />
 
       {isLoading && (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
@@ -36,53 +37,39 @@ export function Players() {
         </div>
       )}
 
-      {!isLoading && !players?.length && <Empty description="Nenhum jogador cadastrado" />}
+      {!isLoading && !sorted.length && <Empty description="Nenhum jogador cadastrado" />}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {players?.map((player) => (
-          <button
-            key={player.id}
-            onClick={() => openEdit(player)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              background: '#fff',
-              border: 'none',
-              borderRadius: 12,
-              padding: '14px 16px',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
-              textAlign: 'left',
-              cursor: 'pointer',
-            }}
-          >
-            <div
+      {!!sorted.length && (
+        <div style={{ display: 'flex', flexDirection: 'column', background: color.surface, borderRadius: 16, overflow: 'hidden' }}>
+          {sorted.map((player) => (
+            <button
+              key={player.id}
+              onClick={() => openEdit(player)}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                background: player.gender === 'male' ? '#e6f4ff' : '#fff0f6',
-                color: player.gender === 'male' ? '#1677ff' : '#eb2f96',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 18,
-                flexShrink: 0,
+                gap: 12,
+                minHeight: 64,
+                padding: '0 14px',
+                border: 'none',
+                borderBottom: `1px solid ${color.lineSoft}`,
+                background: color.surface,
+                color: color.ink,
+                fontFamily: 'inherit',
+                textAlign: 'left',
+                cursor: 'pointer',
               }}
             >
-              <UserOutlined />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <Text strong style={{ display: 'block' }}>
-                {player.name}
-              </Text>
-            </div>
-            <Tag color={player.gender === 'male' ? 'blue' : 'magenta'} style={{ marginRight: 0 }}>
-              {genderLabel[player.gender]}
-            </Tag>
-          </button>
-        ))}
-      </div>
+              <PlayerAvatar name={player.name} gender={player.gender} />
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 16, fontWeight: 600, overflowWrap: 'anywhere' }}>{player.name}</span>
+                <span style={{ fontSize: 13, color: color.muted }}>{genderLabel[player.gender]}</span>
+              </span>
+              <RightOutlined style={{ color: color.subtle }} />
+            </button>
+          ))}
+        </div>
+      )}
 
       <Fab onClick={openCreate} label="Novo jogador" />
 
