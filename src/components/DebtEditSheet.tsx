@@ -8,7 +8,8 @@ import {
   type ExpenseType,
   type UpdateDebtRequest,
 } from '../api';
-import { installmentCountOf, isInstallment } from '../finance/debt';
+import { debtAmounts, installmentCountOf, isInstallment, isInstallmentParent } from '../finance/debt';
+import { money } from '../finance/format';
 import { DEBT_CATEGORY_OPTIONS, EXPENSE_TYPE_OPTIONS } from '../utils/constants';
 
 interface DebtEditSheetProps {
@@ -23,10 +24,11 @@ function pillClass(active: boolean) {
   return active ? 'pill pill-active' : 'pill';
 }
 
-/** Edita descrição, categoria, tipo, vencimento e lista de um débito.
+/** Edita descrição, categoria, tipo, vencimento, valor e lista de um débito.
  * Parcela não é editável no backend: a edição vai pelo pai, que propaga
  * descrição, categoria, tipo e lista para todas as parcelas. O vencimento de
- * cada parcela é fixo, então o campo só aparece em débito comum. */
+ * cada parcela é fixo, então o campo só aparece em débito comum. O valor
+ * também: num parcelamento o total é a soma das parcelas, que são fixas. */
 export function DebtEditSheet({ debt, parent, lists, onClose }: DebtEditSheetProps) {
   const updateDebt = useUpdateFinanceDebt();
   const createList = useCreateFinanceList();
@@ -36,6 +38,8 @@ export function DebtEditSheet({ debt, parent, lists, onClose }: DebtEditSheetPro
   // As parcelas guardam uma cópia dos campos do pai; sem o pai carregado, vale a cópia.
   const source = parent ?? debt;
   const installmentCount = installmentCountOf(debt, parent);
+  const regular = !installment && !isInstallmentParent(debt);
+  const amounts = debtAmounts(debt);
 
   const [form, setForm] = useState({
     description: source.description,
@@ -43,12 +47,15 @@ export function DebtEditSheet({ debt, parent, lists, onClose }: DebtEditSheetPro
     expenseType: source.expenseType as ExpenseType,
     dueDate: debt.dueDate ?? '',
     listId: source.listId ?? null,
+    totalAmount: amounts.total.toFixed(2).replace('.', ','),
   });
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const isPending = updateDebt.isPending || createList.isPending;
   const description = form.description.trim();
+  // Arredonda para centavos: o backend rejeita valores com mais de 2 casas.
+  const totalNum = Math.round((parseFloat(form.totalAmount.replace(',', '.')) || 0) * 100) / 100;
 
   /** Só os campos alterados: ausente = o backend mantém o valor atual. */
   const changes = (): UpdateDebtRequest => {
@@ -58,6 +65,7 @@ export function DebtEditSheet({ debt, parent, lists, onClose }: DebtEditSheetPro
     if (form.expenseType !== source.expenseType) data.expenseType = form.expenseType;
     if (form.listId !== (source.listId ?? null)) data.listId = form.listId;
     if (!installment && form.dueDate && form.dueDate !== debt.dueDate) data.dueDate = form.dueDate;
+    if (regular && totalNum !== amounts.total) data.totalAmount = totalNum.toFixed(2);
     return data;
   };
 
@@ -78,6 +86,10 @@ export function DebtEditSheet({ debt, parent, lists, onClose }: DebtEditSheetPro
 
   const handleSave = () => {
     if (!description) return setError('Informe uma descrição.');
+    if (regular && totalNum <= 0) return setError('Informe um valor maior que zero.');
+    if (regular && totalNum < amounts.paid) {
+      return setError(`O valor não pode ser menor que o já pago (${money(amounts.paid, false)}). Estorne pagamentos antes.`);
+    }
     const data = changes();
     if (Object.keys(data).length === 0) return onClose();
     run(async () => {
@@ -119,6 +131,26 @@ export function DebtEditSheet({ debt, parent, lists, onClose }: DebtEditSheetPro
               value={form.dueDate}
               onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
             />
+          </div>
+        )}
+
+        {regular && (
+          <div className="field" style={{ marginTop: 14, maxWidth: 180 }}>
+            <label htmlFor="debt-edit-total-amount">Valor (R$)</label>
+            <input
+              className="input"
+              id="debt-edit-total-amount"
+              type="text"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={form.totalAmount}
+              onChange={(e) => setForm((f) => ({ ...f, totalAmount: e.target.value }))}
+            />
+            {amounts.paid > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--color-neutral-500)', marginTop: 4, lineHeight: 1.5 }}>
+                Já pago: {money(amounts.paid, false)}
+              </div>
+            )}
           </div>
         )}
 

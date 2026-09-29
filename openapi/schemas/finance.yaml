@@ -187,6 +187,12 @@ UpdateDebtRequest:
     dueDate:
       type: string
       description: "Data (YYYY-MM-DD)"
+    totalAmount:
+      type: string
+      description: >-
+        Decimal como string, > 0, no máximo 2 casas e >= paidAmount. Só em
+        dívida comum (pai e parcela de parcelamento rejeitam com 400);
+        remainingAmount e status são recalculados.
 
 DebtFilters:
   type: object
