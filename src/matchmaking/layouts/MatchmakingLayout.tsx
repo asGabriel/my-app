@@ -1,5 +1,7 @@
 import { CalendarOutlined, TeamOutlined } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router';
+import { BottomNav } from '../components/BottomNav';
+import { CONTENT_MAX_WIDTH, NAV_HEIGHT, color, font } from '../shared/theme';
 
 const TABS = [
   { key: '/', label: 'Sessões', icon: <CalendarOutlined /> },
@@ -14,88 +16,41 @@ function activeTabKey(pathname: string) {
 export function MatchmakingLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const activeKey = activeTabKey(location.pathname);
+  // Dentro de uma sessão a tela tem cabeçalho e navegação próprios (abas da
+  // sessão no rodapé), então o shell só entrega o fundo.
+  const isSessionRoute = location.pathname.startsWith('/sessoes/');
 
   return (
     <div
       style={{
         minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#f5f5f5',
+        background: color.ground,
+        color: color.ink,
+        fontFamily: font.body,
       }}
     >
-      <header
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-          background: '#fa8c16',
-          color: '#fff',
-          padding: '14px 20px',
-          fontSize: 18,
-          fontWeight: 700,
-          letterSpacing: 0.3,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-        }}
-      >
-        🏐 Vôlei
-      </header>
-
-      <main
-        style={{
-          flex: 1,
-          padding: '16px 16px calc(84px + env(safe-area-inset-bottom))',
-          maxWidth: 480,
-          width: '100%',
-          margin: '0 auto',
-          boxSizing: 'border-box',
-        }}
-      >
+      {isSessionRoute ? (
         <Outlet />
-      </main>
-
-      <nav
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
-          display: 'flex',
-          background: '#fff',
-          borderTop: '1px solid #f0f0f0',
-          paddingBottom: 'env(safe-area-inset-bottom)',
-          boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.06)',
-        }}
-      >
-        {TABS.map((tab) => {
-          const isActive = tab.key === activeKey;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => navigate(tab.key)}
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 2,
-                padding: '10px 0 8px',
-                border: 'none',
-                background: 'none',
-                color: isActive ? '#fa8c16' : '#8c8c8c',
-                fontSize: 20,
-                fontWeight: isActive ? 600 : 400,
-              }}
-            >
-              {tab.icon}
-              <span style={{ fontSize: 12 }}>{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      ) : (
+        <>
+          <main
+            style={{
+              padding: `0 16px calc(${NAV_HEIGHT + 96}px + env(safe-area-inset-bottom))`,
+              maxWidth: CONTENT_MAX_WIDTH,
+              margin: '0 auto',
+              boxSizing: 'border-box',
+            }}
+          >
+            <Outlet />
+          </main>
+          <BottomNav
+            ariaLabel="Principal"
+            items={TABS}
+            activeKey={activeTabKey(location.pathname)}
+            onSelect={(key) => navigate(key)}
+          />
+        </>
+      )}
     </div>
   );
 }
