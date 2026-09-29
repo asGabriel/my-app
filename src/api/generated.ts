@@ -95,6 +95,7 @@ const UpdateDebtRequest = z
     listId: z.string().uuid().nullable(),
     description: z.string(),
     dueDate: z.string(),
+    totalAmount: z.string(),
   })
   .partial()
   .passthrough();
