@@ -38,6 +38,11 @@ function buildFilters(year: number, month0: number): DebtFilters {
   };
 }
 
+/** Minúsculo e sem acento, para a busca casar "agua" com "Água". */
+function normalize(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 function matchesStatus(debt: Debt, filter: StatusFilter): boolean {
   if (filter === 'open') return isOpen(debt);
   if (filter === 'settled') return isSettled(debt);
@@ -152,6 +157,10 @@ export function DebtsTab() {
   const { year, month0 } = selected;
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [listFilter, setListFilter] = useState<ListFilter>(null);
+  const [search, setSearch] = useState('');
+  // Grupo de quitadas: `null` = sem escolha do usuário — fechado, mas abre
+  // sozinho durante uma busca para os resultados quitados não ficarem escondidos.
+  const [settledOpen, setSettledOpen] = useState<boolean | null>(null);
   const [editing, setEditing] = useState<Debt | null>(null);
   const [deleting, setDeleting] = useState<Debt | null>(null);
   // Uma linha com ações à mostra por vez: abrir outra fecha a anterior.
@@ -173,10 +182,24 @@ export function DebtsTab() {
   // Lista selecionada que não existe no mês novo cai para "Todos".
   const activeList = monthLists.some((l) => l.id === listFilter) ? listFilter : null;
 
+  const query = normalize(search.trim());
+
   const debts = useMemo(
-    () => monthDebts.filter((d) => matchesStatus(d, filter) && (activeList === null || d.listId === activeList)),
-    [monthDebts, filter, activeList]
+    () => monthDebts.filter(
+      (d) => matchesStatus(d, filter)
+        && (activeList === null || d.listId === activeList)
+        && (query === '' || normalize(d.description).includes(query))
+    ),
+    [monthDebts, filter, activeList, query]
   );
+
+  // Com o filtro "Todas", as quitadas vão para um grupo recolhível no topo;
+  // nos outros filtros a lista já é de um status só e fica plana.
+  const groupSettled = filter === 'all';
+  const mainDebts = useMemo(() => (groupSettled ? debts.filter((d) => !isSettled(d)) : debts), [debts, groupSettled]);
+  const settledDebts = useMemo(() => (groupSettled ? debts.filter(isSettled) : []), [debts, groupSettled]);
+  const settledSum = useMemo(() => settledDebts.reduce((s, d) => s + debtAmounts(d).total, 0), [settledDebts]);
+  const showSettled = settledOpen ?? query !== '';
 
   // Pais dos parcelamentos que aparecem no mês (total/restante da compra).
   const { parentsById } = useFinanceDebtParents(debts);
@@ -191,6 +214,26 @@ export function DebtsTab() {
     ),
     [debts]
   );
+
+  const renderRow = (d: Debt) => {
+    const parent = parentOf(d, parentsById);
+    return (
+      <DebtRow
+        key={d.id}
+        debt={d}
+        parent={parent}
+        // Com uma lista filtrada o nome seria redundante em toda linha.
+        listName={activeList === null && d.listId ? listsById.get(d.listId)?.name : undefined}
+        privado={privado}
+        open={swiped?.id === d.id ? swiped.side : null}
+        onOpenChange={(side) => setSwiped(side ? { id: d.id, side } : null)}
+        onEdit={() => setEditing(d)}
+        // O PaySheet é global (MainLayout) e parte da ocorrência do mês.
+        onPay={() => openPay(occurrenceFromDebt(d, parent), year, month0)}
+        onDelete={() => setDeleting(d)}
+      />
+    );
+  };
 
   return (
     <div>
@@ -225,6 +268,22 @@ export function DebtsTab() {
         ))}
       </div>
 
+      <div style={{ position: 'relative', marginTop: 12 }}>
+        <i
+          className="ph ph-magnifying-glass"
+          style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-neutral-500)', pointerEvents: 'none' }}
+        />
+        <input
+          className="input"
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar débito"
+          aria-label="Buscar débito"
+          style={{ paddingLeft: 32 }}
+        />
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 16 }}>
         <div className="card" style={{ padding: '11px 12px 12px' }}>
           <div className="card-kicker">Total</div>
@@ -252,28 +311,33 @@ export function DebtsTab() {
           </div>
         ) : debts.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', textAlign: 'center', padding: '24px 0' }}>
-            Nenhum débito em {MESES_LONGOS[month0]}.
+            {query ? `Nenhum débito encontrado para "${search.trim()}".` : `Nenhum débito em ${MESES_LONGOS[month0]}.`}
           </div>
         ) : (
-          debts.map((d) => {
-            const parent = parentOf(d, parentsById);
-            return (
-              <DebtRow
-                key={d.id}
-                debt={d}
-                parent={parent}
-                // Com uma lista filtrada o nome seria redundante em toda linha.
-                listName={activeList === null && d.listId ? listsById.get(d.listId)?.name : undefined}
-                privado={privado}
-                open={swiped?.id === d.id ? swiped.side : null}
-                onOpenChange={(side) => setSwiped(side ? { id: d.id, side } : null)}
-                onEdit={() => setEditing(d)}
-                // O PaySheet é global (MainLayout) e parte da ocorrência do mês.
-                onPay={() => openPay(occurrenceFromDebt(d, parent), year, month0)}
-                onDelete={() => setDeleting(d)}
-              />
-            );
-          })
+          <>
+            {settledDebts.length > 0 && (
+              <div style={{ marginBottom: mainDebts.length > 0 ? 18 : 0 }}>
+                <button
+                  onClick={() => setSettledOpen(!showSettled)}
+                  aria-expanded={showSettled}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', width: '100%',
+                    padding: '0 0 6px', border: 0, background: 'transparent', cursor: 'pointer', color: 'inherit',
+                    fontFamily: 'inherit', textAlign: 'left',
+                  }}
+                >
+                  <span className="section-kicker" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <i className={showSettled ? 'ph ph-caret-down' : 'ph ph-caret-right'} style={{ fontSize: 11 }} />
+                    Quitadas
+                    <span style={{ color: 'var(--color-neutral-500)' }}>· {settledDebts.length}</span>
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--color-neutral-500)' }}>{short(settledSum, privado)}</span>
+                </button>
+                {showSettled && settledDebts.map(renderRow)}
+              </div>
+            )}
+            {mainDebts.map(renderRow)}
+          </>
         )}
       </div>
 
