@@ -348,6 +348,34 @@ fillCourts:
               items:
                 $ref: "../schemas/matchmaking.yaml#/CourtSuggestion"
 
+nextChallengers:
+  get:
+    operationId: getNextChallengers
+    summary: Prévia dos próximos times que a fila formaria agora
+    description: >-
+      Só leitura — não grava nada. Roda o mesmo sorteio do preenchimento de
+      quadras (next_challenger, com as regras de gênero do GameMode e de
+      evitar parceiro repetido) até 2 vezes, cada um sobre o que o anterior
+      deixou na fila. É a fonte da prévia "próximos a entrar".
+    tags:
+      - Matchmaking
+    parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Até 2 times, na ordem em que entrariam (menos se a fila não fecha um time)
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/matchmaking.yaml#/ChallengerSuggestion"
+
 pinQueuePlayer:
   patch:
     operationId: setQueuePin

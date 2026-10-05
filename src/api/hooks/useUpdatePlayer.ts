@@ -22,6 +22,9 @@ export function useUpdatePlayer() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['matchmaking', 'players'] });
+      // O gênero entra no sorteio do modo Misto — a prévia dos próximos
+      // (sob a queryKey da fila) precisa ser refeita.
+      queryClient.invalidateQueries({ queryKey: ['matchmaking', 'queue'] });
     },
   });
 }
