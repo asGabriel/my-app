@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { useFinanceLists, type Debt } from '../../api';
+import { useFinanceIncomes, useFinanceLists, useFinancePayments, type Debt } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import { DebtDeleteSheet } from '../../components/DebtDeleteSheet';
 import { DebtEditSheet } from '../../components/DebtEditSheet';
@@ -12,14 +12,19 @@ import { debtSwipeActions } from '../../finance/debtSwipeActions';
 import { useFinanceMonth, MESES_LONGOS } from '../../finance/FinanceMonthContext';
 import { money, short } from '../../finance/format';
 import { categoryIcon } from '../../finance/categoryIcon';
-import { KIND_LABELS, type Occurrence } from '../../finance/monthEngine';
+import { computeCashBalance, KIND_LABELS, type Occurrence } from '../../finance/monthEngine';
 import { MonthChips } from './MonthChips';
 
 interface OccGroup {
   label: string;
   items: Occurrence[];
   sum: number;
+  /** Grupo do que já foi pago — começa recolhido, o foco é o que falta. */
+  paid: boolean;
 }
+
+/** Itens mostrados num grupo aberto antes do "Ver mais". */
+const GROUP_PREVIEW = 5;
 
 function groupOccurrences(occurrences: Occurrence[], isNow: boolean, isPast: boolean, todayDate: number): OccGroup[] {
   const sum = (items: Occurrence[]) => items.reduce((s, o) => s + o.amount, 0);
@@ -33,15 +38,15 @@ function groupOccurrences(occurrences: Occurrence[], isNow: boolean, isPast: boo
     });
     const labels = ['Já saiu da conta', 'Nos próximos 7 dias', 'Depois neste mês'];
     return buckets
-      .map((items, i) => ({ label: labels[i], items, sum: sum(items) }))
+      .map((items, i) => ({ label: labels[i], items, sum: sum(items), paid: i === 0 }))
       .filter((g) => g.items.length > 0);
   }
 
   const paid = occurrences.filter((o) => o.isPaid);
   const unpaid = occurrences.filter((o) => !o.isPaid);
   const groups: OccGroup[] = [];
-  if (paid.length) groups.push({ label: 'Pago', items: paid, sum: sum(paid) });
-  if (unpaid.length) groups.push({ label: isPast ? 'Em atraso' : 'Programado', items: unpaid, sum: sum(unpaid) });
+  if (paid.length) groups.push({ label: 'Pago', items: paid, sum: sum(paid), paid: true });
+  if (unpaid.length) groups.push({ label: isPast ? 'Em atraso' : 'Programado', items: unpaid, sum: sum(unpaid), paid: false });
   return groups;
 }
 
@@ -121,6 +126,10 @@ export function MesTab() {
   const [editing, setEditing] = useState<Debt | null>(null);
   const [deleting, setDeleting] = useState<Debt | null>(null);
   const [showIncomes, setShowIncomes] = useState(false);
+  // Por grupo (label): aberto/fechado escolhido pelo usuário e "ver mais" —
+  // sem escolha, o grupo de pagos começa fechado e os outros abertos.
+  const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>({});
+  const [groupShowAll, setGroupShowAll] = useState<Record<string, boolean>>({});
   const debtOf = (o: Occurrence) => debtsById.get(o.debtId);
 
   const handleLogout = () => {
@@ -133,6 +142,16 @@ export function MesTab() {
   const todayIdx = today.year() * 12 + today.month();
   const isNow = monthIdx === todayIdx;
   const isPast = monthIdx < todayIdx;
+
+  // Saldo agora: o que entrou menos o que foi pago do dia 1 até hoje — para
+  // bater com o saldo do banco e notar lançamento esquecido. Só no mês atual.
+  const cashFilters = useMemo(() => {
+    const now = dayjs();
+    return { startDate: now.startOf('month').format('YYYY-MM-DD'), endDate: now.format('YYYY-MM-DD') };
+  }, []);
+  const { data: cashIncomes } = useFinanceIncomes(cashFilters, isNow);
+  const { data: cashPayments } = useFinancePayments(cashFilters, isNow);
+  const caixa = cashIncomes && cashPayments ? computeCashBalance(cashIncomes, cashPayments) : null;
 
   const occurrences = getOccurrences(year, month0);
   const totals = getTotals(year, month0);
@@ -231,7 +250,7 @@ export function MesTab() {
         <div style={{ width: `${pctSaiu}%`, height: '100%', background: 'var(--color-accent-600)' }} />
         <div style={{ width: `${pctVaiSair}%`, height: '100%', background: 'var(--color-accent-400)' }} />
       </div>
-      <div style={{ display: 'flex', gap: 14, marginTop: 9, fontSize: 11.5, color: 'var(--color-neutral-500)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '6px 14px', marginTop: 9, fontSize: 11.5, color: 'var(--color-neutral-500)', flexWrap: 'wrap' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--color-accent-600)' }} />
           Já saiu {short(totals.saiu, privado)}
@@ -240,6 +259,15 @@ export function MesTab() {
           <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--color-accent-400)' }} />
           Ainda sai {short(totals.vaiSair, privado)}
         </span>
+        {isNow && caixa && (
+          <span
+            title={`Entrou ${short(caixa.entrou, privado)} e saiu ${short(caixa.saiu, privado)} desde o dia 1 — compare com o banco.`}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--color-neutral-400)' }}
+          >
+            <i className="ph ph-wallet" style={{ fontSize: 12 }} />
+            Saldo agora {short(caixa.saldo, privado)}
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 18 }}>
@@ -297,26 +325,53 @@ export function MesTab() {
           Nenhum lançamento neste mês.
         </div>
       ) : (
-        groups.map((g) => (
-          <div key={g.label} style={{ marginTop: 22 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingBottom: 6 }}>
-              <div className="section-kicker">{g.label}</div>
-              <div style={{ fontSize: 12, color: 'var(--color-neutral-500)' }}>{short(g.sum, privado)}</div>
+        groups.map((g) => {
+          const open = groupOpen[g.label] ?? !g.paid;
+          const showAll = groupShowAll[g.label] ?? false;
+          const visible = showAll ? g.items : g.items.slice(0, GROUP_PREVIEW);
+          const hidden = g.items.length - visible.length;
+          return (
+            <div key={g.label} style={{ marginTop: 22 }}>
+              <button
+                onClick={() => setGroupOpen((s) => ({ ...s, [g.label]: !open }))}
+                aria-expanded={open}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', width: '100%',
+                  padding: '0 0 6px', border: 0, background: 'transparent', cursor: 'pointer', color: 'inherit',
+                  fontFamily: 'inherit', textAlign: 'left',
+                }}
+              >
+                <span className="section-kicker" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <i className={open ? 'ph ph-caret-down' : 'ph ph-caret-right'} style={{ fontSize: 11 }} />
+                  {g.label}
+                  <span style={{ color: 'var(--color-neutral-500)' }}>· {g.items.length}</span>
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--color-neutral-500)' }}>{short(g.sum, privado)}</span>
+              </button>
+              {open && visible.map((o) => (
+                <OccRow
+                  key={o.key}
+                  occurrence={o}
+                  open={swiped?.key === o.key ? swiped.side : null}
+                  onOpenChange={(side) => setSwiped(side ? { key: o.key, side } : null)}
+                  onPay={() => openPay(o, year, month0)}
+                  onTap={() => openDetail(o, year, month0)}
+                  onEdit={() => setEditing(debtOf(o) ?? null)}
+                  onDelete={() => setDeleting(debtOf(o) ?? null)}
+                />
+              ))}
+              {open && g.items.length > GROUP_PREVIEW && (
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setGroupShowAll((s) => ({ ...s, [g.label]: !showAll }))}
+                  style={{ width: '100%', marginTop: 4, fontSize: 12.5 }}
+                >
+                  {showAll ? 'Mostrar menos' : `Ver mais ${hidden}`}
+                </button>
+              )}
             </div>
-            {g.items.map((o) => (
-              <OccRow
-                key={o.key}
-                occurrence={o}
-                open={swiped?.key === o.key ? swiped.side : null}
-                onOpenChange={(side) => setSwiped(side ? { key: o.key, side } : null)}
-                onPay={() => openPay(o, year, month0)}
-                onTap={() => openDetail(o, year, month0)}
-                onEdit={() => setEditing(debtOf(o) ?? null)}
-                onDelete={() => setDeleting(debtOf(o) ?? null)}
-              />
-            ))}
-          </div>
-        ))
+          );
+        })
       )}
 
       {editing && (
