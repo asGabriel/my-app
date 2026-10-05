@@ -73,6 +73,11 @@ export async function matchmakingRequest<T>(
   return request<T>(`${MATCHMAKING_PATH}${endpoint}`, options);
 }
 
+/** `GET /api/status` do rust-api: responde sem tocar no banco nem exigir login. */
+export async function statusRequest(): Promise<unknown> {
+  return request(`${API_BASE}/status`, { method: 'GET' });
+}
+
 /** Módulo `finance` do rust-api (sucessor do financeManager). */
 export async function financeRequest<T>(
   endpoint: string,

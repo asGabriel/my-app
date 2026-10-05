@@ -1,6 +1,7 @@
 import { ConfigProvider, App as AntApp } from 'antd';
 import { QueryClientProvider } from '@tanstack/react-query';
 import ptBR from 'antd/locale/pt_BR';
+import { ApiKeepAlive } from '../components/ApiKeepAlive';
 import { queryClient } from '../services/queryClient';
 import { MatchmakingRouter } from './routes';
 import { color, font } from './shared/theme';
@@ -8,6 +9,7 @@ import { color, font } from './shared/theme';
 export function MatchmakingApp() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ApiKeepAlive />
       <ConfigProvider
         locale={ptBR}
         theme={{
