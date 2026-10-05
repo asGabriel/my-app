@@ -20,7 +20,7 @@
  *   que são as pagáveis (`POST /finance/payment`).
  */
 import dayjs from 'dayjs';
-import { schemas, type Debt, type Income } from '../api';
+import { schemas, type Debt, type Income, type Payment } from '../api';
 import type { DebtCategory } from '../utils/constants';
 import { debtAmounts, installmentCountOf, isInstallment, isInstallmentParent, isSettled, parentOf } from './debt';
 
@@ -159,6 +159,23 @@ export function computeIncomeForMonth(incomes: Income[], year: number, month0: n
       return ref.year() === year && ref.month() === month0;
     })
     .reduce((sum, i) => sum + parseFloat(i.amount), 0);
+}
+
+export interface CashBalance {
+  entrou: number;
+  saiu: number;
+  saldo: number;
+}
+
+/**
+ * Saldo em regime de caixa: o que entrou (`Income`) menos o que foi pago
+ * (`Payment`, pela data do pagamento — não pelo vencimento da dívida).
+ * Quem chama já filtra as listas pelo período desejado.
+ */
+export function computeCashBalance(incomes: Income[], payments: Payment[]): CashBalance {
+  const entrou = incomes.reduce((sum, i) => sum + parseFloat(i.amount), 0);
+  const saiu = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+  return { entrou, saiu, saldo: entrou - saiu };
 }
 
 export function computeMonthTotals(occurrences: Occurrence[], renda: number): MonthTotals {

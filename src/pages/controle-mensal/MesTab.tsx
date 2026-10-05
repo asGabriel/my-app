@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { useFinanceLists, type Debt } from '../../api';
+import { useFinanceIncomes, useFinanceLists, useFinancePayments, type Debt } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import { DebtDeleteSheet } from '../../components/DebtDeleteSheet';
 import { DebtEditSheet } from '../../components/DebtEditSheet';
@@ -12,7 +12,7 @@ import { debtSwipeActions } from '../../finance/debtSwipeActions';
 import { useFinanceMonth, MESES_LONGOS } from '../../finance/FinanceMonthContext';
 import { money, short } from '../../finance/format';
 import { categoryIcon } from '../../finance/categoryIcon';
-import { KIND_LABELS, type Occurrence } from '../../finance/monthEngine';
+import { computeCashBalance, KIND_LABELS, type Occurrence } from '../../finance/monthEngine';
 import { MonthChips } from './MonthChips';
 
 interface OccGroup {
@@ -134,6 +134,16 @@ export function MesTab() {
   const isNow = monthIdx === todayIdx;
   const isPast = monthIdx < todayIdx;
 
+  // Saldo agora: o que entrou menos o que foi pago do dia 1 até hoje — para
+  // bater com o saldo do banco e notar lançamento esquecido. Só no mês atual.
+  const cashFilters = useMemo(() => {
+    const now = dayjs();
+    return { startDate: now.startOf('month').format('YYYY-MM-DD'), endDate: now.format('YYYY-MM-DD') };
+  }, []);
+  const { data: cashIncomes } = useFinanceIncomes(cashFilters, isNow);
+  const { data: cashPayments } = useFinancePayments(cashFilters, isNow);
+  const caixa = cashIncomes && cashPayments ? computeCashBalance(cashIncomes, cashPayments) : null;
+
   const occurrences = getOccurrences(year, month0);
   const totals = getTotals(year, month0);
 
@@ -231,7 +241,7 @@ export function MesTab() {
         <div style={{ width: `${pctSaiu}%`, height: '100%', background: 'var(--color-accent-600)' }} />
         <div style={{ width: `${pctVaiSair}%`, height: '100%', background: 'var(--color-accent-400)' }} />
       </div>
-      <div style={{ display: 'flex', gap: 14, marginTop: 9, fontSize: 11.5, color: 'var(--color-neutral-500)', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '6px 14px', marginTop: 9, fontSize: 11.5, color: 'var(--color-neutral-500)', flexWrap: 'wrap' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--color-accent-600)' }} />
           Já saiu {short(totals.saiu, privado)}
@@ -240,6 +250,15 @@ export function MesTab() {
           <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--color-accent-400)' }} />
           Ainda sai {short(totals.vaiSair, privado)}
         </span>
+        {isNow && caixa && (
+          <span
+            title={`Entrou ${short(caixa.entrou, privado)} e saiu ${short(caixa.saiu, privado)} desde o dia 1 — compare com o banco.`}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--color-neutral-400)' }}
+          >
+            <i className="ph ph-wallet" style={{ fontSize: 12 }} />
+            Saldo agora {short(caixa.saldo, privado)}
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 18 }}>
