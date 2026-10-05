@@ -57,6 +57,8 @@ paths:
     $ref: "./paths/matchmaking.yaml#/sessionQueue"
   /matchmaking/sessions/{sessionId}/queue/fill:
     $ref: "./paths/matchmaking.yaml#/fillCourts"
+  /matchmaking/sessions/{sessionId}/queue/next:
+    $ref: "./paths/matchmaking.yaml#/nextChallengers"
   /matchmaking/sessions/{sessionId}/queue/{playerId}:
     $ref: "./paths/matchmaking.yaml#/pinQueuePlayer"
   /matchmaking/teams/:
@@ -156,6 +158,8 @@ components:
       $ref: "./schemas/matchmaking.yaml#/QueueEntry"
     CourtSuggestion:
       $ref: "./schemas/matchmaking.yaml#/CourtSuggestion"
+    ChallengerSuggestion:
+      $ref: "./schemas/matchmaking.yaml#/ChallengerSuggestion"
     SetPinRequest:
       $ref: "./schemas/matchmaking.yaml#/SetPinRequest"
   securitySchemes:

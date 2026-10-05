@@ -18,6 +18,7 @@ import {
   useTeams,
   useMatches,
   useSessionQueue,
+  useNextChallengers,
   useUpdateSession,
   useCheckInPlayer,
   useCheckOutPlayer,
@@ -80,6 +81,7 @@ export function SessionDetail() {
   const { data: teams, isLoading: isLoadingTeams } = useTeams(sessionId);
   const { data: matches, isLoading: isLoadingMatches } = useMatches(sessionId);
   const { data: queue, isLoading: isLoadingQueue } = useSessionQueue(sessionId);
+  const { data: nextChallengers } = useNextChallengers(sessionId);
 
   const updateSession = useUpdateSession();
   const checkInPlayer = useCheckInPlayer();
@@ -247,19 +249,12 @@ export function SessionDetail() {
     });
   }, [session, teams, matches, playerNameById]);
 
-  // Prévia dos próximos a entrar: os primeiros da fila, em grupos do tamanho
-  // de um time. É uma projeção — quem monta os times de fato é o backend
-  // (fill-courts / sugestão pós-resultado), que pode reordenar por gênero.
-  const nextUp = useMemo(() => {
-    const size = session?.settings.playersPerTeam ?? 0;
-    if (!size) return [];
-    const ids = orderedQueue.map((entry) => entry.playerId);
-    const groups: string[][] = [];
-    for (let i = 0; i + size <= ids.length && groups.length < 2; i += size) {
-      groups.push(ids.slice(i, i + size));
-    }
-    return groups;
-  }, [orderedQueue, session]);
+  // Prévia dos próximos a entrar: vem pronta do backend, que roda o mesmo
+  // sorteio do preenchimento de quadras (gênero do modo, parceiro repetido).
+  const nextUp = useMemo(
+    () => (nextChallengers ?? []).map((challenger) => challenger.playerIds),
+    [nextChallengers],
+  );
 
   if (isLoadingSession) {
     return (

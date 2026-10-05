@@ -257,6 +257,12 @@ const CourtSuggestion = z
     missingChallenger: z.boolean(),
   })
   .passthrough();
+const ChallengerSuggestion = z
+  .object({
+    playerIds: z.array(z.string().uuid()),
+    repeatsPartner: z.boolean(),
+  })
+  .passthrough();
 const SetPinRequest = z.object({ pinned: z.boolean() }).passthrough();
 const CreateTeamRequest = z
   .object({
@@ -339,6 +345,7 @@ export const schemas = {
   UpdateSessionRequest,
   QueueEntry,
   CourtSuggestion,
+  ChallengerSuggestion,
   SetPinRequest,
   CreateTeamRequest,
   TeamStatus,
@@ -836,6 +843,21 @@ const endpoints = makeApi([
       },
     ],
     response: z.array(CourtSuggestion),
+  },
+  {
+    method: "get",
+    path: "/matchmaking/sessions/:sessionId/queue/next",
+    alias: "getNextChallengers",
+    description: `Só leitura — não grava nada. Roda o mesmo sorteio do preenchimento de quadras (next_challenger, com as regras de gênero do GameMode e de evitar parceiro repetido) até 2 vezes, cada um sobre o que o anterior deixou na fila. É a fonte da prévia &quot;próximos a entrar&quot;.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "sessionId",
+        type: "Path",
+        schema: z.string().uuid(),
+      },
+    ],
+    response: z.array(ChallengerSuggestion),
   },
   {
     method: "post",

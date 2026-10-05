@@ -37,7 +37,7 @@ interface CourtsViewProps {
   activeTeams: Team[];
   disbandedTeams: Team[];
   matchHistory: Match[];
-  /** Próximos grupos da fila, já do tamanho de um time. */
+  /** Próximos times que a fila formaria, na ordem — vem do backend (`/queue/next`). */
   nextUp: string[][];
   playersPerTeam: number;
   isLoading: boolean;

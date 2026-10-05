@@ -271,6 +271,21 @@ CourtSuggestion:
       type: boolean
       description: "A fila não tinha jogadores suficientes (ex.: gênero desbalanceado no Misto) pra formar o desafiante — quadra fica ociosa até montar manual ou a fila encher"
 
+ChallengerSuggestion:
+  type: object
+  required:
+    - playerIds
+    - repeatsPartner
+  properties:
+    playerIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+    repeatsPartner:
+      type: boolean
+      description: "Algum par desse time já jogou junto na sessão — só um aviso, não bloqueia"
+
 ReportMatchResultResponse:
   type: object
   required:
