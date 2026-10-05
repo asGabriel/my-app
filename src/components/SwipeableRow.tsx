@@ -79,12 +79,16 @@ export function SwipeableRow({ children, startActions = [], endActions = [], ope
   };
 
   const handleClickCapture = (e: MouseEvent<HTMLDivElement>) => {
-    if (suppressClick.current || open !== null) {
-      e.stopPropagation();
-      e.preventDefault();
+    if (!suppressClick.current && open === null) return;
+    e.stopPropagation();
+    e.preventDefault();
+    // Com mouse, soltar o botão no fim do arraste ainda gera um click — ele
+    // só é engolido; fechar aqui desfaria a abertura que o arraste acabou de fazer.
+    if (suppressClick.current) {
       suppressClick.current = false;
-      if (open !== null) onOpenChange(null);
+      return;
     }
+    onOpenChange(null);
   };
 
   const runAction = (action: SwipeAction) => {
