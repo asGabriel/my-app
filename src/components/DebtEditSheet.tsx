@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  useCreateFinanceList,
   useUpdateFinanceDebt,
   type Debt,
   type DebtCategory,
@@ -11,6 +10,7 @@ import {
 import { debtAmounts, installmentCountOf, isInstallment, isInstallmentParent } from '../finance/debt';
 import { money } from '../finance/format';
 import { DEBT_CATEGORY_OPTIONS, EXPENSE_TYPE_OPTIONS } from '../utils/constants';
+import { DebtListPicker } from './DebtListPicker';
 
 interface DebtEditSheetProps {
   debt: Debt;
@@ -31,7 +31,6 @@ function pillClass(active: boolean) {
  * também: num parcelamento o total é a soma das parcelas, que são fixas. */
 export function DebtEditSheet({ debt, parent, lists, onClose }: DebtEditSheetProps) {
   const updateDebt = useUpdateFinanceDebt();
-  const createList = useCreateFinanceList();
 
   const installment = isInstallment(debt);
   const targetId = debt.parentId ?? debt.id;
@@ -49,10 +48,9 @@ export function DebtEditSheet({ debt, parent, lists, onClose }: DebtEditSheetPro
     listId: source.listId ?? null,
     totalAmount: amounts.total.toFixed(2).replace('.', ','),
   });
-  const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const isPending = updateDebt.isPending || createList.isPending;
+  const isPending = updateDebt.isPending;
   const description = form.description.trim();
   // Arredonda para centavos: o backend rejeita valores com mais de 2 casas.
   const totalNum = Math.round((parseFloat(form.totalAmount.replace(',', '.')) || 0) * 100) / 100;
@@ -72,16 +70,6 @@ export function DebtEditSheet({ debt, parent, lists, onClose }: DebtEditSheetPro
   const run = (action: () => Promise<void>, fallback: string) => {
     setError(null);
     action().catch((e) => setError(e instanceof Error ? e.message : fallback));
-  };
-
-  const handleCreateList = () => {
-    const name = newName.trim();
-    if (!name) return;
-    run(async () => {
-      const list = await createList.mutateAsync({ name });
-      setForm((f) => ({ ...f, listId: list.id }));
-      setNewName('');
-    }, 'Erro ao criar a lista.');
   };
 
   const handleSave = () => {
@@ -177,33 +165,13 @@ export function DebtEditSheet({ debt, parent, lists, onClose }: DebtEditSheetPro
         </div>
 
         <div style={{ marginTop: 16 }}>
-          <div className="field-kicker" style={{ paddingBottom: 8 }}>Lista</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            <button className={pillClass(form.listId === null)} onClick={() => setForm((f) => ({ ...f, listId: null }))}>
-              Sem lista
-            </button>
-            {lists.map((l) => (
-              <button key={l.id} className={pillClass(form.listId === l.id)} onClick={() => setForm((f) => ({ ...f, listId: l.id }))}>
-                {l.name}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <input
-              className="input"
-              type="text"
-              placeholder="Nova lista"
-              aria-label="Nome da nova lista"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleCreateList()}
-              style={{ flex: '1 1 auto', minWidth: 0 }}
-            />
-            <button className="btn btn-secondary" disabled={isPending || !newName.trim()} onClick={handleCreateList} style={{ flex: '0 0 auto' }}>
-              Criar
-            </button>
-          </div>
+          <DebtListPicker
+            lists={lists}
+            value={form.listId}
+            onChange={(listId) => setForm((f) => ({ ...f, listId }))}
+            onError={setError}
+            disabled={isPending}
+          />
         </div>
 
         {error && <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--color-accent-300)' }}>{error}</div>}
