@@ -5,12 +5,14 @@ import { Radio } from 'antd';
 import {
   schemas,
   useCreateFinanceDebt,
+  useFinanceLists,
   type CreateDebtRequest,
   type ExpenseType,
 } from '../../api';
 import { useFinanceMonth } from '../../finance/FinanceMonthContext';
 import { money, short } from '../../finance/format';
 import { DEBT_CATEGORY_OPTIONS, type DebtCategory } from '../../utils/constants';
+import { DebtListPicker } from '../../components/DebtListPicker';
 import { NovaReceitaForm } from './NovaReceitaForm';
 
 /** O que a aba Novo registra: um débito (wizard de 3 passos) ou uma receita. */
@@ -45,6 +47,7 @@ export function NovoTab() {
   const { selected, getTotals, hasMonth } = useFinanceMonth();
 
   const createDebt = useCreateFinanceDebt();
+  const { data: lists = [] } = useFinanceLists();
 
   const location = useLocation();
   // Quem navega para cá pode pedir o modo receita (ex.: sheet de receitas do mês).
@@ -64,6 +67,7 @@ export function NovoTab() {
     n: '12',
     dia: '10',
     expenseType: schemas.ExpenseType.enum.VARIABLE as ExpenseType,
+    listId: null as string | null,
   });
 
   // Arredonda para centavos: o backend rejeita valores com mais de 2 casas.
@@ -106,9 +110,9 @@ export function NovoTab() {
 
   const handleAvancar = () => {
     if (step === 1 && !valorNum) return;
+    setError(null);
     if (step < 3) return setStep(step + 1);
 
-    setError(null);
     const run = async () => {
       if (form.tipo === 'fixo') {
         throw new Error('Recorrência ainda não está disponível');
@@ -121,6 +125,7 @@ export function NovoTab() {
               dueDate: due.format('YYYY-MM-DD'),
               totalAmount: (valorNum * nParc).toFixed(2),
               category: form.categoria,
+              listId: form.listId ?? undefined,
               installmentCount: nParc,
             }
           : {
@@ -129,6 +134,7 @@ export function NovoTab() {
               totalAmount: valorNum.toFixed(2),
               category: form.categoria,
               expenseType: form.expenseType,
+              listId: form.listId ?? undefined,
             };
       await createDebt.mutateAsync(payload);
       setDone({ name: form.nome.trim() || 'Nova despesa', value: money(valorNum, false), texto: previewTexto, impacto });
@@ -252,6 +258,20 @@ export function NovoTab() {
               ))}
             </div>
           </div>
+
+          <div style={{ marginTop: 18 }}>
+            <DebtListPicker
+              lists={lists}
+              value={form.listId}
+              onChange={(listId) => setForm((f) => ({ ...f, listId }))}
+              onError={setError}
+              disabled={isPending}
+            />
+          </div>
+
+          {error && (
+            <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--color-accent-300)' }}>{error}</div>
+          )}
         </div>
       )}
 
@@ -346,6 +366,7 @@ export function NovoTab() {
               { k: 'Tipo', v: TIPO_OPTIONS.find((t) => t.v === form.tipo)?.label ?? form.tipo },
               { k: form.tipo === 'parcelado' ? 'Parcela' : 'Valor', v: money(valorNum, false) + (form.tipo === 'parcelado' ? ` × ${nParc}` : '') },
               { k: 'Categoria', v: DEBT_CATEGORY_OPTIONS.find((c) => c.value === form.categoria)?.label ?? form.categoria },
+              { k: 'Lista', v: lists.find((l) => l.id === form.listId)?.name ?? 'Sem lista' },
               { k: form.tipo === 'parcelado' ? '1º vencimento' : 'Vencimento', v: due.format('DD/MM/YYYY') },
               { k: form.tipo === 'parcelado' ? 'Total' : 'No ano', v: money(valorNum * (form.tipo === 'parcelado' ? nParc : 12), false) },
             ].map((r) => (
