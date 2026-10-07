@@ -1,66 +1,49 @@
-LoginRequest:
+GoogleLoginRequest:
   type: object
   required:
-    - username
-    - password
+    - idToken
   properties:
-    username:
+    idToken:
       type: string
-    password:
-      type: string
+      description: "ID token (credential) retornado pelo Google Identity Services"
 
-RegisterRequest:
-  type: object
-  required:
-    - username
-    - email
-    - password
-    - name
-  properties:
-    username:
-      type: string
-    email:
-      type: string
-      format: email
-    password:
-      type: string
-    name:
-      type: string
+Role:
+  type: string
+  description: Papel do usuário na allowlist
+  enum:
+    - admin
+    - member
 
 UserResponse:
   type: object
   required:
     - id
-    - clientId
-    - username
     - email
     - name
-    - is_active
-    - created_at
+    - tenantId
+    - role
+    - lastLoginAt
   properties:
     id:
       type: string
       format: uuid
-    clientId:
-      type: string
-      format: uuid
-      description: "Client identifier"
-    username:
-      type: string
     email:
       type: string
       format: email
     name:
       type: string
-    is_active:
-      type: boolean
-    created_at:
+    avatarUrl:
       type: string
-      format: date-time
-    updated_at:
-      type: string
-      format: date-time
       nullable: true
+    tenantId:
+      type: string
+      format: uuid
+      description: "Tenant dono dos dados (client_id no finance)"
+    role:
+      $ref: "#/Role"
+    lastLoginAt:
+      type: string
+      format: date-time
 
 AuthResponse:
   type: object

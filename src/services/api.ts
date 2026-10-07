@@ -10,6 +10,17 @@ interface RequestOptions extends RequestInit {
 
 let onUnauthorized: (() => void) | null = null;
 
+export const TOKEN_KEY = 'auth_token';
+
+function getStoredToken(): string | undefined {
+  return localStorage.getItem(TOKEN_KEY) ?? undefined;
+}
+
+/** Envia o token da sessão quando a chamada não informou um explicitamente. */
+function withSession(options: RequestOptions): RequestOptions {
+  return { ...options, token: options.token ?? getStoredToken() };
+}
+
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
@@ -56,7 +67,7 @@ export async function apiRequest<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  return request<T>(`${FINANCE_PATH}${endpoint}`, options);
+  return request<T>(`${FINANCE_PATH}${endpoint}`, withSession(options));
 }
 
 export async function authRequest<T>(
@@ -78,5 +89,5 @@ export async function financeRequest<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  return request<T>(`${FINANCE_V2_PATH}${endpoint}`, options);
+  return request<T>(`${FINANCE_V2_PATH}${endpoint}`, withSession(options));
 }
