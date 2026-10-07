@@ -1,48 +1,22 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { authRequest, ApiError, setUnauthorizedHandler } from '../services/api';
+import { authRequest, ApiError, setUnauthorizedHandler, TOKEN_KEY } from '../services/api';
 import { schemas } from '../api/generated';
 import { queryClient } from '../services/queryClient';
 import { FINANCE_MOCK, MOCK_TOKEN, MOCK_USER } from '../finance/mock/config';
-
-type UserResponse = typeof schemas.UserResponse._type;
-
-interface User {
-    id: string;
-    clientId: string;
-    username: string;
-    name: string;
-    email: string;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt?: string | null;
-}
+import type { AuthResponse, GoogleLoginRequest, UserResponse as User } from '../api/inferredTypes';
 
 interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
     token: string | null;
-    login: (username: string, password: string) => Promise<void>;
+    loginWithGoogle: (idToken: string) => Promise<void>;
     logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
-
-function mapUserResponse(response: UserResponse): User {
-    return {
-        id: response.id,
-        clientId: response.clientId,
-        username: response.username,
-        name: response.name,
-        email: response.email,
-        isActive: response.is_active,
-        createdAt: response.created_at,
-        updatedAt: response.updated_at,
-    };
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -82,15 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
 
                 try {
-                    const response = await authRequest<UserResponse>('/me', {
+                    const response = await authRequest<unknown>('/me', {
                         method: 'GET',
                         token: storedToken,
                     });
-                    const userData = mapUserResponse(response);
+                    const userData = schemas.UserResponse.parse(response);
                     setUser(userData);
                     localStorage.setItem(USER_KEY, JSON.stringify(userData));
                 } catch (error) {
-                    if (error instanceof ApiError && error.status === 401) {
+                    // 403: o e-mail saiu da allowlist depois do login.
+                    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
                         logout();
                     }
                 }
@@ -102,19 +77,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         initAuth();
     }, [logout]);
 
-    const login = async (username: string, password: string) => {
+    const loginWithGoogle = async (idToken: string) => {
         queryClient.clear();
 
-        const response = await authRequest<{ token: string; user: UserResponse }>('/login', {
+        const response = await authRequest<AuthResponse>('/google', {
             method: 'POST',
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ idToken } satisfies GoogleLoginRequest),
         });
+        const { token: apiToken, user: userData } = schemas.AuthResponse.parse(response);
 
-        const userData = mapUserResponse(response.user);
-
-        localStorage.setItem(TOKEN_KEY, response.token);
+        localStorage.setItem(TOKEN_KEY, apiToken);
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
-        setToken(response.token);
+        setToken(apiToken);
         setUser(userData);
     };
 
@@ -125,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated: !!user,
                 isLoading,
                 token,
-                login,
+                loginWithGoogle,
                 logout,
             }}
         >

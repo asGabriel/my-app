@@ -1,33 +1,42 @@
 import { useState } from 'react';
-import { Form, Input, Button, Card, Typography, Space, App } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { Card, Typography, Space, App, Spin, Alert } from 'antd';
+import { GoogleLogin, GoogleOAuthProvider, type CredentialResponse } from '@react-oauth/google';
 import { useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
+import { ApiError } from '../services/api';
 
 const { Title, Text } = Typography;
 
-interface LoginForm {
-  username: string;
-  password: string;
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+function loginErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) {
+    return 'Seu e-mail não tem acesso a este app';
+  }
+  return 'Não foi possível entrar com o Google';
 }
 
 export function Login() {
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { loginWithGoogle } = useAuth();
   const { message } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = location.state?.from?.pathname || '/';
 
-  const onFinish = async (values: LoginForm) => {
+  const onSuccess = async ({ credential }: CredentialResponse) => {
+    if (!credential) {
+      message.error(loginErrorMessage(null));
+      return;
+    }
+
     setLoading(true);
     try {
-      await login(values.username, values.password);
-      message.success('Login realizado com sucesso!');
+      await loginWithGoogle(credential);
       navigate(from, { replace: true });
-    } catch {
-      message.error('Usuário ou senha inválidos');
+    } catch (error) {
+      message.error(loginErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -59,34 +68,27 @@ export function Login() {
             <Text type="secondary">Faça login para continuar</Text>
           </div>
 
-          <Form
-            name="login"
-            onFinish={onFinish}
-            layout="vertical"
-            size="large"
-          >
-            <Form.Item
-              name="username"
-              rules={[
-                { required: true, message: 'Digite seu usuário' },
-              ]}
-            >
-              <Input prefix={<UserOutlined />} placeholder="Usuário" />
-            </Form.Item>
-
-            <Form.Item
-              name="password"
-              rules={[{ required: true, message: 'Digite sua senha' }]}
-            >
-              <Input.Password prefix={<LockOutlined />} placeholder="Senha" />
-            </Form.Item>
-
-            <Form.Item style={{ marginBottom: 0 }}>
-              <Button type="primary" htmlType="submit" loading={loading} block>
-                Entrar
-              </Button>
-            </Form.Item>
-          </Form>
+          {GOOGLE_CLIENT_ID ? (
+            <Spin spinning={loading}>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                  <GoogleLogin
+                    onSuccess={onSuccess}
+                    onError={() => message.error(loginErrorMessage(null))}
+                    // Quem já entrou antes é logado de novo sem clicar (One Tap),
+                    // o que cobre a expiração de 1h do token da API.
+                    useOneTap
+                    auto_select
+                    theme="filled_black"
+                    shape="pill"
+                    text="signin_with"
+                  />
+                </GoogleOAuthProvider>
+              </div>
+            </Spin>
+          ) : (
+            <Alert type="error" showIcon message="VITE_GOOGLE_CLIENT_ID não configurado" />
+          )}
         </Space>
       </Card>
     </div>

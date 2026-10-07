@@ -13,10 +13,8 @@ servers:
         description: Base URL from VITE_API_URL env var
 
 paths:
-  /auth/login:
-    $ref: "./paths/auth.yaml#/login"
-  /auth/register:
-    $ref: "./paths/auth.yaml#/register"
+  /auth/google:
+    $ref: "./paths/auth.yaml#/google"
   /auth/me:
     $ref: "./paths/auth.yaml#/me"
   # financeManager: sem cobertura por hora — backend em reformulação (v2).
@@ -76,10 +74,10 @@ paths:
 
 components:
   schemas:
-    LoginRequest:
-      $ref: "./schemas/auth.yaml#/LoginRequest"
-    RegisterRequest:
-      $ref: "./schemas/auth.yaml#/RegisterRequest"
+    GoogleLoginRequest:
+      $ref: "./schemas/auth.yaml#/GoogleLoginRequest"
+    Role:
+      $ref: "./schemas/auth.yaml#/Role"
     UserResponse:
       $ref: "./schemas/auth.yaml#/UserResponse"
     AuthResponse:

@@ -2,10 +2,10 @@ import { z } from 'zod';
 import { schemas } from './generated';
 
 /** Inferidos de `schemas` em `generated.ts` (preservados ao rodar `generate-api`). */
-export type LoginRequest = z.infer<typeof schemas.LoginRequest>;
+export type GoogleLoginRequest = z.infer<typeof schemas.GoogleLoginRequest>;
+export type Role = z.infer<typeof schemas.Role>;
 export type UserResponse = z.infer<typeof schemas.UserResponse>;
 export type AuthResponse = z.infer<typeof schemas.AuthResponse>;
-export type RegisterRequest = z.infer<typeof schemas.RegisterRequest>;
 // financeManager: sem cobertura por hora — backend em reformulação (v2).
 // Tipos voltam aqui aos poucos, junto com as rotas em openapi/index.yaml.
 export type DebtStatus = z.infer<typeof schemas.DebtStatus>;

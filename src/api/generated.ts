@@ -1,31 +1,21 @@
 import { makeApi, Zodios, type ZodiosOptions } from "@zodios/core";
 import { z } from "zod";
 
-const LoginRequest = z
-  .object({ username: z.string(), password: z.string() })
-  .passthrough();
+const GoogleLoginRequest = z.object({ idToken: z.string() }).passthrough();
+const Role = z.enum(["admin", "member"]);
 const UserResponse = z
   .object({
     id: z.string().uuid(),
-    clientId: z.string().uuid(),
-    username: z.string(),
     email: z.string().email(),
     name: z.string(),
-    is_active: z.boolean(),
-    created_at: z.string().datetime({ offset: true }),
-    updated_at: z.string().datetime({ offset: true }).nullish(),
+    avatarUrl: z.string().nullish(),
+    tenantId: z.string().uuid(),
+    role: Role,
+    lastLoginAt: z.string().datetime({ offset: true }),
   })
   .passthrough();
 const AuthResponse = z
   .object({ token: z.string(), user: UserResponse })
-  .passthrough();
-const RegisterRequest = z
-  .object({
-    username: z.string(),
-    email: z.string().email(),
-    password: z.string(),
-    name: z.string(),
-  })
   .passthrough();
 const DebtCategory = z.enum([
   "UNKNOWN",
@@ -307,10 +297,10 @@ const ReportMatchResultResponse = z
   .passthrough();
 
 export const schemas = {
-  LoginRequest,
+  GoogleLoginRequest,
+  Role,
   UserResponse,
   AuthResponse,
-  RegisterRequest,
   DebtCategory,
   ExpenseType,
   CreateDebtRequest,
@@ -353,21 +343,28 @@ export const schemas = {
 const endpoints = makeApi([
   {
     method: "post",
-    path: "/auth/login",
-    alias: "login",
+    path: "/auth/google",
+    alias: "loginWithGoogle",
+    description: `Só e-mails presentes na allowlist (auth.allowed_users) conseguem entrar.
+`,
     requestFormat: "json",
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: LoginRequest,
+        schema: z.object({ idToken: z.string() }).passthrough(),
       },
     ],
     response: AuthResponse,
     errors: [
       {
         status: 401,
-        description: `Credenciais inválidas`,
+        description: `ID token do Google inválido ou expirado`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `E-mail fora da allowlist`,
         schema: z.void(),
       },
     ],
@@ -382,27 +379,6 @@ const endpoints = makeApi([
       {
         status: 401,
         description: `Não autenticado`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/auth/register",
-    alias: "register",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: RegisterRequest,
-      },
-    ],
-    response: AuthResponse,
-    errors: [
-      {
-        status: 400,
-        description: `Dados inválidos`,
         schema: z.void(),
       },
     ],
