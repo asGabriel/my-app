@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.barbershop.tsbuildinfo",
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
@@ -22,9 +22,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"],
-  /* Isolado do matchmaking e da barbearia (ver tsconfig.matchmaking.json e
-     tsconfig.barbershop.json): cada módulo tem seu próprio projeto de
-     type-check, para que um problema de um lado nunca trave o build do outro. */
-  "exclude": ["src/matchmaking", "src/barbershop"]
+  /* Escopo isolado (ver tsconfig.app.json): a barbearia por enquanto roda só
+     com dados mockados (src/barbershop/mock), então só enxerga a própria
+     árvore — nem o financeiro nem o matchmaking. */
+  "include": ["src/barbershop", "src/vite-env.d.ts"]
 }
