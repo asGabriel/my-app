@@ -11,6 +11,9 @@
     "dev:matchmaking:prod": "vite --config vite.matchmaking.config.ts --mode production",
     "build:matchmaking": "tsc -b tsconfig.matchmaking.json && vite build --config vite.matchmaking.config.ts",
     "preview:matchmaking": "vite preview --config vite.matchmaking.config.ts",
+    "dev:barbershop": "vite --config vite.barbershop.config.ts",
+    "build:barbershop": "tsc -b tsconfig.barbershop.json && vite build --config vite.barbershop.config.ts",
+    "preview:barbershop": "vite preview --config vite.barbershop.config.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "generate-api": "openapi-zod-client ./openapi/index.yaml -o ./src/api/generated.ts"
