@@ -23,8 +23,8 @@
     "noUncheckedSideEffectImports": true
   },
   "include": ["src"],
-  /* Isolado do matchmaking (ver tsconfig.matchmaking.json): esse módulo tem
-     seu próprio projeto de type-check, para que um problema de um lado nunca
-     trave o build do outro. */
-  "exclude": ["src/matchmaking"]
+  /* Isolado do matchmaking e da barbearia (ver tsconfig.matchmaking.json e
+     tsconfig.barbershop.json): cada módulo tem seu próprio projeto de
+     type-check, para que um problema de um lado nunca trave o build do outro. */
+  "exclude": ["src/matchmaking", "src/barbershop"]
 }
