@@ -1,6 +1,7 @@
 import { ConfigProvider, App as AntApp, theme } from 'antd';
 import { QueryClientProvider } from '@tanstack/react-query';
 import ptBR from 'antd/locale/pt_BR';
+import { ApiKeepAlive } from './components/ApiKeepAlive';
 import { AuthProvider } from './contexts/AuthContext';
 import { AppRouter } from './routes';
 import { queryClient } from './services/queryClient';
@@ -15,6 +16,7 @@ import './styles/responsive.css';
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ApiKeepAlive />
       <ConfigProvider
         locale={ptBR}
         theme={{
