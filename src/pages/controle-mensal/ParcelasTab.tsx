@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
+import { useFinanceDebtParents, useFinanceDebts, type Debt } from '../../api';
 import { HorizontalScroller } from '../../components/HorizontalScroller';
 import { debtAmounts, installmentCountOf, isInstallment, isSettled, lastInstallmentDueDate, parentOf } from '../../finance/debt';
 import { useFinanceMonth, MESES_CURTOS, MESES_LONGOS } from '../../finance/FinanceMonthContext';
@@ -10,50 +11,64 @@ import { monthIndex } from '../../finance/monthEngine';
 const CHART_MONTHS_BACK = 3;
 /** O gráfico vai até o último mês com parcela, mas nunca menos que isto à frente. */
 const CHART_MIN_MONTHS_FORWARD = 5;
-/** Teto à frente — a janela que o `FinanceMonthContext` busca. */
-const CHART_MAX_MONTHS_FORWARD = 12;
 const BAR_AREA_HEIGHT = 110;
 
 const label = (m: dayjs.Dayjs) => `${MESES_CURTOS[m.month()]}/${String(m.year()).slice(2)}`;
 
 export function ParcelasTab() {
-  const { selected, getOccurrences, getTotals, debtsById, privado, isLoading, isError, error, refetch } = useFinanceMonth();
+  const { selected, getTotals, privado } = useFinanceMonth();
   const today = useMemo(() => dayjs().startOf('month'), []);
 
   // Mês da lista. Começa no mês selecionado nos chips das outras abas; depois
   // segue o clique nas barras.
   const [sel, setSel] = useState(selected);
 
-  // Nota: sem useMemo, como no PainelTab — `getOccurrences`/`getTotals` são
-  // closures novas a cada render do provider.
-  const allBars = Array.from({ length: CHART_MONTHS_BACK + CHART_MAX_MONTHS_FORWARD + 1 }, (_, k) => {
+  // Todas as parcelas (filhas) de CHART_MONTHS_BACK meses atrás em diante, sem
+  // data final: o gráfico vai até a última, para mostrar quando tudo acaba — a
+  // janela de ±12 meses do FinanceMonthContext cortaria parcelamentos longos.
+  // Com filtro de data o backend não devolve o pai (sem due_date), então ele
+  // vem numa 2ª request.
+  const filters = useMemo(
+    () => ({ includeChildren: true, startDate: today.subtract(CHART_MONTHS_BACK, 'month').format('YYYY-MM-DD') }),
+    [today]
+  );
+  const { data, isLoading, isError, error, refetch } = useFinanceDebts(filters);
+  const installments = useMemo(() => (data ?? []).filter((d) => isInstallment(d) && d.dueDate), [data]);
+  const { parentsById } = useFinanceDebtParents(installments);
+
+  const byMonth = useMemo(() => {
+    const map = new Map<number, Debt[]>();
+    for (const d of installments) {
+      const due = dayjs(d.dueDate);
+      const key = monthIndex(due.year(), due.month());
+      map.set(key, [...(map.get(key) ?? []), d]);
+    }
+    return map;
+  }, [installments]);
+
+  const todayIdx = monthIndex(today.year(), today.month());
+  const monthsForward = Math.max(CHART_MIN_MONTHS_FORWARD, ...Array.from(byMonth.keys(), (k) => k - todayIdx));
+  const bars = Array.from({ length: CHART_MONTHS_BACK + monthsForward + 1 }, (_, k) => {
     const i = k - CHART_MONTHS_BACK;
     const m = today.add(i, 'month');
-    const parc = getOccurrences(m.year(), m.month()).filter((o) => o.kind === 'parcelado');
+    const parc = byMonth.get(todayIdx + i) ?? [];
     return {
       year: m.year(),
       month0: m.month(),
       label: MESES_CURTOS[m.month()] + (m.month() === 0 || k === 0 ? ` ${String(m.year()).slice(2)}` : ''),
-      value: parc.reduce((s, o) => s + o.amount, 0),
+      value: parc.reduce((s, d) => s + debtAmounts(d).total, 0),
       count: parc.length,
       past: i < 0,
       current: i === 0,
     };
   });
-  const lastWithParc = allBars.reduce((last, b, i) => (b.count > 0 ? i : last), -1);
-  const bars = allBars.slice(0, Math.max(lastWithParc, CHART_MONTHS_BACK + CHART_MIN_MONTHS_FORWARD) + 1);
   const maxBar = Math.max(1, ...bars.map((b) => b.value));
   const selIdx = bars.findIndex((b) => b.year === sel.year && b.month0 === sel.month0);
 
-  // Parcelas (filhas) que vencem no mês escolhido. O contexto já tem a janela
-  // inteira com filhas e pais (`debtsById`), então não precisa de request própria.
-  const parcelas = Array.from(debtsById.values())
-    .filter((d) => isInstallment(d) && d.dueDate)
-    .filter((d) => {
-      const due = dayjs(d.dueDate);
-      return due.year() === sel.year && due.month() === sel.month0;
-    })
-    .sort((a, b) => dayjs(a.dueDate).date() - dayjs(b.dueDate).date());
+  // Parcelas que vencem no mês escolhido.
+  const parcelas = [...(byMonth.get(monthIndex(sel.year, sel.month0)) ?? [])].sort(
+    (a, b) => dayjs(a.dueDate).date() - dayjs(b.dueDate).date()
+  );
 
   const renda = getTotals(sel.year, sel.month0).renda;
   const totalParcelas = parcelas.reduce((sum, d) => sum + debtAmounts(d).total, 0);
@@ -62,13 +77,13 @@ export function ParcelasTab() {
   // Compromissos ainda em aberto (de hoje em diante, não do mês escolhido):
   // pais com saldo, e quando cai a última parcela de cada um.
   const lastByParent = new Map<string, dayjs.Dayjs>();
-  debtsById.forEach((d) => {
-    const parent = parentOf(d, debtsById);
+  installments.forEach((d) => {
+    const parent = parentOf(d, parentsById);
     if (!parent || debtAmounts(parent).remaining <= 0 || lastByParent.has(parent.id)) return;
     const last = lastInstallmentDueDate(d, parent);
     if (last) lastByParent.set(parent.id, last);
   });
-  const activeParents = Array.from(lastByParent.keys()).map((id) => debtsById.get(id)!);
+  const activeParents = Array.from(lastByParent.keys()).map((id) => parentsById.get(id)!);
   const restanteTotal = activeParents.reduce((sum, p) => sum + debtAmounts(p).remaining, 0);
   const lastOverall = Array.from(lastByParent.values()).reduce<dayjs.Dayjs | null>(
     (max, l) => (!max || monthIndex(l.year(), l.month()) > monthIndex(max.year(), max.month()) ? l : max),
@@ -77,7 +92,7 @@ export function ParcelasTab() {
   const zeraEm = lastOverall ? label(lastOverall) : '—';
 
   const cards = parcelas.map((d) => {
-    const parent = parentOf(d, debtsById);
+    const parent = parentOf(d, parentsById);
     const count = installmentCountOf(d, parent) ?? null;
     const last = lastInstallmentDueDate(d, parent);
     return {
