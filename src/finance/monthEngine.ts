@@ -199,15 +199,31 @@ export function computeMonthTotals(occurrences: Occurrence[], renda: number): Mo
 export interface CategorySlice {
   category: DebtCategory;
   amount: number;
+  /** Tamanho da barra: relativo à maior categoria do mês (0–100). */
   pct: number;
+  /** Fatia do total do mês (0–100). */
+  share: number;
+  /** Lançamentos do mês na categoria, por vencimento. */
+  items: Occurrence[];
 }
 
+/** Todas as categorias com lançamento no mês, da maior para a menor. */
 export function computeCategoryBreakdown(occurrences: Occurrence[]): CategorySlice[] {
-  const map = new Map<DebtCategory, number>();
-  for (const o of occurrences) map.set(o.category, (map.get(o.category) ?? 0) + o.amount);
-  const max = Math.max(1, ...map.values());
-  return Array.from(map.entries())
-    .map(([category, amount]) => ({ category, amount, pct: Math.round((amount / max) * 100) }))
+  const map = new Map<DebtCategory, Occurrence[]>();
+  for (const o of occurrences) map.set(o.category, [...(map.get(o.category) ?? []), o]);
+  const amounts = Array.from(map.entries()).map(([category, items]) => ({
+    category,
+    items,
+    amount: items.reduce((s, o) => s + o.amount, 0),
+  }));
+  const max = Math.max(1, ...amounts.map((c) => c.amount));
+  const total = amounts.reduce((s, c) => s + c.amount, 0);
+  return amounts
+    .map((c) => ({
+      ...c,
+      pct: Math.round((c.amount / max) * 100),
+      share: total > 0 ? Math.round((c.amount / total) * 100) : 0,
+    }))
     .sort((a, b) => b.amount - a.amount);
 }
 
@@ -215,23 +231,25 @@ export interface MixSlice {
   kind: OccKind;
   label: string;
   amount: number;
+  count: number;
   pct: number;
 }
 
-const MIX_LABELS: Record<OccKind, string> = { fixo: 'Fixos', variavel: 'Variáveis', parcelado: 'Parcelas' };
+export const MIX_LABELS: Record<OccKind, string> = { fixo: 'Fixos', variavel: 'Variáveis', parcelado: 'Parcelas' };
 
 export function computeMix(totals: MonthTotals): MixSlice[] {
-  const raw: [OccKind, number][] = [
-    ['fixo', totals.fixos],
-    ['variavel', totals.variaveis],
-    ['parcelado', totals.parcelas],
+  const raw: [OccKind, number, number][] = [
+    ['fixo', totals.fixos, totals.nFix],
+    ['variavel', totals.variaveis, totals.nVar],
+    ['parcelado', totals.parcelas, totals.nParc],
   ];
   return raw
     .filter(([, v]) => v > 0)
-    .map(([kind, amount]) => ({
+    .map(([kind, amount, count]) => ({
       kind,
       label: MIX_LABELS[kind],
       amount,
+      count,
       pct: totals.total > 0 ? Math.round((amount / totals.total) * 100) : 0,
     }));
 }

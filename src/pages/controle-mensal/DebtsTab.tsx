@@ -1,12 +1,16 @@
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import { useFinanceDebtParents, useFinanceDebts, useFinanceLists, type Debt, type DebtFilters, type DebtList } from '../../api';
-import { debtAmounts, installmentCountOf, isInstallment, isOpen, isSettled, parentOf } from '../../finance/debt';
+import { useSearchParams } from 'react-router';
+import {
+  schemas, useFinanceDebtParents, useFinanceDebts, useFinanceLists,
+  type Debt, type DebtCategory, type DebtFilters, type DebtList, type ExpenseType,
+} from '../../api';
+import { DEBTS_CATEGORY_PARAM, debtAmounts, installmentCountOf, isInstallment, isOpen, isSettled, parentOf } from '../../finance/debt';
 import { useFinanceMonth, MESES_LONGOS } from '../../finance/FinanceMonthContext';
 import { occurrenceFromDebt } from '../../finance/monthEngine';
 import { money, short } from '../../finance/format';
 import { categoryIcon } from '../../finance/categoryIcon';
-import { EXPENSE_TYPE_LABELS } from '../../utils/constants';
+import { DEBT_CATEGORY_LABELS, DEBT_CATEGORY_OPTIONS, EXPENSE_TYPE_LABELS, EXPENSE_TYPE_OPTIONS } from '../../utils/constants';
 import { DebtEditSheet } from '../../components/DebtEditSheet';
 import { DebtDeleteSheet } from '../../components/DebtDeleteSheet';
 import { SwipeableRow, type SwipeSide } from '../../components/SwipeableRow';
@@ -27,8 +31,8 @@ type ListFilter = string | null;
 /** Lista plana do mês selecionado: débitos comuns + parcelas (filhas) que
  * vencem nele. Com filtro de data o backend já deixa o pai do parcelamento de
  * fora (ele não tem `due_date`), então o pai é buscado à parte (ver DebtsTab).
- * Status e lista são filtrados no cliente sobre o mês inteiro, para os chips
- * de lista não sumirem/aparecerem ao trocar o status. */
+ * Status, lista, tipo e categoria são filtrados no cliente sobre o mês inteiro, para os chips
+ * de lista/categoria não sumirem/aparecerem ao trocar os outros filtros. */
 function buildFilters(year: number, month0: number): DebtFilters {
   const first = dayjs(new Date(year, month0, 1));
   return {
@@ -47,6 +51,50 @@ function matchesStatus(debt: Debt, filter: StatusFilter): boolean {
   if (filter === 'open') return isOpen(debt);
   if (filter === 'settled') return isSettled(debt);
   return true;
+}
+
+/** Chips de tipo (fixa/variável) e de categoria: ao contrário da lista não há
+ * um chip "Todos" — tocar no chip ativo desmarca. Categorias só aparecem se
+ * tiverem algum débito no mês. */
+function TypeAndCategoryChips({
+  categories, category, onCategoryChange, expenseType, onExpenseTypeChange,
+}: {
+  categories: DebtCategory[];
+  category: DebtCategory | null;
+  onCategoryChange: (v: DebtCategory | null) => void;
+  expenseType: ExpenseType | null;
+  onExpenseTypeChange: (v: ExpenseType | null) => void;
+}) {
+  return (
+    <div className="mzs" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2, marginTop: 8 }}>
+      {EXPENSE_TYPE_OPTIONS.map((o) => (
+        <button
+          key={o.value}
+          onClick={() => onExpenseTypeChange(expenseType === o.value ? null : o.value)}
+          className={expenseType === o.value ? 'pill pill-active' : 'pill'}
+          aria-pressed={expenseType === o.value}
+          style={{ flex: '0 0 auto' }}
+        >
+          {o.label}
+        </button>
+      ))}
+      {categories.length > 0 && (
+        <span aria-hidden style={{ flex: '0 0 auto', width: 1, margin: '4px 2px', background: 'var(--color-divider)' }} />
+      )}
+      {categories.map((c) => (
+        <button
+          key={c}
+          onClick={() => onCategoryChange(category === c ? null : c)}
+          className={category === c ? 'pill pill-active' : 'pill'}
+          aria-pressed={category === c}
+          style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 5 }}
+        >
+          <i className={categoryIcon(c)} style={{ fontSize: 13 }} />
+          {DEBT_CATEGORY_LABELS[c]}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 /** Chips de lista, no estilo dos filtros do WhatsApp: "Todos" + só as listas
@@ -158,6 +206,14 @@ export function DebtsTab() {
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [listFilter, setListFilter] = useState<ListFilter>(null);
   const [search, setSearch] = useState('');
+  // O Painel abre os débitos de uma categoria (`/debitos?categoria=FOOD`);
+  // a URL só pré-seleciona — depois o filtro é estado local, como os demais.
+  const [searchParams] = useSearchParams();
+  const [categoryFilter, setCategoryFilter] = useState<DebtCategory | null>(() => {
+    const parsed = schemas.DebtCategory.safeParse(searchParams.get(DEBTS_CATEGORY_PARAM));
+    return parsed.success ? parsed.data : null;
+  });
+  const [expenseTypeFilter, setExpenseTypeFilter] = useState<ExpenseType | null>(null);
   // Grupo de quitadas: `null` = sem escolha do usuário — fechado, mas abre
   // sozinho durante uma busca para os resultados quitados não ficarem escondidos.
   const [settledOpen, setSettledOpen] = useState<boolean | null>(null);
@@ -182,15 +238,35 @@ export function DebtsTab() {
   // Lista selecionada que não existe no mês novo cai para "Todos".
   const activeList = monthLists.some((l) => l.id === listFilter) ? listFilter : null;
 
+  // Só as categorias com débito no mês, na ordem do cadastro.
+  const monthCategories = useMemo(() => {
+    const used = new Set(monthDebts.map((d) => d.category));
+    return DEBT_CATEGORY_OPTIONS.map((o) => o.value).filter((c) => used.has(c));
+  }, [monthDebts]);
+
+  // Mesma regra da lista: categoria sem débito no mês novo é desmarcada.
+  const activeCategory = categoryFilter && monthCategories.includes(categoryFilter) ? categoryFilter : null;
+
   const query = normalize(search.trim());
+  const hasFilters = filter !== 'all' || activeList !== null || activeCategory !== null || expenseTypeFilter !== null;
+
+  const clearFilters = () => {
+    setFilter('all');
+    setListFilter(null);
+    setCategoryFilter(null);
+    setExpenseTypeFilter(null);
+    setSearch('');
+  };
 
   const debts = useMemo(
     () => monthDebts.filter(
       (d) => matchesStatus(d, filter)
         && (activeList === null || d.listId === activeList)
+        && (activeCategory === null || d.category === activeCategory)
+        && (expenseTypeFilter === null || d.expenseType === expenseTypeFilter)
         && (query === '' || normalize(d.description).includes(query))
     ),
-    [monthDebts, filter, activeList, query]
+    [monthDebts, filter, activeList, activeCategory, expenseTypeFilter, query]
   );
 
   // Com o filtro "Todas", as quitadas vão para um grupo recolhível no topo;
@@ -268,6 +344,14 @@ export function DebtsTab() {
         ))}
       </div>
 
+      <TypeAndCategoryChips
+        categories={monthCategories}
+        category={activeCategory}
+        onCategoryChange={setCategoryFilter}
+        expenseType={expenseTypeFilter}
+        onExpenseTypeChange={setExpenseTypeFilter}
+      />
+
       <div style={{ position: 'relative', marginTop: 12 }}>
         <i
           className="ph ph-magnifying-glass"
@@ -311,7 +395,18 @@ export function DebtsTab() {
           </div>
         ) : debts.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', textAlign: 'center', padding: '24px 0' }}>
-            {query ? `Nenhum débito encontrado para "${search.trim()}".` : `Nenhum débito em ${MESES_LONGOS[month0]}.`}
+            {query
+              ? `Nenhum débito encontrado para "${search.trim()}".`
+              : hasFilters
+                ? 'Nenhum débito com esses filtros.'
+                : `Nenhum débito em ${MESES_LONGOS[month0]}.`}
+            {(hasFilters || query) && (
+              <div>
+                <button className="btn btn-secondary" onClick={clearFilters} style={{ marginTop: 12 }}>
+                  Limpar filtros
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <>

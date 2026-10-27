@@ -9,7 +9,7 @@
  */
 import dayjs from 'dayjs';
 import { schemas } from '../api/generated';
-import type { Debt } from '../api/inferredTypes';
+import type { Debt, DebtCategory } from '../api/inferredTypes';
 
 /** Parcela (filha) de um parcelamento. */
 export function isInstallment(debt: Debt): boolean {
@@ -62,4 +62,12 @@ export function lastInstallmentDueDate(debt: Debt, parent?: Debt): dayjs.Dayjs |
   return debt.dueDate && count && debt.installmentNumber
     ? dayjs(debt.dueDate).add(count - debt.installmentNumber, 'month')
     : null;
+}
+
+/** Parâmetro de URL que pré-seleciona a categoria na tela de Débitos. */
+export const DEBTS_CATEGORY_PARAM = 'categoria';
+
+/** Caminho da tela de Débitos já filtrada pela categoria (usado pelo Painel). */
+export function debtsPathForCategory(category: DebtCategory): string {
+  return `/debitos?${new URLSearchParams({ [DEBTS_CATEGORY_PARAM]: category })}`;
 }

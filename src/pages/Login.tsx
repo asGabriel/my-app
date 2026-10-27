@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Typography, Space, App, Spin, Alert } from 'antd';
+import { Card, Typography, Space, App, Spin, Alert, Input, Button, Divider } from 'antd';
 import { GoogleLogin, GoogleOAuthProvider, type CredentialResponse } from '@react-oauth/google';
 import { useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,14 +16,63 @@ function loginErrorMessage(error: unknown): string {
   return 'Não foi possível entrar com o Google';
 }
 
+/**
+ * Só no dev server (`import.meta.env.DEV`, fica fora do build): entra com um
+ * token da API já emitido, sem Google — ex.: `npm run dev:prod` sem
+ * `VITE_GOOGLE_CLIENT_ID` (ou sem localhost nas origens do OAuth client).
+ * O token sai do `localStorage.auth_token` do app publicado e vale 1h.
+ */
+function DevTokenLogin({ onLogin }: { onLogin: (token: string) => Promise<void> }) {
+  const [token, setToken] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    setLoading(true);
+    try {
+      await onLogin(token.trim());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Space direction="vertical" style={{ width: '100%' }}>
+      <Text type="secondary" style={{ fontSize: 12 }}>
+        Dev: cole o <Text code>auth_token</Text> do localStorage do app publicado.
+      </Text>
+      <Input.Password
+        value={token}
+        onChange={(e) => setToken(e.target.value)}
+        onPressEnter={() => token.trim() && submit()}
+        placeholder="Token da API (JWT)"
+        aria-label="Token da API"
+      />
+      <Button block onClick={submit} loading={loading} disabled={!token.trim()}>
+        Entrar com token
+      </Button>
+    </Space>
+  );
+}
+
 export function Login() {
   const [loading, setLoading] = useState(false);
-  const { loginWithGoogle } = useAuth();
+  const { loginWithGoogle, loginWithToken } = useAuth();
   const { message } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = location.state?.from?.pathname || '/';
+
+  const onTokenLogin = async (token: string) => {
+    try {
+      await loginWithToken(token);
+      navigate(from, { replace: true });
+    } catch (error) {
+      message.error(
+        error instanceof ApiError && error.status === 401 ? 'Token inválido ou expirado' : loginErrorMessage(error)
+      );
+    }
+  };
 
   const onSuccess = async ({ credential }: CredentialResponse) => {
     if (!credential) {
@@ -87,7 +136,18 @@ export function Login() {
               </div>
             </Spin>
           ) : (
-            <Alert type="error" showIcon message="VITE_GOOGLE_CLIENT_ID não configurado" />
+            <Alert
+              type={import.meta.env.DEV ? 'info' : 'error'}
+              showIcon
+              message="VITE_GOOGLE_CLIENT_ID não configurado"
+            />
+          )}
+
+          {import.meta.env.DEV && (
+            <>
+              {GOOGLE_CLIENT_ID && <Divider plain style={{ margin: 0, fontSize: 12 }}>ou</Divider>}
+              <DevTokenLogin onLogin={onTokenLogin} />
+            </>
           )}
         </Space>
       </Card>
