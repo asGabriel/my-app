@@ -11,6 +11,7 @@ interface AuthContextType {
     isLoading: boolean;
     token: string | null;
     loginWithGoogle: (idToken: string) => Promise<void>;
+    loginWithToken: (apiToken: string) => Promise<void>;
     logout: () => void;
 }
 
@@ -92,6 +93,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
     };
 
+    // Só rodando local (ver Login): entra com um JWT da API já emitido — ex.:
+    // copiado do `auth_token` do app publicado — sem passar pelo Google.
+    const loginWithToken = async (apiToken: string) => {
+        queryClient.clear();
+
+        const response = await authRequest<unknown>('/me', { method: 'GET', token: apiToken });
+        const userData = schemas.UserResponse.parse(response);
+
+        localStorage.setItem(TOKEN_KEY, apiToken);
+        localStorage.setItem(USER_KEY, JSON.stringify(userData));
+        setToken(apiToken);
+        setUser(userData);
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -100,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isLoading,
                 token,
                 loginWithGoogle,
+                loginWithToken,
                 logout,
             }}
         >
