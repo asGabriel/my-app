@@ -10,10 +10,13 @@ import { DEBT_CATEGORY_LABELS } from '../../utils/constants';
 import { MonthChips } from './MonthChips';
 
 const MIX_COLOR: Record<OccKind, string> = {
-  fixo: 'var(--color-accent-600)',
-  variavel: 'var(--color-accent-400)',
-  parcelado: 'var(--color-accent-300)',
+  fixo: 'var(--color-chart-fixo)',
+  variavel: 'var(--color-chart-variavel)',
+  parcelado: 'var(--color-chart-parcelado)',
 };
+
+// Faixa (em graus) na cor do fundo entre as fatias do donut, para separá-las.
+const DONUT_GAP_DEG = 2;
 
 /** Ordem de empilhamento das barras de tendência (de baixo para cima). */
 const KIND_ORDER: OccKind[] = ['fixo', 'parcelado', 'variavel'];
@@ -41,16 +44,19 @@ export function PainelTab() {
   const cats = computeCategoryBreakdown(occurrences);
 
   let acc = 0;
-  const donut = mix.length
-    ? `conic-gradient(${mix
+  const slices = mix.filter((m) => m.amount > 0);
+  const gap = slices.length > 1 ? DONUT_GAP_DEG / 2 : 0;
+  const donut = slices.length
+    ? `conic-gradient(from ${-gap}deg, ${slices
         .map((m) => {
           const a = acc;
           const b = acc + (totals.total > 0 ? (m.amount / totals.total) * 360 : 0);
           acc = b;
-          return `${MIX_COLOR[m.kind]} ${a.toFixed(1)}deg ${b.toFixed(1)}deg`;
+          const slice = `${MIX_COLOR[m.kind]} ${(a + gap).toFixed(1)}deg ${(b - gap).toFixed(1)}deg`;
+          return gap ? `${slice}, var(--color-bg) ${(b - gap).toFixed(1)}deg ${(b + gap).toFixed(1)}deg` : slice;
         })
         .join(', ')})`
-    : 'var(--color-neutral-900)';
+    : 'var(--color-chart-track)';
 
   // Nota: computados direto no corpo do componente (sem useMemo) — o volume
   // de dados de um app financeiro pessoal é pequeno, e memoizar aqui exigiria
@@ -149,7 +155,7 @@ export function PainelTab() {
                 <div
                   style={{
                     fontSize: 15, fontWeight: 500, marginTop: 5, letterSpacing: '-0.015em',
-                    color: b.alert ? 'var(--color-accent-300)' : undefined,
+                    color: b.alert ? 'var(--color-chart-negative)' : undefined,
                   }}
                 >
                   {b.value}
@@ -210,8 +216,8 @@ export function PainelTab() {
                         <span style={{ color: 'var(--color-neutral-500)', minWidth: 34, textAlign: 'right' }}>{c.share}%</span>
                         <i className={open ? 'ph ph-caret-down' : 'ph ph-caret-right'} style={{ fontSize: 11, color: 'var(--color-neutral-500)' }} />
                       </div>
-                      <div style={{ marginTop: 6, height: 5, borderRadius: 999, background: 'var(--color-neutral-900)', overflow: 'hidden' }}>
-                        <div style={{ width: `${c.pct}%`, height: '100%', background: 'var(--color-accent-500)', borderRadius: 999 }} />
+                      <div style={{ marginTop: 6, height: 5, borderRadius: 999, background: 'var(--color-chart-track)', overflow: 'hidden' }}>
+                        <div style={{ width: `${c.pct}%`, height: '100%', background: 'var(--color-chart-single)', borderRadius: 999 }} />
                       </div>
                     </button>
                     {open && (
@@ -269,12 +275,13 @@ export function PainelTab() {
                   <div
                     style={{
                       width: '100%', height: `${Math.max(4, Math.round((t.total / maxTrend) * 100))}%`,
-                      display: 'flex', flexDirection: 'column-reverse', borderRadius: '4px 4px 0 0', overflow: 'hidden',
-                      background: 'var(--color-neutral-900)', opacity: t.current ? 1 : 0.6,
+                      display: 'flex', flexDirection: 'column-reverse', gap: 2, borderRadius: '4px 4px 0 0', overflow: 'hidden',
+                      background: t.total > 0 ? 'transparent' : 'var(--color-chart-track)', opacity: t.current ? 1 : 0.6,
                     }}
                   >
-                    {t.total > 0 && KIND_ORDER.map((k) => (
-                      <div key={k} style={{ flex: `0 0 ${(t.byKind[k] / t.total) * 100}%`, background: MIX_COLOR[k] }} />
+                    {/* flex-grow proporcional ao valor, para os 2px de gap entre segmentos não estourarem a altura da barra */}
+                    {KIND_ORDER.filter((k) => t.byKind[k] > 0).map((k) => (
+                      <div key={k} style={{ flex: `${t.byKind[k]} 1 0`, background: MIX_COLOR[k] }} />
                     ))}
                   </div>
                   <div style={{ fontSize: 10, color: t.current ? 'var(--color-accent-200)' : 'var(--color-neutral-500)' }}>{t.label}</div>
@@ -308,7 +315,7 @@ export function PainelTab() {
                 <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
                   <div style={{ fontSize: 13, fontWeight: 500 }}>{short(p.total, privado)}</div>
                   {/* Mês sem receita registrada (ex.: os futuros) não tem "livre" de verdade — só o negativo das saídas. */}
-                  <div style={{ fontSize: 11, color: p.renda > 0 && p.saldo < 0 ? 'var(--color-accent-300)' : 'var(--color-neutral-500)', marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: p.renda > 0 && p.saldo < 0 ? 'var(--color-chart-negative)' : 'var(--color-neutral-500)', marginTop: 2 }}>
                     {p.renda > 0 ? `livre ${short(p.saldo, privado)}` : 'sem renda registrada'}
                   </div>
                 </div>
