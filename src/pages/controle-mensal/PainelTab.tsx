@@ -5,10 +5,13 @@ import { computeCategoryBreakdown, computeMix, type OccKind } from '../../financ
 import { DEBT_CATEGORY_LABELS, type DebtCategory } from '../../utils/constants';
 
 const MIX_COLOR: Record<OccKind, string> = {
-  fixo: 'var(--color-accent-600)',
-  variavel: 'var(--color-accent-400)',
-  parcelado: 'var(--color-accent-300)',
+  fixo: 'var(--color-chart-fixo)',
+  variavel: 'var(--color-chart-variavel)',
+  parcelado: 'var(--color-chart-parcelado)',
 };
+
+// Faixa (em graus) na cor do fundo entre as fatias do donut, para separá-las.
+const DONUT_GAP_DEG = 2;
 
 const N_PROJECTION = 6;
 const N_TREND = 6;
@@ -24,16 +27,19 @@ export function PainelTab() {
   const cats = computeCategoryBreakdown(occurrences).slice(0, 6);
 
   let acc = 0;
-  const donut = mix.length
-    ? `conic-gradient(${mix
+  const slices = mix.filter((m) => m.amount > 0);
+  const gap = slices.length > 1 ? DONUT_GAP_DEG / 2 : 0;
+  const donut = slices.length
+    ? `conic-gradient(from ${-gap}deg, ${slices
         .map((m) => {
           const a = acc;
           const b = acc + (totals.total > 0 ? (m.amount / totals.total) * 360 : 0);
           acc = b;
-          return `${MIX_COLOR[m.kind]} ${a.toFixed(1)}deg ${b.toFixed(1)}deg`;
+          const slice = `${MIX_COLOR[m.kind]} ${(a + gap).toFixed(1)}deg ${(b - gap).toFixed(1)}deg`;
+          return gap ? `${slice}, var(--color-bg) ${(b - gap).toFixed(1)}deg ${(b + gap).toFixed(1)}deg` : slice;
         })
         .join(', ')})`
-    : 'var(--color-neutral-900)';
+    : 'var(--color-chart-track)';
 
   // Nota: computados direto no corpo do componente (sem useMemo) — o volume
   // de dados de um app financeiro pessoal é pequeno, e memoizar aqui exigiria
@@ -108,8 +114,8 @@ export function PainelTab() {
                 <span>{DEBT_CATEGORY_LABELS[c.category as DebtCategory] ?? c.category}</span>
                 <span style={{ color: 'var(--color-neutral-400)' }}>{short(c.amount, privado)}</span>
               </div>
-              <div style={{ marginTop: 5, height: 5, borderRadius: 999, background: 'var(--color-neutral-900)', overflow: 'hidden' }}>
-                <div style={{ width: `${c.pct}%`, height: '100%', background: 'var(--color-accent-500)', borderRadius: 999 }} />
+              <div style={{ marginTop: 5, height: 5, borderRadius: 999, background: 'var(--color-chart-track)', overflow: 'hidden' }}>
+                <div style={{ width: `${c.pct}%`, height: '100%', background: 'var(--color-chart-single)', borderRadius: 999 }} />
               </div>
             </div>
           ))}
@@ -129,7 +135,7 @@ export function PainelTab() {
           {trendBars.map((t, i) => (
             <div key={i} style={{ flex: '1 1 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
               <div style={{ fontSize: 10, color: 'var(--color-neutral-400)' }}>{privado ? '•' : `${Math.round(t.value / 100) / 10}k`}</div>
-              <div style={{ width: '100%', height: `${t.h}%`, background: t.current ? 'var(--color-accent-400)' : 'var(--color-accent-700)', borderRadius: '4px 4px 0 0' }} />
+              <div style={{ width: '100%', height: `${t.h}%`, background: t.current ? 'var(--color-chart-variavel)' : 'var(--color-chart-muted)', borderRadius: '4px 4px 0 0' }} />
               <div style={{ fontSize: 10, color: 'var(--color-neutral-500)' }}>{t.label}</div>
             </div>
           ))}
@@ -152,7 +158,7 @@ export function PainelTab() {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 13, fontWeight: 500 }}>{short(p.total, privado)}</div>
-              <div style={{ fontSize: 11, color: p.saldo < 0 ? 'var(--color-accent-300)' : 'var(--color-neutral-500)', marginTop: 2 }}>
+              <div style={{ fontSize: 11, color: p.saldo < 0 ? 'var(--color-chart-negative)' : 'var(--color-neutral-500)', marginTop: 2 }}>
                 livre {short(p.saldo, privado)}
               </div>
             </div>

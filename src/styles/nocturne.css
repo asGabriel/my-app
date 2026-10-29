@@ -34,6 +34,35 @@
   --color-accent-800: #423a6a;
   --color-accent-900: #2b2741;
 
+  /* — paleta de gráficos —
+     Categórica: um matiz por série, atribuído NA ORDEM (1, 2, 3...), nunca
+     tons do accent para distinguir categorias (viram escala de intensidade).
+     A ordem foi validada contra --color-bg para contraste (>= 3:1) e
+     daltonismo (séries vizinhas distinguíveis); trocar um valor ou a ordem
+     exige revalidar. Mais de 6 séries: agrupar o resto em "Outros".
+     Em gráficos onde todas as séries se tocam (donut, pizza) usar no
+     máximo as 3 primeiras. */
+  --color-chart-1: #8578d6; /* roxo */
+  --color-chart-2: #d9752f; /* laranja */
+  --color-chart-3: #1f9e86; /* verde-azulado */
+  --color-chart-4: #c98500; /* âmbar */
+  --color-chart-5: #3987e5; /* azul */
+  --color-chart-6: #d55181; /* magenta */
+
+  /* Série única (barras de magnitude, uma medida só). */
+  --color-chart-single: var(--color-accent-500);
+  /* Elementos de apoio: trilho de barras de progresso, barras de contexto
+     (períodos anteriores) e valores negativos. */
+  --color-chart-track: var(--color-neutral-900);
+  --color-chart-muted: var(--color-neutral-700);
+  --color-chart-negative: var(--color-danger);
+
+  /* Aliases semânticos — a cor segue a entidade, então "Variável" é a mesma
+     cor em todo gráfico em que aparecer. */
+  --color-chart-fixo: var(--color-chart-1);
+  --color-chart-variavel: var(--color-chart-2);
+  --color-chart-parcelado: var(--color-chart-3);
+
   --font-heading: 'Inter', system-ui, sans-serif;
   --font-heading-weight: 500;
   --font-body: 'Inter', system-ui, sans-serif;
