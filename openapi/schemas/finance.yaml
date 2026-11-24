@@ -167,7 +167,7 @@ CreateDebtRequest:
         Não aceito em parcelamento.
     installmentCount:
       type: integer
-      description: Número de parcelas (>= 2). Ausente = dívida comum.
+      description: Número de parcelas (>= 1; 1 = à vista como parcelamento 1x). Ausente = dívida comum.
 
 UpdateDebtRequest:
   type: object

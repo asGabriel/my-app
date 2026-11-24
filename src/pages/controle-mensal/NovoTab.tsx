@@ -72,7 +72,7 @@ export function NovoTab() {
 
   // Arredonda para centavos: o backend rejeita valores com mais de 2 casas.
   const valorNum = Math.round((parseFloat(form.valor.replace(',', '.')) || 0) * 100) / 100;
-  const nParc = Math.max(2, Math.min(48, parseInt(form.n, 10) || 12));
+  const nParc = Math.max(1, Math.min(48, parseInt(form.n, 10) || 12));
   const diaNum = Math.max(1, Math.min(28, parseInt(form.dia, 10) || 10));
   const start = dayjs(new Date(selected.year, selected.month0, 1)).add(startOffset, 'month');
   const year = start.year();
@@ -86,7 +86,9 @@ export function NovoTab() {
 
   const previewTexto =
     form.tipo === 'parcelado'
-      ? `${nParc} lançamentos de ${money(valorNum, false)}, de ${startLabel} a ${endLabel}. Total ${money(valorNum * nParc, false)}.`
+      ? nParc === 1
+        ? `1 lançamento de ${money(valorNum, false)} em ${startLabel}, parcelado em 1x.`
+        : `${nParc} lançamentos de ${money(valorNum, false)}, de ${startLabel} a ${endLabel}. Total ${money(valorNum * nParc, false)}.`
       : form.tipo === 'avulso'
         ? `1 lançamento de ${money(valorNum, false)} em ${startLabel}, sem repetição.`
         : `Um lançamento por mês a partir de ${startLabel}, sem data de fim (${money(valorNum, false)}/mês).`;
@@ -302,7 +304,7 @@ export function NovoTab() {
                 <div style={{ fontSize: 11.5, color: 'var(--color-neutral-500)', marginTop: 2 }}>Total {money(valorNum * nParc, false)}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button className="btn btn-secondary btn-icon" onClick={() => setForm((f) => ({ ...f, n: String(Math.max(2, nParc - 1)) }))} aria-label="Menos uma parcela" style={{ width: 30, height: 30 }}>
+                <button className="btn btn-secondary btn-icon" onClick={() => setForm((f) => ({ ...f, n: String(Math.max(1, nParc - 1)) }))} aria-label="Menos uma parcela" style={{ width: 30, height: 30 }}>
                   <i className="ph ph-minus" />
                 </button>
                 <div style={{ fontFamily: 'var(--font-heading)', fontSize: 17, fontWeight: 500, minWidth: 26, textAlign: 'center' }}>{nParc}</div>
@@ -396,7 +398,7 @@ export function NovoTab() {
         disabled={isPending || (step === 1 && !valorNum)}
         style={{ marginTop: 24, justifyContent: 'center' }}
       >
-        {isPending ? 'Criando…' : step === 3 ? (form.tipo === 'parcelado' ? `Criar ${nParc} lançamentos` : 'Criar despesa') : 'Continuar'}
+        {isPending ? 'Criando…' : step === 3 ? (form.tipo === 'parcelado' ? `Criar ${nParc} ${nParc === 1 ? 'lançamento' : 'lançamentos'}` : 'Criar despesa') : 'Continuar'}
       </button>
     </div>
   );
