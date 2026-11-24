@@ -120,7 +120,7 @@ seed();
 
 export function createDebt(req: CreateDebtRequest): Debt {
   const total = parseFloat(req.totalAmount);
-  const count = req.installmentCount && req.installmentCount > 1 ? req.installmentCount : undefined;
+  const count = req.installmentCount && req.installmentCount >= 1 ? req.installmentCount : undefined;
   const due = dayjs(req.dueDate);
   const debt = makeDebt({
     description: req.description, category: req.category ?? 'UNKNOWN', total,
